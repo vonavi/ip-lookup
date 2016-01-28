@@ -5,6 +5,7 @@ module Data.IpRouter
        , Prefix(..)
        , Entry(..)
        , IpRouter(..)
+       , prefixMatch
        ) where
 
 import Data.Word
@@ -17,7 +18,7 @@ instance Show Address where
     where parts = map (helper . shiftR x) [24,16,8,0]
           helper y = (fromInteger . toInteger) y :: Word8
 
-newtype Mask = Mask Int
+newtype Mask = Mask Int deriving (Eq, Ord)
 
 instance Show Mask where
   show (Mask x) = "/" ++ show x
@@ -35,4 +36,10 @@ data Entry = Entry { prefix  :: Prefix
 
 class IpRouter a where
   ipInsert :: Entry   -> a -> a
-  ipLookup :: Address -> a -> Entry
+  ipLookup :: Address -> a -> Maybe Entry
+
+prefixMatch :: Address -> Entry -> Bool
+prefixMatch (Address x) (Entry p _) = shiftR x offset == shiftR a offset
+  where Address a = address p
+        Mask m    = mask p
+        offset    = 32 - m
