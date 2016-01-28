@@ -10,6 +10,7 @@ module Data.IpRouter
 
 import Data.Word
 import Data.Bits
+import Data.Function (on)
 
 newtype Address = Address Word32
 
@@ -39,7 +40,7 @@ class IpRouter a where
   ipLookup :: Address -> a -> Maybe Entry
 
 prefixMatch :: Address -> Entry -> Bool
-prefixMatch (Address x) (Entry p _) = shiftR x offset == shiftR a offset
+prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
   where Address a = address p
         Mask m    = mask p
         offset    = 32 - m

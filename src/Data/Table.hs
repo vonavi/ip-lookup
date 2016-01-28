@@ -1,6 +1,7 @@
 module Data.Table where
 
 import Data.List
+import Data.Function (on)
 
 import Data.IpRouter
 
@@ -15,8 +16,8 @@ instance Show Table where
 
 instance IpRouter Table where
   ipInsert e (Table t) = Table (e:t)
+
   ipLookup a (Table t)
     | null matches = Nothing
-    | otherwise    = Just . maximumBy cmp $ matches
-    where matches                       = filter (prefixMatch a) t
-          cmp (Entry p1 _) (Entry p2 _) = compare (mask p1) (mask p2)
+    | otherwise    = Just . maximumBy (compare `on` (mask . prefix)) $ matches
+    where matches = filter (prefixMatch a) t
