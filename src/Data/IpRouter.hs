@@ -5,12 +5,16 @@ module Data.IpRouter
        , Prefix(..)
        , Entry(..)
        , IpRouter(..)
+       , fromString
+       , addrBits
+       , prefixBits
        , prefixMatch
        ) where
 
 import Data.Word
 import Data.Bits
 import Data.Function (on)
+import Data.List.Split (splitOn)
 
 newtype Address = Address Word32
 
@@ -18,6 +22,13 @@ instance Show Address where
   show (Address x) = tail $ concatMap ((++) "." . show) parts
     where parts = map (helper . shiftR x) [24,16,8,0]
           helper y = (fromInteger . toInteger) y :: Word8
+
+fromString :: String -> Address
+fromString s = Address $ sum $ zipWith shift parts [24,16,8,0]
+  where parts = map (\x -> (fromIntegral . read) x :: Word32) $ splitOn "." s
+
+addrBits :: Address -> [Bool]
+addrBits (Address a) = map (`testBit` 31) . take 32 . iterate (`shift` 1) $ a
 
 newtype Mask = Mask Int deriving (Eq, Ord)
 
@@ -30,6 +41,11 @@ data Prefix = Prefix { address :: Address
 
 instance Show Prefix where
   show x = (show . address) x ++ (show . mask) x
+
+prefixBits :: Prefix -> [Bool]
+prefixBits p = map (`testBit` 31) . take m . iterate (`shift` 1) $ a
+  where Address a = address p
+        Mask m    = mask p
 
 data Entry = Entry { prefix  :: Prefix
                    , nextHop :: Int
