@@ -1,7 +1,11 @@
-module Data.Table where
+module Data.Table
+       (
+         Table
+       ) where
 
 import Data.List
 import Data.Function (on)
+import Data.Monoid
 
 import Data.IpRouter
 
@@ -13,6 +17,10 @@ instance Show Table where
           maxLen     = maximum lenList
           helper p l = (show . prefix) p ++ replicate (maxLen - l + 2) ' ' ++
                        (show . nextHop) p ++ "\n"
+
+instance Monoid Table where
+  mempty                        = Table []
+  (Table x) `mappend` (Table y) = Table $ x ++ y
 
 instance IpRouter Table where
   ipInsert e (Table t) = Table (e:t)
