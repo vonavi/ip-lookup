@@ -19,5 +19,6 @@ instance IpRouter Table where
 
   ipLookup a (Table t)
     | null matches = Nothing
-    | otherwise    = Just . maximumBy (compare `on` (mask . prefix)) $ matches
+    | otherwise    = Just . nextHop .
+                     maximumBy (compare `on` (mask . prefix)) $ matches
     where matches = filter (prefixMatch a) t
