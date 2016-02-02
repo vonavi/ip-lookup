@@ -1,7 +1,7 @@
-module Data.BP
+module Data.Bp
        (
          Paren(Open, Close)
-       , BP(BP)
+       , Bp(Bp)
        , findOpen
        , findClose
        , enclose
@@ -17,9 +17,9 @@ instance Show Paren where
   show Open  = "("
   show Close = ")"
 
-newtype BP = BP { toList :: [Paren] } deriving Show
+newtype Bp = Bp { toList :: [Paren] } deriving Show
 
-findOpen :: Int -> BP -> Maybe Int
+findOpen :: Int -> Bp -> Maybe Int
 findOpen n bp
   | n < 0 || n >= length x = Nothing
   | (x !! n) /= Close      = Nothing
@@ -32,7 +32,7 @@ findOpen n bp
                         then helper (pred d) (pred n) (init x)
                         else helper (succ d) (pred n) (init x)
 
-findClose :: Int -> BP -> Maybe Int
+findClose :: Int -> Bp -> Maybe Int
 findClose n bp
   | n < 0 || n >= length x = Nothing
   | (x !! n) /= Open       = Nothing
@@ -45,7 +45,7 @@ findClose n bp
                         then helper (pred d) (succ n) (tail x)
                         else helper (succ d) (succ n) (tail x)
 
-enclose :: Int -> BP -> Maybe Int
+enclose :: Int -> Bp -> Maybe Int
 enclose n bp = do cl <- findClose n bp
                   nx <- helper 1 cl . drop (succ cl) . toList $ bp
                   findOpen nx bp
@@ -56,24 +56,24 @@ enclose n bp = do cl <- findClose n bp
                         then helper (pred d) (succ n) (tail x)
                         else helper (succ d) (succ n) (tail x)
 
-rank :: Int -> (Paren -> Bool) -> BP -> Int
+rank :: Int -> (Paren -> Bool) -> Bp -> Int
 rank n p = helper n p . toList
   where helper n p = length . filter p . take (succ n)
 
-rankOpen :: Int -> BP -> Int
+rankOpen :: Int -> Bp -> Int
 rankOpen n = rank n (== Open)
 
-rankClose :: Int -> BP -> Int
+rankClose :: Int -> Bp -> Int
 rankClose n = rank n (== Close)
 
-select :: Int -> (Paren -> Bool) -> BP -> Maybe Int
+select :: Int -> (Paren -> Bool) -> Bp -> Maybe Int
 select n p bp
   | n <= 0 || n > length op = Nothing
   | otherwise               = Just . fst $ op !! pred n
   where op = filter (p . snd) . zip [0 ..] . toList $ bp
 
-selectOpen :: Int -> BP -> Maybe Int
+selectOpen :: Int -> Bp -> Maybe Int
 selectOpen n = select n (== Open)
 
-selectClose :: Int -> BP -> Maybe Int
+selectClose :: Int -> Bp -> Maybe Int
 selectClose n = select n (== Close)
