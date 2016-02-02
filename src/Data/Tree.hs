@@ -35,10 +35,9 @@ lookupState :: [Bool] -> BTree (Last Int) -> State (Last Int) ()
 lookupState _      Tip         = return ()
 lookupState []     (Bin _ x _) = modify (`mappend` x)
 lookupState (b:bs) (Bin l x r) = do modify (`mappend` x)
-                                    if b
-                                      then lookupState bs r
-                                      else lookupState bs l
+                                    lookupState bs $ if b then r else l
 
 instance IpRouter Tree where
   ipInsert e t        = t `mappend` fromEntry e
-  ipLookup a (Tree t) = getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
+  ipLookup a (Tree t) = getLast $
+                        execState (lookupState (addrBits a) t) (Last Nothing)

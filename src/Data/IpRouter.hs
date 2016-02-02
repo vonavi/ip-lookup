@@ -5,8 +5,9 @@ module Data.IpRouter
        , Prefix(..)
        , Entry(..)
        , IpRouter(..)
-       , fromString
+       , strToAddr
        , addrBits
+       , strToMask
        , prefixBits
        , prefixMatch
        ) where
@@ -15,6 +16,7 @@ import Data.Word
 import Data.Bits
 import Data.Function (on)
 import Data.List.Split (splitOn)
+import Data.Monoid
 
 newtype Address = Address Word32
 
@@ -23,14 +25,17 @@ instance Show Address where
     where parts = map (helper . shiftR x) [24,16,8,0]
           helper y = (fromInteger . toInteger) y :: Word8
 
-fromString :: String -> Address
-fromString s = Address $ sum $ zipWith shift parts [24,16,8,0]
+strToAddr :: String -> Address
+strToAddr s = Address $ sum $ zipWith shift parts [24,16,8,0]
   where parts = map (\x -> (fromIntegral . read) x :: Word32) $ splitOn "." s
 
 addrBits :: Address -> [Bool]
 addrBits (Address a) = map (`testBit` 31) . take 32 . iterate (`shift` 1) $ a
 
 newtype Mask = Mask Int deriving (Eq, Ord)
+
+strToMask :: String -> Mask
+strToMask (_:ss) = Mask (read ss :: Int)
 
 instance Show Mask where
   show (Mask x) = "/" ++ show x
@@ -57,6 +62,6 @@ prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
         Mask m    = mask p
         offset    = 32 - m
 
-class IpRouter a where
+class Monoid a => IpRouter a where
   ipInsert :: Entry   -> a -> a
   ipLookup :: Address -> a -> Maybe Int
