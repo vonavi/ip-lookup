@@ -1,7 +1,6 @@
-module Data.Bp
+module Data.Paren
        (
          Paren(Open, Close)
-       , Bp(Bp)
        , findOpen
        , findClose
        , enclose
@@ -17,38 +16,23 @@ instance Show Paren where
   show Open  = "("
   show Close = ")"
 
-newtype Bp = Bp { toList :: [Paren] } deriving Show
-
-findOpen :: Int -> Bp -> Maybe Int
-findOpen n bp
-  | n < 0 || n >= length x = Nothing
-  | (x !! n) /= Close      = Nothing
-  | otherwise              = helper 1 n $ take n x
-  where x = toList bp
-        helper d n x
+findOpen :: Int -> [Paren] -> Maybe Int
+findOpen n ps
+  | n < 0 || n >= length ps = Nothing
+  | (ps !! n) /= Close      = Nothing
+  | otherwise               = helper 1 n $ take n ps
+  where helper d n x
           | d == 0    = Just n
           | null x    = Nothing
           | otherwise = if last x == Open
                         then helper (pred d) (pred n) (init x)
                         else helper (succ d) (pred n) (init x)
 
-findClose :: Int -> Bp -> Maybe Int
-findClose n bp
-  | n < 0 || n >= length x = Nothing
-  | (x !! n) /= Open       = Nothing
-  | otherwise              = helper 1 n $ drop (succ n) x
-  where x = toList bp
-        helper d n x
-          | d == 0    = Just n
-          | null x    = Nothing
-          | otherwise = if head x == Close
-                        then helper (pred d) (succ n) (tail x)
-                        else helper (succ d) (succ n) (tail x)
-
-enclose :: Int -> Bp -> Maybe Int
-enclose n bp = do cl <- findClose n bp
-                  nx <- helper 1 cl . drop (succ cl) . toList $ bp
-                  findOpen nx bp
+findClose :: Int -> [Paren] -> Maybe Int
+findClose n ps
+  | n < 0 || n >= length ps = Nothing
+  | (ps !! n) /= Open       = Nothing
+  | otherwise               = helper 1 n $ drop (succ n) ps
   where helper d n x
           | d == 0    = Just n
           | null x    = Nothing
@@ -56,24 +40,34 @@ enclose n bp = do cl <- findClose n bp
                         then helper (pred d) (succ n) (tail x)
                         else helper (succ d) (succ n) (tail x)
 
-rank :: Int -> (Paren -> Bool) -> Bp -> Int
-rank n p = helper n p . toList
-  where helper n p = length . filter p . take (succ n)
+enclose :: Int -> [Paren] -> Maybe Int
+enclose n ps = do cl <- findClose n ps
+                  nx <- helper 1 cl . drop (succ cl) $ ps
+                  findOpen nx ps
+  where helper d n x
+          | d == 0    = Just n
+          | null x    = Nothing
+          | otherwise = if head x == Close
+                        then helper (pred d) (succ n) (tail x)
+                        else helper (succ d) (succ n) (tail x)
 
-rankOpen :: Int -> Bp -> Int
+rank :: Int -> (Paren -> Bool) -> [Paren] -> Int
+rank n p = length . filter p . take (succ n)
+
+rankOpen :: Int -> [Paren] -> Int
 rankOpen n = rank n (== Open)
 
-rankClose :: Int -> Bp -> Int
+rankClose :: Int -> [Paren] -> Int
 rankClose n = rank n (== Close)
 
-select :: Int -> (Paren -> Bool) -> Bp -> Maybe Int
-select n p bp
+select :: Int -> (Paren -> Bool) -> [Paren] -> Maybe Int
+select n p ps
   | n <= 0 || n > length op = Nothing
   | otherwise               = Just . fst $ op !! pred n
-  where op = filter (p . snd) . zip [0 ..] . toList $ bp
+  where op = filter (p . snd) . zip [0 ..] $ ps
 
-selectOpen :: Int -> Bp -> Maybe Int
+selectOpen :: Int -> [Paren] -> Maybe Int
 selectOpen n = select n (== Open)
 
-selectClose :: Int -> Bp -> Maybe Int
+selectClose :: Int -> [Paren] -> Maybe Int
 selectClose n = select n (== Close)
