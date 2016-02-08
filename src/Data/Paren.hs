@@ -1,6 +1,8 @@
 module Data.Paren
        (
          Paren(Open, Close)
+       , isOpen
+       , isClose
        , findOpen
        , findClose
        , enclose
@@ -16,11 +18,20 @@ instance Show Paren where
   show Open  = "("
   show Close = ")"
 
+isOpen :: Int -> [Paren] -> Bool
+isOpen n ps
+  | n < 0 || n >= length ps = False
+  | otherwise               = (ps !! n) == Open
+
+isClose :: Int -> [Paren] -> Bool
+isClose n ps
+  | n < 0 || n >= length ps = False
+  | otherwise               = (ps !! n) == Close
+
 findOpen :: Int -> [Paren] -> Maybe Int
 findOpen n ps
-  | n < 0 || n >= length ps = Nothing
-  | (ps !! n) /= Close      = Nothing
-  | otherwise               = helper 1 n $ take n ps
+  | not (isClose n ps) = Nothing
+  | otherwise          = helper 1 n $ take n ps
   where helper d n x
           | d == 0    = Just n
           | null x    = Nothing
@@ -30,9 +41,8 @@ findOpen n ps
 
 findClose :: Int -> [Paren] -> Maybe Int
 findClose n ps
-  | n < 0 || n >= length ps = Nothing
-  | (ps !! n) /= Open       = Nothing
-  | otherwise               = helper 1 n $ drop (succ n) ps
+  | not (isOpen n ps) = Nothing
+  | otherwise         = helper 1 n $ drop (succ n) ps
   where helper d n x
           | d == 0    = Just n
           | null x    = Nothing
