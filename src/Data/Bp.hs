@@ -5,6 +5,9 @@
 module Data.Bp
        (
          parent
+       , firstChild
+       , nextSibling
+       , subtreeSize
        , child
        ) where
 
@@ -35,6 +38,32 @@ parent n bp
   | isOpen n ps = enclose n ps
   | otherwise   = do n' <- findOpen n ps
                      enclose n' ps
+  where ps = toParens bp
+
+firstChild :: Bp a => Int -> a -> Maybe Int
+firstChild n bp
+  | not (isOpen n ps)  = do no <- findOpen n ps
+                            firstChild no bp
+  | not (isOpen nx ps) = Nothing
+  | otherwise          = Just nx
+  where ps = toParens bp
+        nx = succ n
+
+nextSibling :: Bp a => Int -> a -> Maybe Int
+nextSibling n bp
+  | not (isClose n ps) = do nc <- findClose n ps
+                            nextSibling nc bp
+  | not (isOpen nx ps) = Nothing
+  | otherwise          = Just nx
+  where ps = toParens bp
+        nx = succ n
+
+subtreeSize :: Bp a => Int -> a -> Maybe Int
+subtreeSize n bp
+  | not (isClose n ps) = do nc <- findClose n ps
+                            Just $ (nc - n + 1) `div` 2
+  | otherwise          = do no <- findOpen n ps
+                            Just $ (n - no + 1) `div` 2
   where ps = toParens bp
 
 childStateT :: Int -> [Paren] -> StateT [Int] Maybe ()
