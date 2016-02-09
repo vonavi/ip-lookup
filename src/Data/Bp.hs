@@ -39,18 +39,17 @@ parent n bp
 
 childStateT :: Int -> [Paren] -> StateT [Int] Maybe ()
 childStateT n ps
-  | not (isOpen n ps) = return ()
-  | otherwise         = do n' <- lift $ findClose n ps
-                           modify (n :)
-                           childStateT (succ n') ps
+  | not (isClose n ps) = return ()
+  | otherwise          = do no <- lift $ findOpen n ps
+                            modify (no :)
+                            childStateT (pred no) ps
 
 child :: Bp a => Int -> Int -> a -> Maybe Int
 child n i bp
-  | not (isOpen n ps) = do n' <- findOpen n ps
-                           child n' i bp
-  | otherwise         = do
-      iList <- execStateT (childStateT (succ n) ps) []
-      let len = length iList
-      guard $ i >= 0 && i < len
-      Just $ iList !! (len - i - 1)
+  | not (isClose n ps) = do nc <- findClose n ps
+                            child nc i bp
+  | otherwise          = do
+      iList <- execStateT (childStateT (pred n) ps) []
+      guard $ i >= 0 && i < length iList
+      Just $ iList !! i
   where ps = toParens bp
