@@ -2,7 +2,9 @@
 
 module Data.OrdTree
        (
-         OrdTreeT1
+         ordToBp
+       , ordToDfuds
+       , OrdTreeT1
        , OrdTreeT2
        , OrdTreeT3
        , OrdTreeT4
@@ -12,8 +14,10 @@ import Data.Monoid
 import Control.Monad.State
 
 import Data.IpRouter
+import Data.Paren
 
 class OrdTree t where
+  toForest    :: t      -> Forest (Last Int)
   fromEntry   :: Entry  -> t
   lookupState :: [Bool] -> t -> State (Last Int) ()
 
@@ -23,6 +27,25 @@ instance (Monoid a, OrdTree a) => IpRouter a where
                  execState (lookupState (addrBits a) t) (Last Nothing)
 
 newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving Show
+
+forToBp :: Forest a -> [(a, Paren)]
+forToBp = helper . getNodes
+  where helper = concatMap (\(x, Forest l)
+                            -> [(x, Open)] ++ helper l ++ [(x, Close)])
+
+ordToBp :: OrdTree a => a -> [(Last Int, Paren)]
+ordToBp x = [(Last Nothing, Open)] ++ forToBp (toForest x) ++
+            [(Last Nothing, Close)]
+
+forToDfuds :: Forest a -> [(a, [Paren])]
+forToDfuds (Forest x) = helper x
+  where helper []                  = []
+        helper ((x, Forest l) : r) =
+          let p = replicate (length l) Open ++ [Close]
+          in (x, p) : helper l ++ helper r
+
+ordToDfuds :: OrdTree a => a -> [(Last Int, [Paren])]
+ordToDfuds = forToDfuds . toForest
 
 
 newtype OrdTreeT1 = OrdTreeT1 (Forest (Last Int)) deriving Show
@@ -38,6 +61,8 @@ instance Monoid OrdTreeT1 where
             (a `mappend` b, Forest (helper x y)) : helper xs ys
 
 instance OrdTree OrdTreeT1 where
+  toForest (OrdTreeT1 x) = x
+
   fromEntry (Entry p n) = OrdTreeT1 $ helper . prefixBits $ p
     where helper :: [Bool] -> Forest (Last Int)
           helper []     = Forest [(Last (Just n), Forest [])]
@@ -69,6 +94,8 @@ instance Monoid OrdTreeT2 where
                   (b, Forest y) = last ys
 
 instance OrdTree OrdTreeT2 where
+  toForest (OrdTreeT2 x) = x
+
   fromEntry (Entry p n) = OrdTreeT2 $ helper . prefixBits $ p
     where helper :: [Bool] -> Forest (Last Int)
           helper []     = Forest [(Last (Just n), Forest [])]
@@ -101,6 +128,8 @@ instance Monoid OrdTreeT3 where
             (a `mappend` b, Forest (helper x y)) : helper xs ys
 
 instance OrdTree OrdTreeT3 where
+  toForest (OrdTreeT3 x) = x
+
   fromEntry (Entry p n) = OrdTreeT3 $ helper . prefixBits $ p
     where helper :: [Bool] -> Forest (Last Int)
           helper []     = Forest [(Last (Just n), Forest [])]
@@ -132,6 +161,8 @@ instance Monoid OrdTreeT4 where
                   (b, Forest y) = last ys
 
 instance OrdTree OrdTreeT4 where
+  toForest (OrdTreeT4 x) = x
+
   fromEntry (Entry p n) = OrdTreeT4 $ helper . prefixBits $ p
     where helper :: [Bool] -> Forest (Last Int)
           helper []     = Forest [(Last (Just n), Forest [])]
