@@ -70,14 +70,14 @@ rankOpen n = rank n (== Open)
 rankClose :: Int -> [Paren] -> Int
 rankClose n = rank n (== Close)
 
-select :: Int -> (Paren -> Bool) -> [Paren] -> Maybe Int
+select :: Int -> (Paren -> Bool) -> [Paren] -> Int
 select n p ps
-  | n <= 0 || n > length op = Nothing
-  | otherwise               = Just . fst $ op !! pred n
+  | n == 0    = -1
+  | otherwise = fst $ op !! pred n
   where op = filter (p . snd) . zip [0 ..] $ ps
 
-selectOpen :: Int -> [Paren] -> Maybe Int
+selectOpen :: Int -> [Paren] -> Int
 selectOpen n = select n (== Open)
 
-selectClose :: Int -> [Paren] -> Maybe Int
+selectClose :: Int -> [Paren] -> Int
 selectClose n = select n (== Close)

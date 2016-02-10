@@ -45,7 +45,9 @@ forToDfuds (Forest x) = helper x
           in (x, p) : helper l ++ helper r
 
 ordToDfuds :: OrdTree a => a -> [(Last Int, [Paren])]
-ordToDfuds = forToDfuds . toForest
+ordToDfuds x = (Last Nothing, replicate (length l) Open ++ [Close]) :
+               forToDfuds f
+  where f@(Forest l) = toForest x
 
 
 newtype OrdTreeT1 = OrdTreeT1 (Forest (Last Int)) deriving Show
