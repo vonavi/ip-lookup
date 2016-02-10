@@ -6,12 +6,16 @@ module Data.Bp
        (
          parent
        , firstChild
+       , lastChild
        , nextSibling
+       , prevSibling
        , subtreeSize
+       , degree
        , child
        ) where
 
 import Data.Monoid
+import Data.Maybe (fromMaybe)
 import Control.Monad (guard)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State
@@ -49,6 +53,13 @@ firstChild n bp
   where ps = toParens bp
         nx = succ n
 
+lastChild :: Bp a => Int -> a -> Maybe Int
+lastChild n bp
+  | not (isClose n ps) = do nc <- findClose n ps
+                            lastChild nc bp
+  | otherwise          = findOpen (pred n) ps
+  where ps = toParens bp
+
 nextSibling :: Bp a => Int -> a -> Maybe Int
 nextSibling n bp
   | not (isClose n ps) = do nc <- findClose n ps
@@ -58,13 +69,21 @@ nextSibling n bp
   where ps = toParens bp
         nx = succ n
 
-subtreeSize :: Bp a => Int -> a -> Maybe Int
-subtreeSize n bp
-  | not (isClose n ps) = do nc <- findClose n ps
-                            Just $ (nc - n + 1) `div` 2
-  | otherwise          = do no <- findOpen n ps
-                            Just $ (n - no + 1) `div` 2
+prevSibling :: Bp a => Int -> a -> Maybe Int
+prevSibling n bp
+  | not (isOpen n ps) = do no <- findOpen n ps
+                           prevSibling no bp
+  | otherwise         = findOpen (pred n) ps
   where ps = toParens bp
+
+subtreeSize :: Bp a => Int -> a -> Int
+subtreeSize n bp = fromMaybe 0 . helper $ n
+  where ps = toParens bp
+        helper n
+          | not (isClose n ps) = do nc <- findClose n ps
+                                    Just $ (nc - n + 1) `div` 2
+          | otherwise          = do no <- findOpen n ps
+                                    Just $ (n - no + 1) `div` 2
 
 childStateT :: Int -> [Paren] -> StateT [Int] Maybe ()
 childStateT n ps
@@ -72,6 +91,14 @@ childStateT n ps
   | otherwise          = do no <- lift $ findOpen n ps
                             modify (no :)
                             childStateT (pred no) ps
+
+degree :: Bp a => Int -> a -> Int
+degree n bp = length . fromMaybe [] . helper $ n
+  where ps = toParens bp
+        helper n
+          | not (isClose n ps) = do nc <- findClose n ps
+                                    helper nc
+          | otherwise          = execStateT (childStateT (pred n) ps) []
 
 child :: Bp a => Int -> Int -> a -> Maybe Int
 child n i bp
