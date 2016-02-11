@@ -12,11 +12,20 @@ module Data.Dfuds
        , subtreeSize
        , degree
        , child
+       , DfudsT1
+       , ordToDfudsT1
+       , DfudsT2
+       , ordToDfudsT2
+       , DfudsT3
+       , ordToDfudsT3
+       , DfudsT4
+       , ordToDfudsT4
        ) where
 
 import Data.Monoid
-import Data.Maybe (fromMaybe)
+import Data.Maybe
 import Control.Applicative ((<*>))
+import Control.Monad.State
 
 import Data.Paren
 import Data.OrdTree
@@ -24,9 +33,24 @@ import Data.OrdTree
 class Dfuds a where
   getList :: a -> [(Last Int, [Paren])]
 
+  bLeftChild   :: Int -> a -> Maybe Int
+  bRightChild  :: Int -> a -> Maybe Int
+  bParent      :: Int -> a -> Maybe Int
+  bSubtreeSize :: Int -> a -> Int
+
+  bSubtreeSize n dfuds = execState (bSubtreeSizeState n dfuds) 0
+
 instance Dfuds a => Show a where
   show = concatMap helper . getList
     where helper (x, l) = show (getLast x, l) ++ " "
+
+bSubtreeSizeState :: Dfuds a => Int -> a -> State Int ()
+bSubtreeSizeState n dfuds = do
+  let l = bLeftChild n dfuds
+      r = bRightChild n dfuds
+  when (isJust l) $ bSubtreeSizeState (fromJust l) dfuds
+  when (isJust r) $ bSubtreeSizeState (fromJust r) dfuds
+  modify succ
 
 toParens :: Dfuds a => a -> [Paren]
 toParens = concatMap snd . getList
@@ -75,3 +99,59 @@ child n i dfuds
                    Just $ succ no
   where ps = toParens dfuds
         d  = degree n dfuds
+
+
+newtype DfudsT1 = DfudsT1 [(Last Int, [Paren])]
+
+ordToDfudsT1 :: OrdTreeT1 -> DfudsT1
+ordToDfudsT1 = DfudsT1 . ordToDfuds
+
+instance Dfuds DfudsT1 where
+  getList (DfudsT1 x) = x
+
+  bLeftChild      = firstChild
+  bRightChild     = nextSibling
+  bParent n dfuds =
+    getFirst $ First (prevSibling n dfuds) <> First (parent n dfuds)
+
+
+newtype DfudsT2 = DfudsT2 [(Last Int, [Paren])]
+
+ordToDfudsT2 :: OrdTreeT2 -> DfudsT2
+ordToDfudsT2 = DfudsT2 . ordToDfuds
+
+instance Dfuds DfudsT2 where
+  getList (DfudsT2 x) = x
+
+  bLeftChild      = lastChild
+  bRightChild     = prevSibling
+  bParent n dfuds =
+    getFirst $ First (nextSibling n dfuds) <> First (parent n dfuds)
+
+
+newtype DfudsT3 = DfudsT3 [(Last Int, [Paren])]
+
+ordToDfudsT3 :: OrdTreeT3 -> DfudsT3
+ordToDfudsT3 = DfudsT3 . ordToDfuds
+
+instance Dfuds DfudsT3 where
+  getList (DfudsT3 x) = x
+
+  bLeftChild      = nextSibling
+  bRightChild     = firstChild
+  bParent n dfuds =
+    getFirst $ First (prevSibling n dfuds) <> First (parent n dfuds)
+
+
+newtype DfudsT4 = DfudsT4 [(Last Int, [Paren])]
+
+ordToDfudsT4 :: OrdTreeT4 -> DfudsT4
+ordToDfudsT4 = DfudsT4 . ordToDfuds
+
+instance Dfuds DfudsT4 where
+  getList (DfudsT4 x) = x
+
+  bLeftChild      = prevSibling
+  bRightChild     = lastChild
+  bParent n dfuds =
+    getFirst $ First (nextSibling n dfuds) <> First (parent n dfuds)
