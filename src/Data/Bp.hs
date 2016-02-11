@@ -12,11 +12,19 @@ module Data.Bp
        , subtreeSize
        , degree
        , child
+       , BpT1
+       , ordToBpT1
+       , BpT2
+       , ordToBpT2
+       , BpT3
+       , ordToBpT3
+       , BpT4
+       , ordToBpT4
        ) where
 
 import Data.Monoid
-import Data.Maybe (fromMaybe)
-import Control.Monad (guard)
+import Data.Maybe
+import Control.Monad (guard, when)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State
 
@@ -26,11 +34,26 @@ import Data.OrdTree
 class Bp a where
   getList :: a -> [(Last Int, Paren)]
 
+  bLeftChild   :: Int -> a -> Maybe Int
+  bRightChild  :: Int -> a -> Maybe Int
+  bParent      :: Int -> a -> Maybe Int
+  bSubtreeSize :: Int -> a -> Int
+
+  bSubtreeSize n bp = execState (bSubtreeSizeState n bp) 0
+
 instance Bp a => Show a where
   show = concatMap helper . getList
     where helper (x, l) = if l == Open
                           then show l ++ show (getLast x) ++ " "
                           else show (getLast x) ++ show l ++ " "
+
+bSubtreeSizeState :: Bp a => Int -> a -> State Int ()
+bSubtreeSizeState n bp = do
+  let l = bLeftChild n bp
+      r = bRightChild n bp
+  when (isJust l) $ bSubtreeSizeState (fromJust l) bp
+  when (isJust r) $ bSubtreeSizeState (fromJust r) bp
+  modify succ
 
 toParens :: Bp a => a -> [Paren]
 toParens = helper . getList
@@ -109,3 +132,59 @@ child n i bp
       guard $ i >= 0 && i < length iList
       Just $ iList !! i
   where ps = toParens bp
+
+
+newtype BpT1 = BpT1 [(Last Int, Paren)]
+
+ordToBpT1 :: OrdTreeT1 -> BpT1
+ordToBpT1 = BpT1 . ordToBp
+
+instance Bp BpT1 where
+  getList (BpT1 x) = x
+
+  bLeftChild   = firstChild
+  bRightChild  = nextSibling
+  bParent n bp =
+    getFirst $ First (prevSibling n bp) <> First (parent n bp)
+
+
+newtype BpT2 = BpT2 [(Last Int, Paren)]
+
+ordToBpT2 :: OrdTreeT2 -> BpT2
+ordToBpT2 = BpT2 . ordToBp
+
+instance Bp BpT2 where
+  getList (BpT2 x) = x
+
+  bLeftChild   = lastChild
+  bRightChild  = prevSibling
+  bParent n bp =
+    getFirst $ First (nextSibling n bp) <> First (parent n bp)
+
+
+newtype BpT3 = BpT3 [(Last Int, Paren)]
+
+ordToBpT3 :: OrdTreeT3 -> BpT3
+ordToBpT3 = BpT3 . ordToBp
+
+instance Bp BpT3 where
+  getList (BpT3 x) = x
+
+  bLeftChild   = nextSibling
+  bRightChild  = firstChild
+  bParent n bp =
+    getFirst $ First (prevSibling n bp) <> First (parent n bp)
+
+
+newtype BpT4 = BpT4 [(Last Int, Paren)]
+
+ordToBpT4 :: OrdTreeT4 -> BpT4
+ordToBpT4 = BpT4 . ordToBp
+
+instance Bp BpT4 where
+  getList (BpT4 x) = x
+
+  bLeftChild   = prevSibling
+  bRightChild  = lastChild
+  bParent n bp =
+    getFirst $ First (nextSibling n bp) <> First (parent n bp)
