@@ -48,12 +48,14 @@ instance Bp a => Show a where
                           else show (getLast x) ++ show l ++ " "
 
 bSubtreeSizeState :: Bp a => Int -> a -> State Int ()
-bSubtreeSizeState n bp = do
-  let l = bLeftChild n bp
-      r = bRightChild n bp
-  when (isJust l) $ bSubtreeSizeState (fromJust l) bp
-  when (isJust r) $ bSubtreeSizeState (fromJust r) bp
-  modify succ
+bSubtreeSizeState n bp
+  | n < 0 || n >= length (getList bp) = return ()
+  | otherwise                         = do
+      let l = bLeftChild n bp
+          r = bRightChild n bp
+      when (isJust l) $ bSubtreeSizeState (fromJust l) bp
+      when (isJust r) $ bSubtreeSizeState (fromJust r) bp
+      modify succ
 
 toParens :: Bp a => a -> [Paren]
 toParens = helper . getList

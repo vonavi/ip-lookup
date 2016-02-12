@@ -45,12 +45,14 @@ instance Dfuds a => Show a where
     where helper (x, l) = show (getLast x, l) ++ " "
 
 bSubtreeSizeState :: Dfuds a => Int -> a -> State Int ()
-bSubtreeSizeState n dfuds = do
-  let l = bLeftChild n dfuds
-      r = bRightChild n dfuds
-  when (isJust l) $ bSubtreeSizeState (fromJust l) dfuds
-  when (isJust r) $ bSubtreeSizeState (fromJust r) dfuds
-  modify succ
+bSubtreeSizeState n dfuds
+  | n < 0 || n >= length (getList dfuds) = return ()
+  | otherwise                            = do
+      let l = bLeftChild n dfuds
+          r = bRightChild n dfuds
+      when (isJust l) $ bSubtreeSizeState (fromJust l) dfuds
+      when (isJust r) $ bSubtreeSizeState (fromJust r) dfuds
+      modify succ
 
 toParens :: Dfuds a => a -> [Paren]
 toParens = concatMap snd . getList
