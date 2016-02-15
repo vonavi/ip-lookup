@@ -17,9 +17,11 @@ import Data.IpRouter
 import Data.Paren
 
 class OrdTree t where
-  toForest    :: t      -> Forest (Last Int)
-  fromEntry   :: Entry  -> t
-  lookupState :: [Bool] -> t -> State (Last Int) ()
+  toForest      :: t      -> Forest (Last Int)
+  fromEntry     :: Entry  -> t
+  lookupState   :: [Bool] -> t -> State (Last Int) ()
+  bLeftSubtree  :: t      -> t
+  bRightSubtree :: t      -> t
 
 instance (Monoid a, OrdTree a) => IpRouter a where
   ipInsert e t = t `mappend` fromEntry e
@@ -80,6 +82,14 @@ instance OrdTree OrdTreeT1 where
             modify (`mappend` x)
             helper bs $ if b then l else r
 
+  bLeftSubtree = OrdTreeT1 . Forest . helper . toForest
+    where helper (Forest [])                  = []
+          helper (Forest ((_, Forest l) : _)) = l
+
+  bRightSubtree = OrdTreeT1 . Forest . helper . toForest
+    where helper (Forest []) = []
+          helper (Forest x)  = tail x
+
 
 newtype OrdTreeT2 = OrdTreeT2 (Forest (Last Int)) deriving Show
 
@@ -116,6 +126,14 @@ instance OrdTree OrdTreeT2 where
               where (x, Forest r) = last xs
                     l             = init xs
 
+  bLeftSubtree = OrdTreeT2 . Forest . helper . toForest
+    where helper (Forest []) = []
+          helper (Forest x)  = getNodes . snd . last $ x
+
+  bRightSubtree = OrdTreeT2 . Forest . helper . toForest
+    where helper (Forest []) = []
+          helper (Forest x)  = init x
+
 
 newtype OrdTreeT3 = OrdTreeT3 (Forest (Last Int)) deriving Show
 
@@ -146,6 +164,14 @@ instance OrdTree OrdTreeT3 where
           helper (b:bs) ((x, Forest l) : r) = do
             modify (`mappend` x)
             helper bs $ if b then l else r
+
+  bLeftSubtree = OrdTreeT3 . Forest . helper . toForest
+    where helper (Forest []) = []
+          helper (Forest x)  = tail x
+
+  bRightSubtree = OrdTreeT3 . Forest . helper . toForest
+    where helper (Forest [])                  = []
+          helper (Forest ((_, Forest r) : _)) = r
 
 
 newtype OrdTreeT4 = OrdTreeT4 (Forest (Last Int)) deriving Show
@@ -182,3 +208,11 @@ instance OrdTree OrdTreeT4 where
             helper bs $ if b then l else r
               where (x, Forest l) = last xs
                     r             = init xs
+
+  bLeftSubtree = OrdTreeT4 . Forest . helper . toForest
+    where helper (Forest []) = []
+          helper (Forest x)  = init x
+
+  bRightSubtree = OrdTreeT4 . Forest . helper . toForest
+    where helper (Forest []) = []
+          helper (Forest x)  = getNodes . snd . last $ x
