@@ -16,19 +16,27 @@ import Control.Monad.State
 import Data.IpRouter
 import Data.Paren
 
+newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving Show
+
 class OrdTree t where
-  toForest      :: t      -> Forest (Last Int)
-  fromEntry     :: Entry  -> t
-  lookupState   :: [Bool] -> t -> State (Last Int) ()
-  bLeftSubtree  :: t      -> t
-  bRightSubtree :: t      -> t
+  toForest    :: t      -> Forest (Last Int)
+  fromEntry   :: Entry  -> t
+  lookupState :: [Bool] -> t -> State (Last Int) ()
+
+  size          :: t -> Int
+  bLeftSubtree  :: t -> t
+  bRightSubtree :: t -> t
+
+  size x = execState (helper . toForest $ x) 0
+    where helper :: Forest (Last Int) -> State Int ()
+          helper (Forest xs) = do
+            mapM_ (helper . snd) xs
+            modify succ
 
 instance (Monoid a, OrdTree a) => IpRouter a where
   ipInsert e t = t `mappend` fromEntry e
   ipLookup a t = getLast $
                  execState (lookupState (addrBits a) t) (Last Nothing)
-
-newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving Show
 
 forToBp :: Forest a -> [(a, Paren)]
 forToBp = helper . getNodes
