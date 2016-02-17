@@ -24,9 +24,11 @@ class OrdTree t where
   fromEntry   :: Entry  -> t
   lookupState :: [Bool] -> t -> State (Last Int) ()
 
-  size          :: t -> Int
-  bLeftSubtree  :: t -> t
-  bRightSubtree :: t -> t
+  size          :: t        -> Int
+  bRoot         :: t        -> Last Int
+  bLeftSubtree  :: t        -> t
+  bRightSubtree :: t        -> t
+  bInsertRoot   :: Last Int -> t -> t -> t
 
   isEmpty = null . getNodes . toForest
 
@@ -93,6 +95,10 @@ instance OrdTree OrdTreeT1 where
             modify (`mappend` x)
             helper bs $ if b then l else r
 
+  bRoot = helper . getNodes . toForest
+    where helper []           = Last Nothing
+          helper ((x, _) : _) = x
+
   bLeftSubtree = OrdTreeT1 . Forest . helper . toForest
     where helper (Forest [])                  = []
           helper (Forest ((_, Forest l) : _)) = l
@@ -100,6 +106,10 @@ instance OrdTree OrdTreeT1 where
   bRightSubtree = OrdTreeT1 . Forest . helper . toForest
     where helper (Forest []) = []
           helper (Forest x)  = tail x
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT1 . Forest $
+    (x, toForest ltree) : (getNodes . toForest $ rtree)
 
 
 newtype OrdTreeT2 = OrdTreeT2 (Forest (Last Int)) deriving Show
@@ -137,6 +147,10 @@ instance OrdTree OrdTreeT2 where
               where (x, Forest r) = last xs
                     l             = init xs
 
+  bRoot = helper . getNodes . toForest
+    where helper [] = Last Nothing
+          helper x  = fst . last $ x
+
   bLeftSubtree = OrdTreeT2 . Forest . helper . toForest
     where helper (Forest []) = []
           helper (Forest x)  = getNodes . snd . last $ x
@@ -144,6 +158,10 @@ instance OrdTree OrdTreeT2 where
   bRightSubtree = OrdTreeT2 . Forest . helper . toForest
     where helper (Forest []) = []
           helper (Forest x)  = init x
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT2 . Forest $
+    (getNodes . toForest $ rtree) ++ [(x, toForest ltree)]
 
 
 newtype OrdTreeT3 = OrdTreeT3 (Forest (Last Int)) deriving Show
@@ -176,6 +194,10 @@ instance OrdTree OrdTreeT3 where
             modify (`mappend` x)
             helper bs $ if b then l else r
 
+  bRoot = helper . getNodes . toForest
+    where helper []           = Last Nothing
+          helper ((x, _) : _) = x
+
   bLeftSubtree = OrdTreeT3 . Forest . helper . toForest
     where helper (Forest []) = []
           helper (Forest x)  = tail x
@@ -183,6 +205,10 @@ instance OrdTree OrdTreeT3 where
   bRightSubtree = OrdTreeT3 . Forest . helper . toForest
     where helper (Forest [])                  = []
           helper (Forest ((_, Forest r) : _)) = r
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT3 . Forest $
+    (x, toForest rtree) : (getNodes . toForest $ ltree)
 
 
 newtype OrdTreeT4 = OrdTreeT4 (Forest (Last Int)) deriving Show
@@ -220,6 +246,10 @@ instance OrdTree OrdTreeT4 where
               where (x, Forest l) = last xs
                     r             = init xs
 
+  bRoot = helper . getNodes . toForest
+    where helper [] = Last Nothing
+          helper x  = fst . last $ x
+
   bLeftSubtree = OrdTreeT4 . Forest . helper . toForest
     where helper (Forest []) = []
           helper (Forest x)  = init x
@@ -227,3 +257,7 @@ instance OrdTree OrdTreeT4 where
   bRightSubtree = OrdTreeT4 . Forest . helper . toForest
     where helper (Forest []) = []
           helper (Forest x)  = getNodes . snd . last $ x
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT4 . Forest $
+    (getNodes . toForest $ ltree) ++ [(x, toForest rtree)]
