@@ -20,6 +20,7 @@ newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving Show
 
 class OrdTree t where
   toForest    :: t      -> Forest (Last Int)
+  isEmpty     :: t      -> Bool
   fromEntry   :: Entry  -> t
   lookupState :: [Bool] -> t -> State (Last Int) ()
 
@@ -27,7 +28,9 @@ class OrdTree t where
   bLeftSubtree  :: t -> t
   bRightSubtree :: t -> t
 
-  size x = execState (helper . toForest $ x) 0
+  isEmpty = null . getNodes . toForest
+
+  size x = pred $ execState (helper . toForest $ x) 0
     where helper :: Forest (Last Int) -> State Int ()
           helper (Forest xs) = do
             mapM_ (helper . snd) xs
