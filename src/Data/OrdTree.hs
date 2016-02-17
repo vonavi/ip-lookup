@@ -2,7 +2,8 @@
 
 module Data.OrdTree
        (
-         ordToBp
+         OrdTree(..)
+       , ordToBp
        , ordToDfuds
        , OrdTreeT1
        , OrdTreeT2
