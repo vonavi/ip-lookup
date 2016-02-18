@@ -19,7 +19,7 @@ executable ip-lookup-hs
   main-is:             Main.hs
   -- other-modules:       
   other-extensions:    FlexibleInstances, UndecidableInstances, OverlappingInstances
-  build-depends:       base >=4.6 && <4.7
+  build-depends:       base >=4.6 && <4.9
                      , mtl >=2.2 && <2.3
                      , transformers >=0.4 && <0.5
                      , split >=0.2 && <0.3
@@ -29,7 +29,7 @@ executable ip-lookup-hs
 test-suite tests
   type:                exitcode-stdio-1.0
   main-is:             HSpecTests.hs
-  build-depends:       base >=4.6 && <4.7
+  build-depends:       base >=4.6 && <4.9
                      , mtl >=2.2 && <2.3
                      , split >=0.2 && <0.3
                      , transformers >=0.4 && <0.5
