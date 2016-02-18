@@ -1,3 +1,5 @@
+{-# LANGUAGE OverlappingInstances #-}
+
 module Data.BinTree
        (
          BinTree

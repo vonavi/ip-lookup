@@ -25,3 +25,14 @@ executable ip-lookup-hs
                      , split >=0.2 && <0.3
   hs-source-dirs:      src
   default-language:    Haskell2010
+
+test-suite tests
+  type:                exitcode-stdio-1.0
+  main-is:             HSpecTests.hs
+  build-depends:       base >=4.6 && <4.7
+                     , mtl >=2.2 && <2.3
+                     , split >=0.2 && <0.3
+                     , transformers >=0.4 && <0.5
+                     , hspec >= 2.2.2
+  hs-source-dirs:      tests, src
+  default-language:    Haskell2010
