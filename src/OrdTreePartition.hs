@@ -4,45 +4,71 @@ import Data.Monoid
 
 import Data.OrdTree
 
-data Pages a = Empty | Page (a, [Pages a]) deriving Show
+data Pages a = Empty
+             | Page { tree  :: a
+                    , pages :: [Pages a]
+                    }
+             deriving Show
 
 maxPageSize :: Int
 maxPageSize = 3
 
 pageSize :: OrdTree a => Pages a -> Int
-pageSize Empty    = 0
-pageSize (Page x) = size . fst $ x
+pageSize Empty = 0
+pageSize x     = size . tree $ x
 
 pageDepth :: OrdTree a => Pages a -> Int
-pageDepth Empty          = 0
-pageDepth (Page (_, xs))
-  | null xs   = 1
-  | otherwise = succ . maximum . map pageDepth $ xs
+pageDepth Empty = 0
+pageDepth x
+  | null ps   = 1
+  | otherwise = succ . maximum . map pageDepth $ ps
+  where ps = pages x
 
 
 pageMergeBoth :: (OrdTree a, Monoid a) => Last Int
                  -> Pages a -> Pages a -> Pages a
-pageMergeBoth x Empty Empty = Page (bInsertRoot x mempty mempty, [])
-pageMergeBoth x (Page (l, lps)) Empty = Page (bInsertRoot x l mempty, lps)
-pageMergeBoth x Empty (Page (r, rps)) = Page (bInsertRoot x mempty r, rps)
-pageMergeBoth x (Page (l, lps)) (Page (r, rps)) =
-  Page (bInsertRoot x l r, lps ++ rps)
+pageMergeBoth x Empty Empty = Page { tree  = bInsertRoot x mempty mempty
+                                   , pages = []
+                                   }
+pageMergeBoth x lp Empty = Page { tree  = bInsertRoot x (tree lp) mempty
+                                , pages = pages lp
+                                }
+pageMergeBoth x Empty rp = Page { tree  = bInsertRoot x mempty (tree rp)
+                                , pages = pages rp
+                                }
+pageMergeBoth x lp rp = Page { tree  = bInsertRoot x (tree lp) (tree rp)
+                             , pages = pages lp ++ pages rp
+                             }
 
 pageMergeLeft :: (OrdTree a, Monoid a) => Last Int
                  -> Pages a -> Pages a -> Pages a
-pageMergeLeft x Empty Empty = Page (bInsertRoot x mempty mempty, [])
-pageMergeLeft x (Page (l, lps)) Empty = Page (bInsertRoot x l mempty, lps)
-pageMergeLeft x Empty rpage = Page (bInsertRoot x mempty mempty, [rpage])
-pageMergeLeft x (Page (l, lps)) rpage =
-  Page (bInsertRoot x l mempty, lps ++ [rpage])
+pageMergeLeft x Empty Empty = Page { tree  = bInsertRoot x mempty mempty
+                                   , pages = []
+                                   }
+pageMergeLeft x lp Empty = Page { tree  = bInsertRoot x (tree lp) mempty
+                                , pages = pages lp
+                                }
+pageMergeLeft x Empty rp = Page { tree  = bInsertRoot x mempty mempty
+                                , pages = [rp]
+                                }
+pageMergeLeft x lp rp = Page { tree  = bInsertRoot x (tree lp) mempty
+                             , pages = pages lp ++ [rp]
+                             }
 
 pageMergeRight :: (OrdTree a, Monoid a) => Last Int
                   -> Pages a -> Pages a -> Pages a
-pageMergeRight x Empty Empty = Page (bInsertRoot x mempty mempty, [])
-pageMergeRight x lpage Empty = Page (bInsertRoot x mempty mempty, [lpage])
-pageMergeRight x Empty (Page (r, rps)) = Page (bInsertRoot x mempty r, rps)
-pageMergeRight x lpage (Page (r, rps)) =
-  Page (bInsertRoot x mempty r, lpage : rps)
+pageMergeRight x Empty Empty = Page { tree  = bInsertRoot x mempty mempty
+                                    , pages = []
+                                    }
+pageMergeRight x lp Empty = Page { tree  = bInsertRoot x mempty mempty
+                                 , pages = [lp]
+                                 }
+pageMergeRight x Empty rp = Page { tree  = bInsertRoot x mempty (tree rp)
+                                 , pages = pages rp
+                                 }
+pageMergeRight x lp rp = Page { tree  = bInsertRoot x mempty (tree rp)
+                              , pages = lp : pages rp
+                              }
 
 ordTreePartition :: (OrdTree a, Monoid a) => a -> Pages a
 ordTreePartition t
@@ -50,15 +76,15 @@ ordTreePartition t
   | lht == rht =
       if pageSize lpages + size xt + pageSize rpages <= maxPageSize
       then pageMergeBoth x lpages rpages
-      else Page (xt, [lpages, rpages])
+      else Page { tree = xt, pages = [lpages, rpages] }
   | lht > rht  =
       if size xt + pageSize lpages <= maxPageSize
       then pageMergeLeft x lpages rpages
-      else Page (xt, [lpages, rpages])
+      else Page { tree = xt, pages = [lpages, rpages] }
   | otherwise  =
       if size xt + pageSize rpages <= maxPageSize
       then pageMergeRight x lpages rpages
-      else Page (xt, [lpages, rpages])
+      else Page { tree = xt, pages = [lpages, rpages] }
   where x      = bRoot t
         xt     = bInsertRoot x mempty mempty
         lpages = ordTreePartition . bLeftSubtree $ t
