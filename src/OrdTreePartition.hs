@@ -6,27 +6,27 @@ import Data.OrdTree
 
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
 
-data Pages a = Empty
-             | Page { iTree :: a
-                    , depth :: Int
-                    , oTree :: Tree (Pages a)
-                    }
-             deriving Show
+data OrdSst a = Empty
+              | Page { iTree :: a
+                     , depth :: Int
+                     , oTree :: Tree (OrdSst a)
+                     }
+            deriving Show
 
 maxPageSize :: Int
 maxPageSize = 3
 
-pageSize :: OrdTree a => Pages a -> Int
+pageSize :: OrdTree a => OrdSst a -> Int
 pageSize Empty = 0
 pageSize x     = size . iTree $ x
 
-pageDepth :: OrdTree a => Pages a -> Int
+pageDepth :: OrdTree a => OrdSst a -> Int
 pageDepth Empty              = 0
 pageDepth Page { depth = d } = d
 
 
 pageMergeBoth :: (OrdTree a, Monoid a) => Last Int
-                 -> Pages a -> Pages a -> Pages a
+                 -> OrdSst a -> OrdSst a -> OrdSst a
 pageMergeBoth x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                    , depth = 1
                                    , oTree = Leaf Empty
@@ -45,7 +45,7 @@ pageMergeBoth x lp rp = Page { iTree = bInsertRoot x (iTree lp) (iTree rp)
                              }
 
 pageMergeLeft :: (OrdTree a, Monoid a) => Last Int
-                 -> Pages a -> Pages a -> Pages a
+                 -> OrdSst a -> OrdSst a -> OrdSst a
 pageMergeLeft x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                    , depth = 1
                                    , oTree = Leaf Empty
@@ -64,7 +64,7 @@ pageMergeLeft x lp rp = Page { iTree = bInsertRoot x (iTree lp) mempty
                              }
 
 pageMergeRight :: (OrdTree a, Monoid a) => Last Int
-                  -> Pages a -> Pages a -> Pages a
+                  -> OrdSst a -> OrdSst a -> OrdSst a
 pageMergeRight x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                     , depth = 1
                                     , oTree = Leaf Empty
@@ -82,7 +82,7 @@ pageMergeRight x lp rp = Page { iTree = bInsertRoot x mempty (iTree rp)
                               , oTree = Node (Leaf lp) (oTree rp)
                               }
 
-ordTreePartition :: (OrdTree a, Monoid a) => a -> Pages a
+ordTreePartition :: (OrdTree a, Monoid a) => a -> OrdSst a
 ordTreePartition t
   | isEmpty t  = Empty
   | lht == rht =
