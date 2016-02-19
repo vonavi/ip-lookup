@@ -1,5 +1,3 @@
-{-# LANGUAGE OverlappingInstances #-}
-
 module Data.BinTree
        (
          BinTree
@@ -39,7 +37,7 @@ lookupState []     (Bin _ x _) = modify (`mappend` x)
 lookupState (b:bs) (Bin l x r) = do modify (`mappend` x)
                                     lookupState bs $ if b then r else l
 
-instance IpRouter BinTree where
+instance {-# OVERLAPPING #-} IpRouter BinTree where
   ipBuild                = foldr (mappend . fromEntry) mempty
   ipLookup a (BinTree t) =
     getLast $ execState (lookupState (addrBits a) t) (Last Nothing)

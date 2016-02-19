@@ -1,5 +1,3 @@
-{-# LANGUAGE OverlappingInstances #-}
-
 module Data.Table
        (
          Table
@@ -19,7 +17,7 @@ instance Show Table where
           helper p l = (show . prefix) p ++ replicate (maxLen - l + 2) ' ' ++
                        (show . nextHop) p ++ "\n"
 
-instance IpRouter Table where
+instance {-# OVERLAPPING #-} IpRouter Table where
   ipBuild = Table
   ipLookup a (Table t)
     | null matches = Nothing

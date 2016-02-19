@@ -1,4 +1,5 @@
-{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances,
+             UndecidableInstances #-}
 
 module Data.OrdTree
        (
@@ -39,7 +40,7 @@ class OrdTree t where
             mapM_ (helper . snd) xs
             modify succ
 
-instance (Monoid a, OrdTree a) => IpRouter a where
+instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   ipBuild      = foldr (mappend . fromEntry) mempty
   ipLookup a t =
     getLast $ execState (lookupState (addrBits a) t) (Last Nothing)

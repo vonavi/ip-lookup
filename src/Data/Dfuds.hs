@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances,
-             UndecidableInstances,
-             OverlappingInstances #-}
+             UndecidableInstances #-}
 
 module Data.Dfuds
        (
@@ -40,7 +39,7 @@ class Dfuds a where
 
   bSubtreeSize n dfuds = execState (bSubtreeSizeState n dfuds) 0
 
-instance Dfuds a => Show a where
+instance {-# OVERLAPS #-} Dfuds a => Show a where
   show = concatMap helper . getList
     where helper (x, l) = show (getLast x, l) ++ " "
 

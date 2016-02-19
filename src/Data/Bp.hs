@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances,
-             UndecidableInstances,
-             OverlappingInstances #-}
+             UndecidableInstances #-}
 
 module Data.Bp
        (
@@ -41,7 +40,7 @@ class Bp a where
 
   bSubtreeSize n bp = execState (bSubtreeSizeState n bp) 0
 
-instance Bp a => Show a where
+instance {-# OVERLAPS #-} Bp a => Show a where
   show = concatMap helper . getList
     where helper (x, l) = if l == Open
                           then show l ++ show (getLast x) ++ " "
