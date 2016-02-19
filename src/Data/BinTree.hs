@@ -40,6 +40,7 @@ lookupState (b:bs) (Bin l x r) = do modify (`mappend` x)
                                     lookupState bs $ if b then r else l
 
 instance IpRouter BinTree where
+  ipEmpty                = mempty
   ipInsert e t           = t `mappend` fromEntry e
   ipLookup a (BinTree t) = getLast $
                            execState (lookupState (addrBits a) t) (Last Nothing)

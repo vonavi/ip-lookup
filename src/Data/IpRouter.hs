@@ -16,7 +16,6 @@ import Data.Word
 import Data.Bits
 import Data.Function (on)
 import Data.List.Split (splitOn)
-import Data.Monoid
 
 newtype Address = Address Word32
 
@@ -62,6 +61,7 @@ prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
         Mask m    = mask p
         offset    = 32 - m
 
-class Monoid a => IpRouter a where
+class IpRouter a where
+  ipEmpty  :: a
   ipInsert :: Entry   -> a -> a
   ipLookup :: Address -> a -> Maybe Int

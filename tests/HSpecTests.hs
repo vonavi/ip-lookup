@@ -9,11 +9,9 @@ import Data.BinTree
 import Data.OrdTree
 
 testIpRouter :: IpRouter a => a
-testIpRouter = insertE mempty (map toEntry l)
-  where insertE r []      = r
-        insertE r xs      = foldr (\x -> mappend (ipInsert x r)) r xs
-        toEntry (s, m, h) = let p = Prefix (strToAddr s) (strToMask m)
-                            in Entry p h
+testIpRouter = foldr ipInsert ipEmpty $ map toEntry l
+  where toEntry (s, m, h) = Entry p h
+          where p = Prefix (strToAddr s) (strToMask m)
         l = [ ("0.0.0.0",       "/0",  0)
             , ("192.168.0.0",   "/24", 1)
             , ("192.168.0.1",   "/22", 2)

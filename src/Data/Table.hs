@@ -25,6 +25,7 @@ instance Monoid Table where
   (Table x) `mappend` (Table y) = Table $ x ++ y
 
 instance IpRouter Table where
+  ipEmpty              = mempty
   ipInsert e (Table t) = Table (e:t)
 
   ipLookup a (Table t)
