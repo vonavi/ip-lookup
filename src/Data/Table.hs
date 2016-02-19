@@ -7,7 +7,6 @@ module Data.Table
 
 import Data.List
 import Data.Function (on)
-import Data.Monoid
 
 import Data.IpRouter
 
@@ -20,14 +19,8 @@ instance Show Table where
           helper p l = (show . prefix) p ++ replicate (maxLen - l + 2) ' ' ++
                        (show . nextHop) p ++ "\n"
 
-instance Monoid Table where
-  mempty                        = Table []
-  (Table x) `mappend` (Table y) = Table $ x ++ y
-
 instance IpRouter Table where
-  ipEmpty              = mempty
-  ipInsert e (Table t) = Table (e:t)
-
+  ipBuild = Table
   ipLookup a (Table t)
     | null matches = Nothing
     | otherwise    = Just . nextHop .

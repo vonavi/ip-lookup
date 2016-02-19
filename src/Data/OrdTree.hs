@@ -40,10 +40,9 @@ class OrdTree t where
             modify succ
 
 instance (Monoid a, OrdTree a) => IpRouter a where
-  ipEmpty      = mempty
-  ipInsert e t = t `mappend` fromEntry e
-  ipLookup a t = getLast $
-                 execState (lookupState (addrBits a) t) (Last Nothing)
+  ipBuild      = foldr (mappend . fromEntry) mempty
+  ipLookup a t =
+    getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
 
 forToBp :: Forest a -> [(a, Paren)]
 forToBp = helper . getNodes

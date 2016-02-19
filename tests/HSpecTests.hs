@@ -9,7 +9,7 @@ import Data.BinTree
 import Data.OrdTree
 
 testIpRouter :: IpRouter a => a
-testIpRouter = foldr ipInsert ipEmpty $ map toEntry l
+testIpRouter = ipBuild . map toEntry $ l
   where toEntry (s, m, h) = Entry p h
           where p = Prefix (strToAddr s) (strToMask m)
         l = [ ("0.0.0.0",       "/0",  0)
