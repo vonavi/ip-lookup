@@ -1,4 +1,4 @@
-module OrdTreePartition where
+module Data.OrdSst where
 
 import Data.Monoid
 
