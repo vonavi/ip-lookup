@@ -1,7 +1,9 @@
 module Data.OrdSst where
 
 import Data.Monoid
+import Control.Monad.State
 
+import Data.IpRouter
 import Data.OrdTree
 
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
@@ -107,3 +109,54 @@ minHeightOrdSst t
                      , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
                      , oTree = Node (Leaf lpage) (Leaf rpage)
                      }
+
+ordSstLookup :: OrdTree a => Address -> OrdSst a -> Maybe Int
+ordSstLookup addr t =
+  getLast $ execState (lookupState (addrBits addr) t) (Last Nothing)
+
+lookupState :: OrdTree a => [Bool] -> OrdSst a -> State (Last Int) ()
+lookupState _           Empty = return ()
+lookupState []          page  = modify (`mappend` (bRoot . iTree $ page))
+lookupState bits@(b:bs) page
+  | isEmpty t = do let Leaf p = oTree page
+                   lookupState bits p
+  | otherwise = do modify (`mappend` bRoot t)
+                   if b
+                     then do let Node _ r = oTree page
+                             lookupState bs Page { iTree = bRightSubtree t
+                                                 , depth = depth page
+                                                 , oTree = r
+                                                 }
+                     else do let Node l _ = oTree page
+                             lookupState bs Page { iTree = bLeftSubtree t
+                                                 , depth = depth page
+                                                 , oTree = l
+                                                 }
+  where t = iTree page
+
+newtype MhOrdSstT1 = MhOrdSstT1 (OrdSst OrdTreeT1) deriving Show
+
+instance IpRouter MhOrdSstT1 where
+  ipBuild = MhOrdSstT1 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT1)
+  ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
+
+
+newtype MhOrdSstT2 = MhOrdSstT2 (OrdSst OrdTreeT2) deriving Show
+
+instance IpRouter MhOrdSstT2 where
+  ipBuild = MhOrdSstT2 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT2)
+  ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
+
+
+newtype MhOrdSstT3 = MhOrdSstT3 (OrdSst OrdTreeT3) deriving Show
+
+instance IpRouter MhOrdSstT3 where
+  ipBuild = MhOrdSstT3 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT3)
+  ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
+
+
+newtype MhOrdSstT4 = MhOrdSstT4 (OrdSst OrdTreeT4) deriving Show
+
+instance IpRouter MhOrdSstT4 where
+  ipBuild = MhOrdSstT4 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT4)
+  ipLookup addr (MhOrdSstT4 t) = ordSstLookup addr t

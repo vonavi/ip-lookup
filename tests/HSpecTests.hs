@@ -7,6 +7,7 @@ import Data.IpRouter
 import Data.Table
 import Data.BinTree
 import Data.OrdTree
+import Data.OrdSst
 
 testIpRouter :: IpRouter a => a
 testIpRouter = ipBuild . map toEntry $ l
@@ -63,3 +64,15 @@ main = hspec $ do
 
     it "Check ordinal tree T4" $ do
       testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T1" $ do
+      testIpLookup (testIpRouter :: MhOrdSstT1) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T2" $ do
+      testIpLookup (testIpRouter :: MhOrdSstT2) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T3" $ do
+      testIpLookup (testIpRouter :: MhOrdSstT3) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T4" $ do
+      testIpLookup (testIpRouter :: MhOrdSstT4) `shouldBe` True

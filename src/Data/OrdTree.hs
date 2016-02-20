@@ -3,7 +3,13 @@
 
 module Data.OrdTree
        (
-         OrdTree(..)
+         OrdTree( isEmpty
+                , size
+                , bRoot
+                , bLeftSubtree
+                , bRightSubtree
+                , bInsertRoot
+                )
        , ordToBp
        , ordToDfuds
        , OrdTreeT1
