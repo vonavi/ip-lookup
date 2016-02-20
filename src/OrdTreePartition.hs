@@ -82,8 +82,8 @@ pageMergeRight x lp rp = Page { iTree = bInsertRoot x mempty (iTree rp)
                               , oTree = Node (Leaf lp) (oTree rp)
                               }
 
-ordTreePartition :: (OrdTree a, Monoid a) => a -> OrdSst a
-ordTreePartition t
+minHeightOrdSst :: (OrdTree a, Monoid a) => a -> OrdSst a
+minHeightOrdSst t
   | isEmpty t  = Empty
   | lht == rht =
       if pageSize lpage + size xt + pageSize rpage <= maxPageSize
@@ -99,8 +99,8 @@ ordTreePartition t
       else npage
   where x     = bRoot t
         xt    = bInsertRoot x mempty mempty
-        lpage = ordTreePartition . bLeftSubtree $ t
-        rpage = ordTreePartition . bRightSubtree $ t
+        lpage = minHeightOrdSst . bLeftSubtree $ t
+        rpage = minHeightOrdSst . bRightSubtree $ t
         lht   = pageDepth lpage
         rht   = pageDepth rpage
         npage = Page { iTree = xt
