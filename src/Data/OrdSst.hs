@@ -104,6 +104,6 @@ minHeightOrdSst t
         lht   = pageDepth lpage
         rht   = pageDepth rpage
         npage = Page { iTree = xt
-                     , depth = succ $ max (depth lpage) (depth rpage)
+                     , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
                      , oTree = Node (Leaf lpage) (Leaf rpage)
                      }
