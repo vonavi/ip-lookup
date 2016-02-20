@@ -14,31 +14,31 @@ import Data.OrdTree
 
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
 
-data OrdSst a = Empty
-              | Page { iTree :: a
-                     , depth :: Int
-                     , oTree :: Tree (OrdSst a)
-                     }
+data Page a = Empty
+            | Page { iTree :: a
+                   , depth :: Int
+                   , oTree :: Tree (Page a)
+                   }
             deriving Show
 
 maxPageSize :: Int
 maxPageSize = 256
 
-pageSize :: OrdTree a => OrdSst a -> Int
+pageSize :: OrdTree a => Page a -> Int
 pageSize Empty = 0
 pageSize x     = 18 * numOfPrefixes t + 3 * size t + 1
   where t = iTree x
 
-isFitted :: OrdTree a => [OrdSst a] -> Bool
+isFitted :: OrdTree a => [Page a] -> Bool
 isFitted = (<= maxPageSize) . sum . map pageSize
 
-pageDepth :: OrdTree a => OrdSst a -> Int
+pageDepth :: OrdTree a => Page a -> Int
 pageDepth Empty              = 0
 pageDepth Page { depth = d } = d
 
 
 pageMergeBoth :: (OrdTree a, Monoid a) => Last Int
-                 -> OrdSst a -> OrdSst a -> OrdSst a
+                 -> Page a -> Page a -> Page a
 pageMergeBoth x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                    , depth = 1
                                    , oTree = Leaf Empty
@@ -57,7 +57,7 @@ pageMergeBoth x lp rp = Page { iTree = bInsertRoot x (iTree lp) (iTree rp)
                              }
 
 pageMergeLeft :: (OrdTree a, Monoid a) => Last Int
-                 -> OrdSst a -> OrdSst a -> OrdSst a
+                 -> Page a -> Page a -> Page a
 pageMergeLeft x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                    , depth = 1
                                    , oTree = Leaf Empty
@@ -76,7 +76,7 @@ pageMergeLeft x lp rp = Page { iTree = bInsertRoot x (iTree lp) mempty
                              }
 
 pageMergeRight :: (OrdTree a, Monoid a) => Last Int
-                  -> OrdSst a -> OrdSst a -> OrdSst a
+                  -> Page a -> Page a -> Page a
 pageMergeRight x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                     , depth = 1
                                     , oTree = Leaf Empty
@@ -94,7 +94,7 @@ pageMergeRight x lp rp = Page { iTree = bInsertRoot x mempty (iTree rp)
                               , oTree = Node (Leaf lp) (oTree rp)
                               }
 
-minHeightOrdSst :: (OrdTree a, Monoid a) => a -> OrdSst a
+minHeightOrdSst :: (OrdTree a, Monoid a) => a -> Page a
 minHeightOrdSst t
   | isEmpty t  = Empty
   | lht == rht =
@@ -120,11 +120,11 @@ minHeightOrdSst t
                      , oTree = Node (Leaf lpage) (Leaf rpage)
                      }
 
-ordSstLookup :: OrdTree a => Address -> OrdSst a -> Maybe Int
+ordSstLookup :: OrdTree a => Address -> Page a -> Maybe Int
 ordSstLookup addr t =
   getLast $ execState (lookupState (addrBits addr) t) (Last Nothing)
 
-lookupState :: OrdTree a => [Bool] -> OrdSst a -> State (Last Int) ()
+lookupState :: OrdTree a => [Bool] -> Page a -> State (Last Int) ()
 lookupState _           Empty = return ()
 lookupState []          page  = modify (`mappend` (bRoot . iTree $ page))
 lookupState bits@(b:bs) page
@@ -145,28 +145,28 @@ lookupState bits@(b:bs) page
   where t = iTree page
 
 
-newtype MhOrdSstT1 = MhOrdSstT1 (OrdSst OrdTreeT1) deriving Show
+newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
 
 instance IpRouter MhOrdSstT1 where
   ipBuild = MhOrdSstT1 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT1)
   ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
 
 
-newtype MhOrdSstT2 = MhOrdSstT2 (OrdSst OrdTreeT2) deriving Show
+newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
 
 instance IpRouter MhOrdSstT2 where
   ipBuild = MhOrdSstT2 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT2)
   ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
 
 
-newtype MhOrdSstT3 = MhOrdSstT3 (OrdSst OrdTreeT3) deriving Show
+newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
 
 instance IpRouter MhOrdSstT3 where
   ipBuild = MhOrdSstT3 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT3)
   ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
 
 
-newtype MhOrdSstT4 = MhOrdSstT4 (OrdSst OrdTreeT4) deriving Show
+newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
 
 instance IpRouter MhOrdSstT4 where
   ipBuild = MhOrdSstT4 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT4)
