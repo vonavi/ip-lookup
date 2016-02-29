@@ -148,26 +148,26 @@ lookupState bits@(b:bs) page
 newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
 
 instance IpRouter MhOrdSstT1 where
-  ipBuild = MhOrdSstT1 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT1)
+  mkTable = MhOrdSstT1 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT1)
   ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
 
 
 newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
 
 instance IpRouter MhOrdSstT2 where
-  ipBuild = MhOrdSstT2 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT2)
+  mkTable = MhOrdSstT2 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT2)
   ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
 
 
 newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
 
 instance IpRouter MhOrdSstT3 where
-  ipBuild = MhOrdSstT3 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT3)
+  mkTable = MhOrdSstT3 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT3)
   ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
 
 
 newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
 
 instance IpRouter MhOrdSstT4 where
-  ipBuild = MhOrdSstT4 . minHeightOrdSst . (ipBuild :: [Entry] -> OrdTreeT4)
+  mkTable = MhOrdSstT4 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT4)
   ipLookup addr (MhOrdSstT4 t) = ordSstLookup addr t

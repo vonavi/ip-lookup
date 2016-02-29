@@ -18,7 +18,7 @@ instance Show Table where
                        (show . nextHop) p ++ "\n"
 
 instance {-# OVERLAPPING #-} IpRouter Table where
-  ipBuild = Table
+  mkTable = Table
   ipLookup a (Table t)
     | null matches = Nothing
     | otherwise    = Just . nextHop .

@@ -10,7 +10,7 @@ import Data.OrdTree
 import Data.OrdSst
 
 testIpRouter :: IpRouter a => a
-testIpRouter = ipBuild . map toEntry $ l
+testIpRouter = mkTable . map toEntry $ l
   where toEntry (s, m, h) = Entry p h
           where p = Prefix (strToAddr s) (strToMask m)
         l = [ ("0.0.0.0",       "/0",  0)

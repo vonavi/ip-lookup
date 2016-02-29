@@ -58,7 +58,7 @@ class OrdTree t where
             when (isJust . getLast $ x) $ modify succ
 
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
-  ipBuild      = foldr (mappend . fromEntry) mempty
+  mkTable      = foldr (mappend . fromEntry) mempty
   ipLookup a t =
     getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
 

@@ -38,6 +38,6 @@ lookupState (b:bs) (Bin l x r) = do modify (`mappend` x)
                                     lookupState bs $ if b then r else l
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
-  ipBuild                = foldr (mappend . fromEntry) mempty
+  mkTable                = foldr (mappend . fromEntry) mempty
   ipLookup a (BinTree t) =
     getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
