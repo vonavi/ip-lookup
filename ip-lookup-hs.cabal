@@ -18,7 +18,10 @@ cabal-version:       >=1.10
 executable ip-lookup-hs
   main-is:             Main.hs
   -- other-modules:       
-  other-extensions:    FlexibleInstances, UndecidableInstances
+  other-extensions:    FlexibleContexts
+                     , FlexibleInstances
+                     , IncoherentInstances
+                     , UndecidableInstances
   build-depends:       base >=4.8 && <4.9
                      , mtl >=2.2 && <2.3
                      , random >= 1.1 && <1.2

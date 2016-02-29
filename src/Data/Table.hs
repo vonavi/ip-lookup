@@ -19,8 +19,11 @@ instance Show Table where
 
 instance {-# OVERLAPPING #-} IpRouter Table where
   mkTable = Table
+
   ipLookup a (Table t)
     | null matches = Nothing
     | otherwise    = Just . nextHop .
                      maximumBy (compare `on` (mask . prefix)) $ matches
     where matches = filter (prefixMatch a) t
+
+  numOfPrefixes (Table t) = length t

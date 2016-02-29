@@ -62,5 +62,6 @@ prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
         offset    = 32 - m
 
 class IpRouter a where
-  mkTable  :: [Entry] -> a
-  ipLookup :: Address -> a -> Maybe Int
+  mkTable       :: [Entry] -> a
+  ipLookup      :: Address -> a -> Maybe Int
+  numOfPrefixes :: a       -> Int

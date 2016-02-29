@@ -3,6 +3,7 @@ module Data.BinTree
          BinTree
        ) where
 
+import Data.Maybe (isJust)
 import Data.Monoid
 import Control.Monad.State
 
@@ -38,6 +39,15 @@ lookupState (b:bs) (Bin l x r) = do modify (`mappend` x)
                                     lookupState bs $ if b then r else l
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
-  mkTable                = foldr (mappend . fromEntry) mempty
+  mkTable = foldr (mappend . fromEntry) mempty
+
   ipLookup a (BinTree t) =
     getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
+
+  numOfPrefixes (BinTree t) = execState (helperS t) 0
+    where helperS :: Tree (Last Int) -> State Int ()
+          helperS Tip         = return ()
+          helperS (Bin l x r) = do
+            helperS l
+            helperS r
+            when (isJust . getLast $ x) $ modify succ
