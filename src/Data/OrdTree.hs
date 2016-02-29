@@ -9,6 +9,7 @@ module Data.OrdTree
                 , bLeftSubtree
                 , bRightSubtree
                 , bInsertRoot
+                , numOfPrefixes
                 )
        , ordToBp
        , ordToDfuds
@@ -19,6 +20,7 @@ module Data.OrdTree
        ) where
 
 import Data.Monoid
+import Data.Maybe (isJust)
 import Control.Monad.State
 
 import Data.IpRouter
@@ -37,6 +39,7 @@ class OrdTree t where
   bLeftSubtree  :: t        -> t
   bRightSubtree :: t        -> t
   bInsertRoot   :: Last Int -> t -> t -> t
+  numOfPrefixes :: t        -> Int
 
   isEmpty = null . getNodes . toForest
 
@@ -45,6 +48,14 @@ class OrdTree t where
           helper (Forest xs) = do
             mapM_ (helper . snd) xs
             modify succ
+
+  numOfPrefixes x = execState (helper . toForest $ x) 0
+    where helper :: Forest (Last Int) -> State Int ()
+          helper (Forest [])           = return ()
+          helper (Forest ((x, l) : r)) = do
+            helper l
+            helper (Forest r)
+            when (isJust . getLast $ x) $ modify succ
 
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   ipBuild      = foldr (mappend . fromEntry) mempty

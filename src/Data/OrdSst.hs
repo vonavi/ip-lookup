@@ -1,4 +1,10 @@
-module Data.OrdSst where
+module Data.OrdSst
+       (
+         MhOrdSstT1
+       , MhOrdSstT2
+       , MhOrdSstT3
+       , MhOrdSstT4
+       ) where
 
 import Data.Monoid
 import Control.Monad.State
@@ -16,11 +22,15 @@ data OrdSst a = Empty
             deriving Show
 
 maxPageSize :: Int
-maxPageSize = 3
+maxPageSize = 256
 
 pageSize :: OrdTree a => OrdSst a -> Int
 pageSize Empty = 0
-pageSize x     = size . iTree $ x
+pageSize x     = 18 * numOfPrefixes t + 3 * size t + 1
+  where t = iTree x
+
+isFitted :: OrdTree a => [OrdSst a] -> Bool
+isFitted = (<= maxPageSize) . sum . map pageSize
 
 pageDepth :: OrdTree a => OrdSst a -> Int
 pageDepth Empty              = 0
@@ -88,15 +98,15 @@ minHeightOrdSst :: (OrdTree a, Monoid a) => a -> OrdSst a
 minHeightOrdSst t
   | isEmpty t  = Empty
   | lht == rht =
-      if pageSize lpage + size xt + pageSize rpage <= maxPageSize
+      if isFitted [npage, lpage, rpage]
       then pageMergeBoth x lpage rpage
       else npage
   | lht > rht  =
-      if size xt + pageSize lpage <= maxPageSize
+      if isFitted [npage, lpage]
       then pageMergeLeft x lpage rpage
       else npage
   | otherwise  =
-      if size xt + pageSize rpage <= maxPageSize
+      if isFitted [npage, rpage]
       then pageMergeRight x lpage rpage
       else npage
   where x     = bRoot t
@@ -133,6 +143,7 @@ lookupState bits@(b:bs) page
                                                  , oTree = l
                                                  }
   where t = iTree page
+
 
 newtype MhOrdSstT1 = MhOrdSstT1 (OrdSst OrdTreeT1) deriving Show
 
