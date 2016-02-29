@@ -4,6 +4,7 @@ import Test.Hspec
 import Data.Monoid
 
 import Data.IpRouter
+import RandomPrefixes
 import Data.Table
 import Data.BinTree
 import Data.OrdTree
@@ -44,6 +45,14 @@ testIpLookup router = and $ zipWith (==) testHopList nextHopList
                   , Just 0
                   ]
 
+randomIpRouter :: IpRouter a => Int -> a
+randomIpRouter n
+  | n == 0    = mkTable []
+  | otherwise = mkTable entries
+  where zeroEntry = Entry (Prefix (Address 0) (Mask 0)) 0
+        entries   = zeroEntry : randomEntries (32, 32) [1 .. pred n]
+
+
 main :: IO ()
 main = hspec $ do
   describe "Simple IP lookups" $ do
@@ -76,3 +85,35 @@ main = hspec $ do
 
     it "Check min-height SST for ordinal tree T4" $ do
       testIpLookup (testIpRouter :: MhOrdSstT4) `shouldBe` True
+
+  describe "Number of random prefixes" $ do
+    let n = 1000
+    it "Check table" $ do
+      numOfPrefixes (randomIpRouter n :: Table) `shouldBe` n
+
+    it "Check binary tree" $ do
+      numOfPrefixes (randomIpRouter n :: BinTree) `shouldBe` n
+
+    it "Check ordinal tree T1" $ do
+      numOfPrefixes (randomIpRouter n :: OrdTreeT1) `shouldBe` n
+
+    it "Check ordinal tree T2" $ do
+      numOfPrefixes (randomIpRouter n :: OrdTreeT2) `shouldBe` n
+
+    it "Check ordinal tree T3" $ do
+      numOfPrefixes (randomIpRouter n :: OrdTreeT3) `shouldBe` n
+
+    it "Check ordinal tree T4" $ do
+      numOfPrefixes (randomIpRouter n :: OrdTreeT4) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T1" $ do
+      numOfPrefixes (randomIpRouter n :: MhOrdSstT1) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T2" $ do
+      numOfPrefixes (randomIpRouter n :: MhOrdSstT2) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T3" $ do
+      numOfPrefixes (randomIpRouter n :: MhOrdSstT3) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T4" $ do
+      numOfPrefixes (randomIpRouter n :: MhOrdSstT4) `shouldBe` n
