@@ -49,6 +49,12 @@ genRandomEntries :: Int -> [Entry]
 genRandomEntries n = Entry (Prefix (Address 0) (Mask 0)) 0 :
                      randomEntries (32, 32) [1 .. pred n]
 
+insEntries :: IpRouter a => a -> [Entry] -> a
+insEntries = foldr insEntry
+
+delEntries :: IpRouter a => a -> [Entry] -> a
+delEntries = foldr delEntry
+
 
 main :: IO ()
 main = hspec $ do
@@ -115,3 +121,21 @@ main = hspec $ do
 
     it "Check min-height SST for ordinal tree T4" $ do
       numOfPrefixes (mkTable e :: MhOrdSstT4) `shouldBe` n
+
+  describe "Insertion of random prefixes" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check table" $ do
+      numOfPrefixes (insEntries (mkTable [] :: Table) e) `shouldBe` n
+
+    it "Check binary tree" $ do
+      numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
+
+  describe "Deletion of random prefixes" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check table" $ do
+      numOfPrefixes (delEntries (mkTable e :: Table) e) `shouldBe` 0
+
+    it "Check binary tree" $ do
+      numOfPrefixes (delEntries (mkTable e :: BinTree) e) `shouldBe` 0
