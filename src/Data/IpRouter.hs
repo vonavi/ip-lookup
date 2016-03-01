@@ -17,7 +17,7 @@ import Data.Bits
 import Data.Function (on)
 import Data.List.Split (splitOn)
 
-newtype Address = Address Word32
+newtype Address = Address Word32 deriving Eq
 
 instance Show Address where
   show (Address x) = tail $ concatMap ((++) "." . show) parts
@@ -42,6 +42,7 @@ instance Show Mask where
 data Prefix = Prefix { address :: Address
                      , mask    :: Mask
                      }
+            deriving Eq
 
 instance Show Prefix where
   show x = (show . address) x ++ (show . mask) x
@@ -53,7 +54,8 @@ prefixBits p = map (`testBit` 31) . take m . iterate (`shift` 1) $ a
 
 data Entry = Entry { prefix  :: Prefix
                    , nextHop :: Int
-                   } deriving Show
+                   }
+           deriving (Eq, Show)
 
 prefixMatch :: Address -> Entry -> Bool
 prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
@@ -63,5 +65,7 @@ prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
 
 class IpRouter a where
   mkTable       :: [Entry] -> a
+  insEntry      :: Entry   -> a -> a
+  delEntry      :: Entry   -> a -> a
   ipLookup      :: Address -> a -> Maybe Int
   numOfPrefixes :: a       -> Int

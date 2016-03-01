@@ -181,6 +181,8 @@ newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
 
 instance IpRouter MhOrdSstT1 where
   mkTable = MhOrdSstT1 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT1)
+  insEntry = undefined
+  delEntry = undefined
   ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT1 t) = numOfPrefixes' t
 
@@ -194,6 +196,8 @@ newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
 
 instance IpRouter MhOrdSstT2 where
   mkTable = MhOrdSstT2 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT2)
+  insEntry = undefined
+  delEntry = undefined
   ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT2 t) = numOfPrefixes' t
 
@@ -207,6 +211,8 @@ newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
 
 instance IpRouter MhOrdSstT3 where
   mkTable = MhOrdSstT3 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT3)
+  insEntry = undefined
+  delEntry = undefined
   ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT3 t) = numOfPrefixes' t
 
@@ -220,6 +226,8 @@ newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
 
 instance IpRouter MhOrdSstT4 where
   mkTable = MhOrdSstT4 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT4)
+  insEntry = undefined
+  delEntry = undefined
   ipLookup addr (MhOrdSstT4 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT4 t) = numOfPrefixes' t
 

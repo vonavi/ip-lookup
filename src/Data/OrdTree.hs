@@ -50,6 +50,9 @@ class OrdTree t where
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   mkTable = foldr (mappend . fromEntry) mempty
 
+  insEntry = undefined
+  delEntry = undefined
+
   ipLookup a t =
     getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
 

@@ -8,7 +8,7 @@ import Data.Function (on)
 
 import Data.IpRouter
 
-newtype Table = Table [Entry]
+newtype Table = Table [Entry] deriving Eq
 
 instance Show Table where
   show (Table t) = concat $ zipWith helper t lenList
@@ -19,6 +19,10 @@ instance Show Table where
 
 instance {-# OVERLAPPING #-} IpRouter Table where
   mkTable = Table
+
+  insEntry e (Table t) = Table (e:t)
+
+  delEntry e (Table t) = Table $ delete e t
 
   ipLookup a (Table t)
     | null matches = Nothing
