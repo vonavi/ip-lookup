@@ -3,7 +3,8 @@
 
 module Data.OrdSst
        (
-         MhOrdSstT1
+         OrdSst(..)
+       , MhOrdSstT1
        , MhOrdSstT2
        , MhOrdSstT3
        , MhOrdSstT4
@@ -23,6 +24,12 @@ data Page a = Empty
                    , oTree :: Tree (Page a)
                    }
             deriving Show
+
+class OrdSst a where
+  height     :: a -> Int
+  numOfPages :: a -> Int
+  fillSize   :: a -> Int
+
 
 maxPageSize :: Int
 maxPageSize = 256
@@ -163,6 +170,12 @@ foldState f page  = case oTree page of
 numOfPrefixes' :: (OrdTree a, Monoid a) => Page a -> Int
 numOfPrefixes' = foldOrdSst $ (+) . numOfPrefixes . iTree
 
+numOfPages' :: OrdTree a => Page a -> Int
+numOfPages' = foldOrdSst $ const succ
+
+fillSize' :: (OrdTree a, Monoid a) => Page a -> Int
+fillSize' = foldOrdSst $ (+) . pageSize
+
 
 newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
 
@@ -170,6 +183,11 @@ instance IpRouter MhOrdSstT1 where
   mkTable = MhOrdSstT1 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT1)
   ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT1 t) = numOfPrefixes' t
+
+instance OrdSst MhOrdSstT1 where
+  height (MhOrdSstT1 t)     = pageDepth t
+  numOfPages (MhOrdSstT1 t) = numOfPages' t
+  fillSize (MhOrdSstT1 t)   = fillSize' t
 
 
 newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
@@ -179,6 +197,11 @@ instance IpRouter MhOrdSstT2 where
   ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT2 t) = numOfPrefixes' t
 
+instance OrdSst MhOrdSstT2 where
+  height (MhOrdSstT2 t)     = pageDepth t
+  numOfPages (MhOrdSstT2 t) = numOfPages' t
+  fillSize (MhOrdSstT2 t)   = fillSize' t
+
 
 newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
 
@@ -187,6 +210,11 @@ instance IpRouter MhOrdSstT3 where
   ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT3 t) = numOfPrefixes' t
 
+instance OrdSst MhOrdSstT3 where
+  height (MhOrdSstT3 t)     = pageDepth t
+  numOfPages (MhOrdSstT3 t) = numOfPages' t
+  fillSize (MhOrdSstT3 t)   = fillSize' t
+
 
 newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
 
@@ -194,3 +222,8 @@ instance IpRouter MhOrdSstT4 where
   mkTable = MhOrdSstT4 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT4)
   ipLookup addr (MhOrdSstT4 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT4 t) = numOfPrefixes' t
+
+instance OrdSst MhOrdSstT4 where
+  height (MhOrdSstT4 t)     = pageDepth t
+  numOfPages (MhOrdSstT4 t) = numOfPages' t
+  fillSize (MhOrdSstT4 t)   = fillSize' t
