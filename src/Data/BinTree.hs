@@ -1,24 +1,27 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Data.BinTree
        (
          BinTree
        ) where
 
 import Data.Maybe (isJust, fromJust)
-import Data.Monoid
+import Control.Applicative ((<|>))
 import Control.Monad.State
 
 import Data.IpRouter
 
 data Tree a = Tip | Bin (Tree a) a (Tree a) deriving Show
 
-instance Monoid a => Monoid (Tree a) where
+newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving Show
+
+instance Monoid (Tree (Maybe Int)) where
   mempty = Tip
+
   Tip `mappend` x = x
   x `mappend` Tip = x
   (Bin ll x lr) `mappend` (Bin rl y rr) =
-    Bin (ll `mappend` rl) (x `mappend` y) (lr `mappend` rr)
-
-newtype BinTree = BinTree { getTree :: Tree (Last Int) } deriving Show
+    Bin (ll `mappend` rl) (x <|> y) (lr `mappend` rr)
 
 instance Monoid BinTree where
   mempty        = BinTree mempty
@@ -26,16 +29,16 @@ instance Monoid BinTree where
 
 fromEntry :: Entry -> BinTree
 fromEntry (Entry p n) = BinTree $ helper . prefixBits $ p
-  where helper :: [Bool] -> Tree (Last Int)
-        helper []     = Bin Tip (Last (Just n)) Tip
+  where helper :: [Bool] -> Tree (Maybe Int)
+        helper []     = Bin Tip (Just n) Tip
         helper (b:bs) = if b
-                        then Bin Tip (Last Nothing) (helper bs)
-                        else Bin (helper bs) (Last Nothing) Tip
+                        then Bin Tip Nothing (helper bs)
+                        else Bin (helper bs) Nothing Tip
 
-lookupState :: [Bool] -> Tree (Last Int) -> State (Last Int) ()
+lookupState :: [Bool] -> Tree (Maybe Int) -> State (Maybe Int) ()
 lookupState _      Tip         = return ()
-lookupState []     (Bin _ x _) = modify (`mappend` x)
-lookupState (b:bs) (Bin l x r) = do modify (`mappend` x)
+lookupState []     (Bin _ x _) = modify (x <|>)
+lookupState (b:bs) (Bin l x r) = do modify (x <|>)
                                     lookupState bs $ if b then r else l
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
@@ -45,26 +48,23 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   delEntry (Entry p n) (BinTree bt) = BinTree $ helper (prefixBits p) bt
     where helper _      Tip               = Tip
-          helper []     t@(Bin Tip x Tip) = if (fromJust . getLast $ x) == n
+          helper []     t@(Bin Tip x Tip) = if fromJust x == n
                                             then Tip
                                             else t
-          helper []     t@(Bin l x r)     = case getLast x of
+          helper []     t@(Bin l x r)     = case x of
                                              Nothing -> t
-                                             Just n' ->
-                                               if n' == n
-                                               then Bin l (Last Nothing) r
-                                               else t
+                                             Just n' -> if n' == n
+                                                        then Bin l Nothing r
+                                                        else t
           helper (b:bs) (Bin l x r)       = if b
                                             then Bin l x (helper bs r)
                                             else Bin (helper bs l) x r
 
-  ipLookup a (BinTree t) =
-    getLast $ execState (lookupState (addrBits a) t) (Last Nothing)
+  ipLookup a (BinTree t) = execState (lookupState (addrBits a) t) Nothing
 
   numOfPrefixes (BinTree t) = execState (helperS t) 0
-    where helperS :: Tree (Last Int) -> State Int ()
+    where helperS :: Tree (Maybe Int) -> State Int ()
           helperS Tip         = return ()
-          helperS (Bin l x r) = do
-            helperS l
-            helperS r
-            when (isJust . getLast $ x) $ modify succ
+          helperS (Bin l x r) = do helperS l
+                                   helperS r
+                                   when (isJust x) $ modify succ
