@@ -147,17 +147,21 @@ lookupState bits@(b:bs) page
                                                  }
   where t = iTree page
 
+foldOrdSst :: (Page a -> Int -> Int) -> Page a -> Int
+foldOrdSst f p = execState (foldState f p) (f p 0)
+
+foldState :: (Page a -> Int -> Int) -> Page a -> State Int ()
+foldState _ Empty = return ()
+foldState f page  = case oTree page of
+                     Leaf p   -> case p of
+                                  Empty -> return ()
+                                  _     -> do modify (f p)
+                                              foldState f p
+                     Node l r -> do foldState f $ page { oTree = l }
+                                    foldState f $ page { oTree = r }
+
 numOfPrefixes' :: (OrdTree a, Monoid a) => Page a -> Int
-numOfPrefixes' x = execState (helper x) (prefNum x)
-  where helper Empty = return ()
-        helper page  = case oTree page of
-                        Leaf p   -> case p of
-                                     Empty -> return ()
-                                     _     -> do modify (+ prefNum p)
-                                                 helper p
-                        Node l r -> do helper page { oTree = l }
-                                       helper page { oTree = r }
-        prefNum Page { iTree = t } = numOfPrefixes t
+numOfPrefixes' = foldOrdSst $ (+) . numOfPrefixes . iTree
 
 
 newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
