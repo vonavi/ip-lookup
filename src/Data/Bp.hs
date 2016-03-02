@@ -21,8 +21,8 @@ module Data.Bp
        , ordToBpT4
        ) where
 
-import Data.Monoid
 import Data.Maybe
+import Control.Applicative ((<|>))
 import Control.Monad (guard, when)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State
@@ -31,7 +31,7 @@ import Data.Paren
 import Data.OrdTree
 
 class Bp a where
-  getList :: a -> [(Last Int, Paren)]
+  getList :: a -> [(Maybe Int, Paren)]
 
   bLeftChild   :: Int -> a -> Maybe Int
   bRightChild  :: Int -> a -> Maybe Int
@@ -41,10 +41,10 @@ class Bp a where
   bSubtreeSize n bp = execState (bSubtreeSizeState n bp) 0
 
 instance {-# OVERLAPS #-} Bp a => Show a where
-  show = concatMap helper . getList
+  show = tail . concatMap helper . getList
     where helper (x, l) = if l == Open
-                          then show l ++ show (getLast x) ++ " "
-                          else show (getLast x) ++ show l ++ " "
+                          then " " ++ show l ++ show x
+                          else " " ++ show x ++ show l
 
 bSubtreeSizeState :: Bp a => Int -> a -> State Int ()
 bSubtreeSizeState n bp
@@ -135,7 +135,7 @@ child n i bp
   where ps = toParens bp
 
 
-newtype BpT1 = BpT1 [(Last Int, Paren)]
+newtype BpT1 = BpT1 [(Maybe Int, Paren)]
 
 ordToBpT1 :: OrdTreeT1 -> BpT1
 ordToBpT1 = BpT1 . ordToBp
@@ -145,11 +145,10 @@ instance Bp BpT1 where
 
   bLeftChild   = firstChild
   bRightChild  = nextSibling
-  bParent n bp =
-    getFirst $ First (prevSibling n bp) <> First (parent n bp)
+  bParent n bp = prevSibling n bp <|> parent n bp
 
 
-newtype BpT2 = BpT2 [(Last Int, Paren)]
+newtype BpT2 = BpT2 [(Maybe Int, Paren)]
 
 ordToBpT2 :: OrdTreeT2 -> BpT2
 ordToBpT2 = BpT2 . ordToBp
@@ -159,11 +158,10 @@ instance Bp BpT2 where
 
   bLeftChild   = lastChild
   bRightChild  = prevSibling
-  bParent n bp =
-    getFirst $ First (nextSibling n bp) <> First (parent n bp)
+  bParent n bp = nextSibling n bp <|> parent n bp
 
 
-newtype BpT3 = BpT3 [(Last Int, Paren)]
+newtype BpT3 = BpT3 [(Maybe Int, Paren)]
 
 ordToBpT3 :: OrdTreeT3 -> BpT3
 ordToBpT3 = BpT3 . ordToBp
@@ -173,11 +171,10 @@ instance Bp BpT3 where
 
   bLeftChild   = nextSibling
   bRightChild  = firstChild
-  bParent n bp =
-    getFirst $ First (prevSibling n bp) <> First (parent n bp)
+  bParent n bp = prevSibling n bp <|> parent n bp
 
 
-newtype BpT4 = BpT4 [(Last Int, Paren)]
+newtype BpT4 = BpT4 [(Maybe Int, Paren)]
 
 ordToBpT4 :: OrdTreeT4 -> BpT4
 ordToBpT4 = BpT4 . ordToBp
@@ -187,5 +184,4 @@ instance Bp BpT4 where
 
   bLeftChild   = prevSibling
   bRightChild  = lastChild
-  bParent n bp =
-    getFirst $ First (nextSibling n bp) <> First (parent n bp)
+  bParent n bp = nextSibling n bp <|> parent n bp
