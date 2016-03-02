@@ -135,7 +135,7 @@ main = hspec $ do
     let n = 1000
         e = genRandomEntries n
     it "Check table" $ do
-      numOfPrefixes (delEntries (mkTable e :: Table) e) `shouldBe` 0
+      delEntries (mkTable e :: Table) e `shouldBe` (mkTable [] :: Table)
 
     it "Check binary tree" $ do
-      numOfPrefixes (delEntries (mkTable e :: BinTree) e) `shouldBe` 0
+      delEntries (mkTable e :: BinTree) e `shouldBe` (mkTable [] :: BinTree)

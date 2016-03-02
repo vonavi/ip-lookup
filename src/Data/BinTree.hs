@@ -5,15 +5,15 @@ module Data.BinTree
          BinTree
        ) where
 
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
 import Control.Monad.State
 
 import Data.IpRouter
 
-data Tree a = Tip | Bin (Tree a) a (Tree a) deriving Show
+data Tree a = Tip | Bin (Tree a) a (Tree a) deriving (Eq, Show)
 
-newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving Show
+newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving (Eq, Show)
 
 instance Monoid (Tree (Maybe Int)) where
   mempty = Tip
@@ -46,19 +46,15 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   insEntry e t = t `mappend` fromEntry e
 
-  delEntry (Entry p n) (BinTree bt) = BinTree $ helper (prefixBits p) bt
-    where helper _      Tip               = Tip
-          helper []     t@(Bin Tip x Tip) = if fromJust x == n
-                                            then Tip
-                                            else t
-          helper []     t@(Bin l x r)     = case x of
-                                             Nothing -> t
-                                             Just n' -> if n' == n
-                                                        then Bin l Nothing r
-                                                        else t
-          helper (b:bs) (Bin l x r)       = if b
-                                            then Bin l x (helper bs r)
-                                            else Bin (helper bs l) x r
+  delEntry e (BinTree a) = let BinTree b = fromEntry e
+                           in BinTree $ helper a b
+    where helper Tip           _             = Tip
+          helper t             Tip           = t
+          helper (Bin lx x rx) (Bin ly y ry) =
+            collapse $ Bin (helper lx ly) z (helper rx ry)
+            where z = if x == y then Nothing else x
+                  collapse (Bin Tip Nothing Tip) = Tip
+                  collapse t                     = t
 
   ipLookup a (BinTree t) = execState (lookupState (addrBits a) t) Nothing
 
