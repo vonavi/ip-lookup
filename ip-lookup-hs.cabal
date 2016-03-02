@@ -33,13 +33,13 @@ executable ip-lookup-hs
 
 test-suite tests
   type:                exitcode-stdio-1.0
-  main-is:             HSpecTests.hs
+  main-is:             Main.hs
   build-depends:       base >=4.8 && <4.9
                      , hspec >=2.2 && <2.3
                      , mtl >=2.2 && <2.3
                      , random >= 1.1 && <1.2
                      , split >=0.2 && <0.3
                      , transformers >=0.4 && <0.5
-  hs-source-dirs:      tests, src
+  hs-source-dirs:      test, src
   default-language:    Haskell2010
   ghc-options:         -Wall -fno-warn-orphans -O2 -threaded
