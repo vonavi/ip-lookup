@@ -21,16 +21,15 @@ module Data.Dfuds
        , ordToDfudsT4
        ) where
 
-import Data.Monoid
 import Data.Maybe
-import Control.Applicative ((<*>))
+import Control.Applicative ((<*>), (<|>))
 import Control.Monad.State
 
 import Data.Paren
 import Data.OrdTree
 
 class Dfuds a where
-  getList :: a -> [(Last Int, [Paren])]
+  getList :: a -> [(Maybe Int, [Paren])]
 
   bLeftChild   :: Int -> a -> Maybe Int
   bRightChild  :: Int -> a -> Maybe Int
@@ -40,8 +39,7 @@ class Dfuds a where
   bSubtreeSize n dfuds = execState (bSubtreeSizeState n dfuds) 0
 
 instance {-# OVERLAPS #-} Dfuds a => Show a where
-  show = concatMap helper . getList
-    where helper (x, l) = show (getLast x, l) ++ " "
+  show = tail . concatMap ((++) " " . show) . getList
 
 bSubtreeSizeState :: Dfuds a => Int -> a -> State Int ()
 bSubtreeSizeState n dfuds
@@ -102,7 +100,7 @@ child n i dfuds
         d  = degree n dfuds
 
 
-newtype DfudsT1 = DfudsT1 [(Last Int, [Paren])]
+newtype DfudsT1 = DfudsT1 [(Maybe Int, [Paren])]
 
 ordToDfudsT1 :: OrdTreeT1 -> DfudsT1
 ordToDfudsT1 = DfudsT1 . ordToDfuds
@@ -112,11 +110,10 @@ instance Dfuds DfudsT1 where
 
   bLeftChild      = firstChild
   bRightChild     = nextSibling
-  bParent n dfuds =
-    getFirst $ First (prevSibling n dfuds) <> First (parent n dfuds)
+  bParent n dfuds = prevSibling n dfuds <|> parent n dfuds
 
 
-newtype DfudsT2 = DfudsT2 [(Last Int, [Paren])]
+newtype DfudsT2 = DfudsT2 [(Maybe Int, [Paren])]
 
 ordToDfudsT2 :: OrdTreeT2 -> DfudsT2
 ordToDfudsT2 = DfudsT2 . ordToDfuds
@@ -126,11 +123,10 @@ instance Dfuds DfudsT2 where
 
   bLeftChild      = lastChild
   bRightChild     = prevSibling
-  bParent n dfuds =
-    getFirst $ First (nextSibling n dfuds) <> First (parent n dfuds)
+  bParent n dfuds = nextSibling n dfuds <|> parent n dfuds
 
 
-newtype DfudsT3 = DfudsT3 [(Last Int, [Paren])]
+newtype DfudsT3 = DfudsT3 [(Maybe Int, [Paren])]
 
 ordToDfudsT3 :: OrdTreeT3 -> DfudsT3
 ordToDfudsT3 = DfudsT3 . ordToDfuds
@@ -140,11 +136,10 @@ instance Dfuds DfudsT3 where
 
   bLeftChild      = nextSibling
   bRightChild     = firstChild
-  bParent n dfuds =
-    getFirst $ First (prevSibling n dfuds) <> First (parent n dfuds)
+  bParent n dfuds = prevSibling n dfuds <|> parent n dfuds
 
 
-newtype DfudsT4 = DfudsT4 [(Last Int, [Paren])]
+newtype DfudsT4 = DfudsT4 [(Maybe Int, [Paren])]
 
 ordToDfudsT4 :: OrdTreeT4 -> DfudsT4
 ordToDfudsT4 = DfudsT4 . ordToDfuds
@@ -154,5 +149,4 @@ instance Dfuds DfudsT4 where
 
   bLeftChild      = prevSibling
   bRightChild     = lastChild
-  bParent n dfuds =
-    getFirst $ First (nextSibling n dfuds) <> First (parent n dfuds)
+  bParent n dfuds = nextSibling n dfuds <|> parent n dfuds
