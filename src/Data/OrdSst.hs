@@ -10,7 +10,7 @@ module Data.OrdSst
        , MhOrdSstT4
        ) where
 
-import Data.Monoid
+import Control.Applicative ((<|>))
 import Control.Monad.State
 
 import Data.IpRouter
@@ -47,7 +47,7 @@ pageDepth Empty              = 0
 pageDepth Page { depth = d } = d
 
 
-pageMergeBoth :: (OrdTree a, Monoid a) => Last Int
+pageMergeBoth :: (OrdTree a, Monoid a) => Maybe Int
                  -> Page a -> Page a -> Page a
 pageMergeBoth x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                    , depth = 1
@@ -66,7 +66,7 @@ pageMergeBoth x lp rp = Page { iTree = bInsertRoot x (iTree lp) (iTree rp)
                              , oTree = Node (oTree lp) (oTree rp)
                              }
 
-pageMergeLeft :: (OrdTree a, Monoid a) => Last Int
+pageMergeLeft :: (OrdTree a, Monoid a) => Maybe Int
                  -> Page a -> Page a -> Page a
 pageMergeLeft x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                    , depth = 1
@@ -85,7 +85,7 @@ pageMergeLeft x lp rp = Page { iTree = bInsertRoot x (iTree lp) mempty
                              , oTree = Node (oTree lp) (Leaf rp)
                              }
 
-pageMergeRight :: (OrdTree a, Monoid a) => Last Int
+pageMergeRight :: (OrdTree a, Monoid a) => Maybe Int
                   -> Page a -> Page a -> Page a
 pageMergeRight x Empty Empty = Page { iTree = bInsertRoot x mempty mempty
                                     , depth = 1
@@ -131,16 +131,15 @@ minHeightOrdSst t
                      }
 
 ordSstLookup :: OrdTree a => Address -> Page a -> Maybe Int
-ordSstLookup addr t =
-  getLast $ execState (lookupState (addrBits addr) t) (Last Nothing)
+ordSstLookup addr t = execState (lookupState (addrBits addr) t) Nothing
 
-lookupState :: OrdTree a => [Bool] -> Page a -> State (Last Int) ()
+lookupState :: OrdTree a => [Bool] -> Page a -> State (Maybe Int) ()
 lookupState _           Empty = return ()
-lookupState []          page  = modify (`mappend` (bRoot . iTree $ page))
+lookupState []          page  = modify (bRoot (iTree page) <|>)
 lookupState bits@(b:bs) page
   | isEmpty t = do let Leaf p = oTree page
                    lookupState bits p
-  | otherwise = do modify (`mappend` bRoot t)
+  | otherwise = do modify (bRoot t <|>)
                    if b
                      then do let Node _ r = oTree page
                              lookupState bs Page { iTree = bRightSubtree t
