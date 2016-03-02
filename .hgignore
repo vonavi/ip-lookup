@@ -1,4 +1,13 @@
+syntax: glob
+
 # Sandbox's stuff
 .cabal-sandbox/
 cabal.sandbox.config
 dist/
+
+# Profiling junk
+*.aux
+*.hp
+*.pdf
+*.prof
+*.ps
