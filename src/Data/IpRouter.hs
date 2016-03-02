@@ -21,12 +21,12 @@ newtype Address = Address Word32 deriving Eq
 
 instance Show Address where
   show (Address x) = tail $ concatMap ((++) "." . show) parts
-    where parts = map (helper . shiftR x) [24,16,8,0]
+    where parts = map (helper . shiftR x) [24, 16, 8, 0]
           helper y = (fromInteger . toInteger) y :: Word8
 
 strToAddr :: String -> Address
-strToAddr s = Address $ sum $ zipWith shift parts [24,16,8,0]
-  where parts = map (\x -> (fromIntegral . read) x :: Word32) $ splitOn "." s
+strToAddr s = Address $ sum $ zipWith shift parts [24, 16, 8, 0]
+  where parts = map (read :: String -> Word32) $ splitOn "." s
 
 addrBits :: Address -> [Bool]
 addrBits (Address a) = map (`testBit` 31) . take 32 . iterate (`shift` 1) $ a
@@ -34,7 +34,8 @@ addrBits (Address a) = map (`testBit` 31) . take 32 . iterate (`shift` 1) $ a
 newtype Mask = Mask Int deriving (Eq, Ord)
 
 strToMask :: String -> Mask
-strToMask (_:ss) = Mask (read ss :: Int)
+strToMask ('/' : ss) = Mask (read ss :: Int)
+strToMask _          = error "Incorrect network mask"
 
 instance Show Mask where
   show (Mask x) = "/" ++ show x

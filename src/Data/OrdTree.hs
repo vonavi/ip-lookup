@@ -55,7 +55,7 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
 
   ipLookup a t = execState (lookupState (addrBits a) t) Nothing
 
-  numOfPrefixes x = execState (helper . toForest $ x) 0
+  numOfPrefixes t = execState (helper . toForest $ t) 0
     where helper :: Forest (Maybe Int) -> State Int ()
           helper (Forest [])           = return ()
           helper (Forest ((x, l) : r)) = do
@@ -72,7 +72,7 @@ ordToBp :: OrdTree a => a -> [(Maybe Int, Paren)]
 ordToBp x = [(Nothing, Open)] ++ forToBp (toForest x) ++ [(Nothing, Close)]
 
 forToDfuds :: Forest a -> [(a, [Paren])]
-forToDfuds (Forest x) = helper x
+forToDfuds (Forest t) = helper t
   where helper []                  = []
         helper ((x, Forest l) : r) =
           let p = replicate (length l) Open ++ [Close]
@@ -89,8 +89,8 @@ newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving Show
 instance Monoid OrdTreeT1 where
   mempty = OrdTreeT1 $ Forest []
 
-  x `mappend` y = OrdTreeT1 $ Forest $
-                  helper (getNodes $ toForest x) (getNodes $ toForest y)
+  tx `mappend` ty = OrdTreeT1 $ Forest $
+                    helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper []                   ys                   = ys
           helper xs                   []                   = xs
           helper ((a, Forest x) : xs) ((b, Forest y) : ys) =
@@ -107,7 +107,7 @@ instance OrdTree OrdTreeT1 where
                                         getNodes (helper bs)
                                    else [(Nothing, helper bs)]
 
-  lookupState bs = helper bs . getNodes . toForest
+  lookupState bits = helper bits . getNodes . toForest
     where helper _      []                  = return ()
           helper []     ((x, _) : _)        = modify (x <|>)
           helper (b:bs) ((x, Forest r) : l) = do
@@ -136,8 +136,8 @@ newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving Show
 instance Monoid OrdTreeT2 where
   mempty = OrdTreeT2 $ Forest []
 
-  x `mappend` y = OrdTreeT2 $ Forest $
-                  helper (getNodes $ toForest x) (getNodes $ toForest y)
+  tx `mappend` ty = OrdTreeT2 $ Forest $
+                    helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper [] ys = ys
           helper xs [] = xs
           helper xs ys = helper (init xs) (init ys) ++
@@ -156,7 +156,7 @@ instance OrdTree OrdTreeT2 where
                                         [(Nothing, Forest [])]
                                    else [(Nothing, helper bs)]
 
-  lookupState bs = helper bs . getNodes . toForest
+  lookupState bits = helper bits . getNodes . toForest
     where helper _      [] = return ()
           helper []     xs = let x = fst . last $ xs
                              in modify (x <|>)
@@ -188,8 +188,8 @@ newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving Show
 instance Monoid OrdTreeT3 where
   mempty = OrdTreeT3 $ Forest []
 
-  x `mappend` y = OrdTreeT3 $ Forest $
-                  helper (getNodes $ toForest x) (getNodes $ toForest y)
+  tx `mappend` ty = OrdTreeT3 $ Forest $
+                    helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper []                   ys                   = ys
           helper xs                   []                   = xs
           helper ((a, Forest x) : xs) ((b, Forest y) : ys) =
@@ -206,7 +206,7 @@ instance OrdTree OrdTreeT3 where
                                    else (Nothing, Forest []) :
                                         getNodes (helper bs)
 
-  lookupState bs = helper bs . getNodes . toForest
+  lookupState bits = helper bits . getNodes . toForest
     where helper _      []                  = return ()
           helper []     ((x, _) : _)        = modify (x <|>)
           helper (b:bs) ((x, Forest l) : r) = do
@@ -235,8 +235,8 @@ newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving Show
 instance Monoid OrdTreeT4 where
   mempty = OrdTreeT4 $ Forest []
 
-  x `mappend` y = OrdTreeT4 $ Forest $
-                  helper (getNodes $ toForest x) (getNodes $ toForest y)
+  tx `mappend` ty = OrdTreeT4 $ Forest $
+                    helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper [] ys = ys
           helper xs [] = xs
           helper xs ys = helper (init xs) (init ys) ++
@@ -255,7 +255,7 @@ instance OrdTree OrdTreeT4 where
                                    else getNodes (helper bs) ++
                                         [(Nothing, Forest [])]
 
-  lookupState bs = helper bs . getNodes . toForest
+  lookupState bits = helper bits . getNodes . toForest
     where helper _      [] = return ()
           helper []     xs = let x = fst . last $ xs
                              in modify (x <|>)

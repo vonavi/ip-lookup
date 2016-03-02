@@ -31,35 +31,35 @@ isClose n ps
 findOpen :: Int -> [Paren] -> Maybe Int
 findOpen n ps
   | not (isClose n ps) = Nothing
-  | otherwise          = helper 1 n $ take n ps
-  where helper d n x
-          | d == 0    = Just n
-          | null x    = Nothing
-          | otherwise = if last x == Open
-                        then helper (pred d) (pred n) (init x)
-                        else helper (succ d) (pred n) (init x)
+  | otherwise          = helper (1 :: Int) n $ take n ps
+  where helper depth no x
+          | depth == 0 = Just no
+          | null x     = Nothing
+          | otherwise  = if last x == Open
+                         then helper (pred depth) (pred no) (init x)
+                         else helper (succ depth) (pred no) (init x)
 
 findClose :: Int -> [Paren] -> Maybe Int
 findClose n ps
   | not (isOpen n ps) = Nothing
-  | otherwise         = helper 1 n $ drop (succ n) ps
-  where helper d n x
-          | d == 0    = Just n
-          | null x    = Nothing
-          | otherwise = if head x == Close
-                        then helper (pred d) (succ n) (tail x)
-                        else helper (succ d) (succ n) (tail x)
+  | otherwise         = helper (1 :: Int) n $ drop (succ n) ps
+  where helper depth nc x
+          | depth == 0 = Just nc
+          | null x     = Nothing
+          | otherwise  = if head x == Close
+                         then helper (pred depth) (succ nc) (tail x)
+                         else helper (succ depth) (succ nc) (tail x)
 
 enclose :: Int -> [Paren] -> Maybe Int
-enclose n ps = do cl <- findClose n ps
-                  nx <- helper 1 cl . drop (succ cl) $ ps
+enclose n ps = do nc <- findClose n ps
+                  nx <- helper (1 :: Int) nc . drop (succ nc) $ ps
                   findOpen nx ps
-  where helper d n x
-          | d == 0    = Just n
-          | null x    = Nothing
-          | otherwise = if head x == Close
-                        then helper (pred d) (succ n) (tail x)
-                        else helper (succ d) (succ n) (tail x)
+  where helper depth nc' x
+          | depth == 0 = Just nc'
+          | null x     = Nothing
+          | otherwise  = if head x == Close
+                         then helper (pred depth) (succ nc') (tail x)
+                         else helper (succ depth) (succ nc') (tail x)
 
 rank :: Int -> (Paren -> Bool) -> [Paren] -> Int
 rank n p = length . filter p . take (succ n)
