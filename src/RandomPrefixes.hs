@@ -26,8 +26,8 @@ maskSeed :: Int
 maskSeed = 1
 
 randomEntries :: (Int, Int) -> [Int] -> [Entry]
-randomEntries (a, b) = zipWith3 helper addrList maskList
+randomEntries (l, h) = zipWith3 helper addrList maskList
   where helper a m = Entry (Prefix a m)
-        maskList   = map Mask . randomRs (a, b) . mkStdGen $ maskSeed
+        maskList   = map Mask . randomRs (l, h) . mkStdGen $ maskSeed
         addrList   = map (Address . getWord32) $ unfoldr step addrSeed
-          where step a = let b = step32 a in Just (b, b)
+          where step x = let y = step32 x in Just (y, y)
