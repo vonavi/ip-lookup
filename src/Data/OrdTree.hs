@@ -63,23 +63,23 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
             helper (Forest r)
             when (isJust x) $ modify succ
 
-forToBp :: Forest a -> [(a, Paren)]
-forToBp = helper . getNodes
+forestToBp :: Forest a -> [(a, Paren)]
+forestToBp = helper . getNodes
   where helper = concatMap (\(x, Forest l)
                             -> [(x, Open)] ++ helper l ++ [(x, Close)])
 
 ordToBp :: OrdTree a => a -> [(Maybe Int, Paren)]
-ordToBp x = [(Nothing, Open)] ++ forToBp (toForest x) ++ [(Nothing, Close)]
+ordToBp x = [(Nothing, Open)] ++ forestToBp (toForest x) ++ [(Nothing, Close)]
 
-forToDfuds :: Forest a -> [(a, [Paren])]
-forToDfuds (Forest t) = helper t
+forestToDfuds :: Forest a -> [(a, [Paren])]
+forestToDfuds (Forest t) = helper t
   where helper []                  = []
         helper ((x, Forest l) : r) =
           let p = replicate (length l) Open ++ [Close]
           in (x, p) : helper l ++ helper r
 
 ordToDfuds :: OrdTree a => a -> [(Maybe Int, [Paren])]
-ordToDfuds x = (Nothing, ps) : forToDfuds f
+ordToDfuds x = (Nothing, ps) : forestToDfuds f
   where f  = toForest x
         ps = replicate (length $ getNodes f) Open ++ [Close]
 

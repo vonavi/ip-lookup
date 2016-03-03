@@ -7,7 +7,6 @@ module IpRouterSpec
        ) where
 
 import Test.Hspec
-import Data.Monoid ()
 
 import Data.IpRouter
 import RandomPrefixes

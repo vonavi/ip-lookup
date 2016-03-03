@@ -3,6 +3,7 @@ module Main where
 import Test.Hspec
 
 import IpRouterSpec
+import OrdTreeSpec
 
 main :: IO ()
 main = do
@@ -10,3 +11,7 @@ main = do
   hspec numOfPrefixesSpec
   hspec insEntriesSpec
   hspec delEntriesSpec
+
+  hspec ordSizeSpec
+  hspec ordBpSpec
+  hspec ordDfudsSpec
