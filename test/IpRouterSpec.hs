@@ -140,6 +140,18 @@ insEntriesSpec = do
     it "Check binary tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
 
+    it "Check ordinal tree T1" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT1) e) `shouldBe` n
+
+    it "Check ordinal tree T2" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT2) e) `shouldBe` n
+
+    it "Check ordinal tree T3" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT3) e) `shouldBe` n
+
+    it "Check ordinal tree T4" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
+
 delEntriesSpec :: Spec
 delEntriesSpec = do
   describe "Deletion of random entries" $ do
@@ -150,3 +162,15 @@ delEntriesSpec = do
 
     it "Check binary tree" $ do
       delEntries (mkTable e :: BinTree) e `shouldBe` (mkTable [] :: BinTree)
+
+    it "Check ordinal tree T1" $ do
+      delEntries (mkTable e :: OrdTreeT1) e `shouldBe` (mkTable [] :: OrdTreeT1)
+
+    it "Check ordinal tree T2" $ do
+      delEntries (mkTable e :: OrdTreeT2) e `shouldBe` (mkTable [] :: OrdTreeT2)
+
+    it "Check ordinal tree T3" $ do
+      delEntries (mkTable e :: OrdTreeT3) e `shouldBe` (mkTable [] :: OrdTreeT3)
+
+    it "Check ordinal tree T4" $ do
+      delEntries (mkTable e :: OrdTreeT4) e `shouldBe` (mkTable [] :: OrdTreeT4)

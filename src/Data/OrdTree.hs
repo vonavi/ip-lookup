@@ -26,13 +26,14 @@ import Control.Monad.State
 import Data.IpRouter
 import Data.Paren
 
-newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving Show
+newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving (Eq, Show)
 
 class OrdTree t where
   toForest    :: t       -> Forest (Maybe Int)
   isEmpty     :: t       -> Bool
   fromEntry   :: Entry   -> t
   lookupState :: Address -> t -> State (Maybe Int) ()
+  delSubtree  :: t       -> t -> t
 
   size          :: t         -> Int
   bRoot         :: t         -> Maybe Int
@@ -51,8 +52,9 @@ class OrdTree t where
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   mkTable = foldr (mappend . fromEntry) mempty
 
-  insEntry = undefined
-  delEntry = undefined
+  insEntry e t = t `mappend` fromEntry e
+
+  delEntry e t = t `delSubtree` fromEntry e
 
   ipLookup a t = execState (lookupState a t) Nothing
 
@@ -85,7 +87,7 @@ ordToDfuds x = (Nothing, ps) : forestToDfuds f
         ps = replicate (length $ getNodes f) Open ++ [Close]
 
 
-newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving Show
+newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT1 where
   mempty = OrdTreeT1 $ Forest []
@@ -114,6 +116,16 @@ instance OrdTree OrdTreeT1 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
+  delSubtree a b = OrdTreeT1 . Forest $
+                   helper (getNodes . toForest $ a) (getNodes . toForest $ b)
+    where helper []                    _                     = []
+          helper t                     []                    = t
+          helper ((x, Forest lx) : rx) ((y, Forest ly) : ry) =
+            collapse $ (z, Forest (helper lx ly)) : helper rx ry
+            where z = if x == y then Nothing else x
+                  collapse [(Nothing, Forest [])] = []
+                  collapse t                      = t
+
   bRoot = helper . getNodes . toForest
     where helper []           = Nothing
           helper ((x, _) : _) = x
@@ -131,7 +143,7 @@ instance OrdTree OrdTreeT1 where
     (x, toForest ltree) : (getNodes . toForest $ rtree)
 
 
-newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving Show
+newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT2 where
   mempty = OrdTreeT2 $ Forest []
@@ -164,6 +176,20 @@ instance OrdTree OrdTreeT2 where
               where (x, Forest l) = last xs
                     r             = init xs
 
+  delSubtree a b = OrdTreeT2 . Forest $
+                   helper (getNodes . toForest $ a) (getNodes . toForest $ b)
+    where helper [] _   = []
+          helper t  []  = t
+          helper tx ty  =
+            collapse $ helper rx ry ++ [(z, Forest (helper lx ly))]
+            where (x, Forest lx) = last tx
+                  rx             = init tx
+                  (y, Forest ly) = last ty
+                  ry             = init ty
+                  z              = if x == y then Nothing else x
+                  collapse [(Nothing, Forest [])] = []
+                  collapse t                      = t
+
   bRoot = helper . getNodes . toForest
     where helper [] = Nothing
           helper x  = fst . last $ x
@@ -181,7 +207,7 @@ instance OrdTree OrdTreeT2 where
     (getNodes . toForest $ rtree) ++ [(x, toForest ltree)]
 
 
-newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving Show
+newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT3 where
   mempty = OrdTreeT3 $ Forest []
@@ -210,6 +236,16 @@ instance OrdTree OrdTreeT3 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
+  delSubtree a b = OrdTreeT3 . Forest $
+                   helper (getNodes . toForest $ a) (getNodes . toForest $ b)
+    where helper []                    _                     = []
+          helper t                     []                    = t
+          helper ((x, Forest rx) : lx) ((y, Forest ry) : ly) =
+            collapse $ (z, Forest (helper rx ry)) : helper lx ly
+            where z = if x == y then Nothing else x
+                  collapse [(Nothing, Forest [])] = []
+                  collapse t                      = t
+
   bRoot = helper . getNodes . toForest
     where helper []           = Nothing
           helper ((x, _) : _) = x
@@ -227,7 +263,7 @@ instance OrdTree OrdTreeT3 where
     (x, toForest rtree) : (getNodes . toForest $ ltree)
 
 
-newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving Show
+newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT4 where
   mempty = OrdTreeT4 $ Forest []
@@ -251,6 +287,20 @@ instance OrdTree OrdTreeT4 where
                        then [(Nothing, Forest y)]
                        else y ++ [(Nothing, Forest [])]
             where y = helper (pred i) x
+
+  delSubtree a b = OrdTreeT4 . Forest $
+                   helper (getNodes . toForest $ a) (getNodes . toForest $ b)
+    where helper [] _   = []
+          helper t  []  = t
+          helper tx ty  =
+            collapse $ helper lx ly ++ [(z, Forest (helper rx ry))]
+            where (x, Forest rx) = last tx
+                  lx             = init tx
+                  (y, Forest ry) = last ty
+                  ly             = init ty
+                  z              = if x == y then Nothing else x
+                  collapse [(Nothing, Forest [])] = []
+                  collapse t                      = t
 
   lookupState (Address a) = helper 31 . getNodes . toForest
     where helper _ [] = return ()
