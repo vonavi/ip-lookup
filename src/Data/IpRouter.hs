@@ -8,7 +8,6 @@ module Data.IpRouter
        , strToAddr
        , addrBits
        , strToMask
-       , prefixBits
        , prefixMatch
        ) where
 
@@ -47,11 +46,6 @@ data Prefix = Prefix { address :: {-# UNPACK #-} !Address
 
 instance Show Prefix where
   show x = (show . address) x ++ (show . mask) x
-
-prefixBits :: Prefix -> [Bool]
-prefixBits p = map (a `testBit`) [31, 30 .. (32 - m)]
-  where Address a = address p
-        Mask m    = mask p
 
 data Entry = Entry { prefix  :: {-# UNPACK #-} !Prefix
                    , nextHop :: {-# UNPACK #-} !Int

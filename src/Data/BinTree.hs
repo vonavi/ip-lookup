@@ -5,6 +5,7 @@ module Data.BinTree
          BinTree
        ) where
 
+import Data.Bits
 import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
 import Control.Monad.State
@@ -28,12 +29,13 @@ instance Monoid BinTree where
   x `mappend` y = BinTree $ getTree x `mappend` getTree y
 
 fromEntry :: Entry -> BinTree
-fromEntry (Entry p n) = BinTree $ helper . prefixBits $ p
-  where helper :: [Bool] -> Tree (Maybe Int)
-        helper []     = Bin Tip (Just n) Tip
-        helper (b:bs) = if b
-                        then Bin Tip Nothing (helper bs)
-                        else Bin (helper bs) Nothing Tip
+fromEntry (Entry p n) = BinTree $ helper m (Bin Tip (Just n) Tip)
+    where Prefix (Address a) (Mask m) = p
+          helper 0 x = x
+          helper i x = if a `testBit` (31 - m + i)
+                       then Bin Tip Nothing y
+                       else Bin y Nothing Tip
+            where y = helper (pred i) x
 
 lookupState :: [Bool] -> Tree (Maybe Int) -> State (Maybe Int) ()
 lookupState _      Tip         = return ()

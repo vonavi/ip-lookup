@@ -18,6 +18,7 @@ module Data.OrdTree
        , OrdTreeT4
        ) where
 
+import Data.Bits
 import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
 import Control.Monad.State
@@ -99,11 +100,13 @@ instance Monoid OrdTreeT1 where
 instance OrdTree OrdTreeT1 where
   toForest (OrdTreeT1 x) = x
 
-  fromEntry (Entry p n) =
-    OrdTreeT1 . Forest . foldr helper [(Just n, Forest [])] . prefixBits $ p
-    where helper b xs = if b
-                        then (Nothing, Forest []) : xs
-                        else [(Nothing, Forest xs)]
+  fromEntry (Entry p n) = OrdTreeT1 . Forest $ helper m [(Just n, Forest [])]
+    where Prefix (Address a) (Mask m) = p
+          helper 0 x = x
+          helper i x = if a `testBit` (31 - m + i)
+                       then (Nothing, Forest []) : y
+                       else [(Nothing, Forest y)]
+            where y = helper (pred i) x
 
   lookupState bits = helper bits . getNodes . toForest
     where helper _      []                  = return ()
@@ -146,11 +149,13 @@ instance Monoid OrdTreeT2 where
 instance OrdTree OrdTreeT2 where
   toForest (OrdTreeT2 x) = x
 
-  fromEntry (Entry p n) =
-    OrdTreeT2 . Forest . foldr helper [(Just n, Forest [])] . prefixBits $ p
-    where helper b xs = if b
-                        then xs ++ [(Nothing, Forest [])]
-                        else [(Nothing, Forest xs)]
+  fromEntry (Entry p n) = OrdTreeT2 . Forest $ helper m [(Just n, Forest [])]
+    where Prefix (Address a) (Mask m) = p
+          helper 0 x = x
+          helper i x = if a `testBit` (31 - m + i)
+                       then y ++ [(Nothing, Forest [])]
+                       else [(Nothing, Forest y)]
+            where y = helper (pred i) x
 
   lookupState bits = helper bits . getNodes . toForest
     where helper _      [] = return ()
@@ -194,11 +199,13 @@ instance Monoid OrdTreeT3 where
 instance OrdTree OrdTreeT3 where
   toForest (OrdTreeT3 x) = x
 
-  fromEntry (Entry p n) =
-    OrdTreeT3 . Forest . foldr helper [(Just n, Forest [])] . prefixBits $ p
-    where helper b xs = if b
-                        then [(Nothing, Forest xs)]
-                        else (Nothing, Forest []) : xs
+  fromEntry (Entry p n) = OrdTreeT3 . Forest $ helper m [(Just n, Forest [])]
+    where Prefix (Address a) (Mask m) = p
+          helper 0 x = x
+          helper i x = if a `testBit` (31 - m + i)
+                       then [(Nothing, Forest y)]
+                       else (Nothing, Forest []) : y
+            where y = helper (pred i) x
 
   lookupState bits = helper bits . getNodes . toForest
     where helper _      []                  = return ()
@@ -241,11 +248,13 @@ instance Monoid OrdTreeT4 where
 instance OrdTree OrdTreeT4 where
   toForest (OrdTreeT4 x) = x
 
-  fromEntry (Entry p n) =
-    OrdTreeT4 . Forest . foldr helper [(Just n, Forest [])] . prefixBits $ p
-    where helper b xs = if b
-                        then [(Nothing, Forest xs)]
-                        else xs ++ [(Nothing, Forest [])]
+  fromEntry (Entry p n) = OrdTreeT4 . Forest $ helper m [(Just n, Forest [])]
+    where Prefix (Address a) (Mask m) = p
+          helper 0 x = x
+          helper i x = if a `testBit` (31 - m + i)
+                       then [(Nothing, Forest y)]
+                       else y ++ [(Nothing, Forest [])]
+            where y = helper (pred i) x
 
   lookupState bits = helper bits . getNodes . toForest
     where helper _      [] = return ()
