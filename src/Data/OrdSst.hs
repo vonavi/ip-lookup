@@ -10,6 +10,7 @@ module Data.OrdSst
        , MhOrdSstT4
        ) where
 
+import Data.Bits
 import Control.Applicative ((<|>))
 import Control.Monad.State
 
@@ -131,27 +132,29 @@ minHeightOrdSst t
                      }
 
 ordSstLookup :: OrdTree a => Address -> Page a -> Maybe Int
-ordSstLookup addr t = execState (lookupState (addrBits addr) t) Nothing
+ordSstLookup a t = execState (lookupState a t) Nothing
 
-lookupState :: OrdTree a => [Bool] -> Page a -> State (Maybe Int) ()
-lookupState _           Empty = return ()
-lookupState []          page  = modify (bRoot (iTree page) <|>)
-lookupState bits@(b:bs) page
-  | isEmpty t = do let Leaf p = oTree page
-                   lookupState bits p
-  | otherwise = do modify (bRoot t <|>)
-                   if b
-                     then do let Node _ r = oTree page
-                             lookupState bs Page { iTree = bRightSubtree t
-                                                 , depth = depth page
-                                                 , oTree = r
-                                                 }
-                     else do let Node l _ = oTree page
-                             lookupState bs Page { iTree = bLeftSubtree t
-                                                 , depth = depth page
-                                                 , oTree = l
-                                                 }
-  where t = iTree page
+lookupState :: OrdTree a => Address -> Page a -> State (Maybe Int) ()
+lookupState (Address a) = helper 31
+  where helper _    Empty = return ()
+        helper (-1) page  = modify (bRoot (iTree page) <|>)
+        helper n    page  = do
+          let t = iTree page
+          if isEmpty t
+            then do let Leaf p = oTree page
+                    helper n p
+            else do modify (bRoot t <|>)
+                    if a `testBit` n
+                      then do let Node _ r = oTree page
+                              helper (pred n) Page { iTree = bRightSubtree t
+                                                   , depth = depth page
+                                                   , oTree = r
+                                                   }
+                      else do let Node l _ = oTree page
+                              helper (pred n) Page { iTree = bLeftSubtree t
+                                                   , depth = depth page
+                                                   , oTree = l
+                                                   }
 
 foldOrdSst :: (Page a -> Int -> Int) -> Page a -> Int
 foldOrdSst f p = execState (foldState f p) (f p 0)

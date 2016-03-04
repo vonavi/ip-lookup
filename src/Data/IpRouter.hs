@@ -6,7 +6,6 @@ module Data.IpRouter
        , Entry(..)
        , IpRouter(..)
        , strToAddr
-       , addrBits
        , strToMask
        , prefixMatch
        ) where
@@ -26,9 +25,6 @@ instance Show Address where
 strToAddr :: String -> Address
 strToAddr s = Address $ sum $ zipWith shift parts [24, 16, 8, 0]
   where parts = map (read :: String -> Word32) $ splitOn "." s
-
-addrBits :: Address -> [Bool]
-addrBits (Address a) = map (a `testBit`) [31, 30 .. 0]
 
 newtype Mask = Mask Int deriving (Eq, Ord)
 

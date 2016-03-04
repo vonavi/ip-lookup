@@ -29,10 +29,10 @@ import Data.Paren
 newtype Forest a = Forest { getNodes :: [(a, Forest a)] } deriving Show
 
 class OrdTree t where
-  toForest    :: t      -> Forest (Maybe Int)
-  isEmpty     :: t      -> Bool
-  fromEntry   :: Entry  -> t
-  lookupState :: [Bool] -> t -> State (Maybe Int) ()
+  toForest    :: t       -> Forest (Maybe Int)
+  isEmpty     :: t       -> Bool
+  fromEntry   :: Entry   -> t
+  lookupState :: Address -> t -> State (Maybe Int) ()
 
   size          :: t         -> Int
   bRoot         :: t         -> Maybe Int
@@ -54,7 +54,7 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   insEntry = undefined
   delEntry = undefined
 
-  ipLookup a t = execState (lookupState (addrBits a) t) Nothing
+  ipLookup a t = execState (lookupState a t) Nothing
 
   numOfPrefixes t = execState (helper . toForest $ t) 0
     where helper :: Forest (Maybe Int) -> State Int ()
@@ -108,12 +108,11 @@ instance OrdTree OrdTreeT1 where
                        else [(Nothing, Forest y)]
             where y = helper (pred i) x
 
-  lookupState bits = helper bits . getNodes . toForest
-    where helper _      []                  = return ()
-          helper []     ((x, _) : _)        = modify (x <|>)
-          helper (b:bs) ((x, Forest r) : l) = do
+  lookupState (Address a) = helper 31 . getNodes . toForest
+    where helper _ []                  = return ()
+          helper n ((x, Forest l) : r) = do
             modify (x <|>)
-            helper bs $ if b then l else r
+            helper (pred n) $ if a `testBit` n then r else l
 
   bRoot = helper . getNodes . toForest
     where helper []           = Nothing
@@ -157,15 +156,13 @@ instance OrdTree OrdTreeT2 where
                        else [(Nothing, Forest y)]
             where y = helper (pred i) x
 
-  lookupState bits = helper bits . getNodes . toForest
-    where helper _      [] = return ()
-          helper []     xs = let x = fst . last $ xs
-                             in modify (x <|>)
-          helper (b:bs) xs = do
+  lookupState (Address a) = helper 31 . getNodes . toForest
+    where helper _ [] = return ()
+          helper n xs = do
             modify (x <|>)
-            helper bs $ if b then l else r
-              where (x, Forest r) = last xs
-                    l             = init xs
+            helper (pred n) $ if a `testBit` n then r else l
+              where (x, Forest l) = last xs
+                    r             = init xs
 
   bRoot = helper . getNodes . toForest
     where helper [] = Nothing
@@ -207,12 +204,11 @@ instance OrdTree OrdTreeT3 where
                        else (Nothing, Forest []) : y
             where y = helper (pred i) x
 
-  lookupState bits = helper bits . getNodes . toForest
-    where helper _      []                  = return ()
-          helper []     ((x, _) : _)        = modify (x <|>)
-          helper (b:bs) ((x, Forest l) : r) = do
+  lookupState (Address a) = helper 31 . getNodes . toForest
+    where helper _ []                  = return ()
+          helper n ((x, Forest r) : l) = do
             modify (x <|>)
-            helper bs $ if b then l else r
+            helper (pred n) $ if a `testBit` n then r else l
 
   bRoot = helper . getNodes . toForest
     where helper []           = Nothing
@@ -256,15 +252,13 @@ instance OrdTree OrdTreeT4 where
                        else y ++ [(Nothing, Forest [])]
             where y = helper (pred i) x
 
-  lookupState bits = helper bits . getNodes . toForest
-    where helper _      [] = return ()
-          helper []     xs = let x = fst . last $ xs
-                             in modify (x <|>)
-          helper (b:bs) xs = do
+  lookupState (Address a) = helper 31 . getNodes . toForest
+    where helper _ [] = return ()
+          helper n xs = do
             modify (x <|>)
-            helper bs $ if b then l else r
-              where (x, Forest l) = last xs
-                    r             = init xs
+            helper (pred n) $ if a `testBit` n then r else l
+              where (x, Forest r) = last xs
+                    l             = init xs
 
   bRoot = helper . getNodes . toForest
     where helper [] = Nothing

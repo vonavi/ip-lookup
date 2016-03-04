@@ -37,11 +37,12 @@ fromEntry (Entry p n) = BinTree $ helper m (Bin Tip (Just n) Tip)
                        else Bin y Nothing Tip
             where y = helper (pred i) x
 
-lookupState :: [Bool] -> Tree (Maybe Int) -> State (Maybe Int) ()
-lookupState _      Tip         = return ()
-lookupState []     (Bin _ x _) = modify (x <|>)
-lookupState (b:bs) (Bin l x r) = do modify (x <|>)
-                                    lookupState bs $ if b then r else l
+lookupState :: Address -> Tree (Maybe Int) -> State (Maybe Int) ()
+lookupState (Address a) = helper 31
+  where helper _ Tip         = return ()
+        helper n (Bin l x r) = do
+          modify (x <|>)
+          helper (pred n) $ if a `testBit` n then r else l
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
   mkTable = foldr (mappend . fromEntry) mempty
@@ -58,7 +59,7 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
                   collapse (Bin Tip Nothing Tip) = Tip
                   collapse t                     = t
 
-  ipLookup a (BinTree t) = execState (lookupState (addrBits a) t) Nothing
+  ipLookup a (BinTree t) = execState (lookupState a t) Nothing
 
   numOfPrefixes (BinTree t) = execState (helperS t) 0
     where helperS :: Tree (Maybe Int) -> State Int ()
