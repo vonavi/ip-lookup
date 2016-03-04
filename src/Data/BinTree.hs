@@ -11,7 +11,7 @@ import Control.Monad.State
 
 import Data.IpRouter
 
-data Tree a = Tip | Bin (Tree a) a (Tree a) deriving (Eq, Show)
+data Tree a = Tip | Bin !(Tree a) !a !(Tree a) deriving (Eq, Show)
 
 newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving (Eq, Show)
 

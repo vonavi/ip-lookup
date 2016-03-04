@@ -16,11 +16,11 @@ import Control.Monad.State
 import Data.IpRouter
 import Data.OrdTree
 
-data Tree a = Leaf a | Node (Tree a) (Tree a) deriving Show
+data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving Show
 
 data Page a = Empty
             | Page { iTree :: a
-                   , depth :: Int
+                   , depth :: {-# UNPACK #-} !Int
                    , oTree :: Tree (Page a)
                    }
             deriving Show

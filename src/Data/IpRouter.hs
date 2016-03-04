@@ -40,8 +40,8 @@ strToMask _          = error "Incorrect network mask"
 instance Show Mask where
   show (Mask x) = "/" ++ show x
 
-data Prefix = Prefix { address :: Address
-                     , mask    :: Mask
+data Prefix = Prefix { address :: {-# UNPACK #-} !Address
+                     , mask    :: {-# UNPACK #-} !Mask
                      }
             deriving Eq
 
@@ -53,8 +53,8 @@ prefixBits p = map (a `testBit`) [31, 30 .. (32 - m)]
   where Address a = address p
         Mask m    = mask p
 
-data Entry = Entry { prefix  :: Prefix
-                   , nextHop :: Int
+data Entry = Entry { prefix  :: {-# UNPACK #-} !Prefix
+                   , nextHop :: {-# UNPACK #-} !Int
                    }
            deriving (Eq, Show)
 
