@@ -29,7 +29,7 @@ strToAddr s = Address $ sum $ zipWith shift parts [24, 16, 8, 0]
   where parts = map (read :: String -> Word32) $ splitOn "." s
 
 addrBits :: Address -> [Bool]
-addrBits (Address a) = map (`testBit` 31) . take 32 . iterate (`shift` 1) $ a
+addrBits (Address a) = map (a `testBit`) [31, 30 .. 0]
 
 newtype Mask = Mask Int deriving (Eq, Ord)
 
@@ -49,7 +49,7 @@ instance Show Prefix where
   show x = (show . address) x ++ (show . mask) x
 
 prefixBits :: Prefix -> [Bool]
-prefixBits p = map (`testBit` 31) . take m . iterate (`shift` 1) $ a
+prefixBits p = map (a `testBit`) [31, 30 .. (32 - m)]
   where Address a = address p
         Mask m    = mask p
 
