@@ -92,7 +92,7 @@ newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT1 where
   mempty = OrdTreeT1 $ Forest []
 
-  tx `mappend` ty = OrdTreeT1 $ Forest $
+  tx `mappend` ty = OrdTreeT1 . Forest $
                     helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper []                   ys                   = ys
           helper xs                   []                   = xs
@@ -102,12 +102,13 @@ instance Monoid OrdTreeT1 where
 instance OrdTree OrdTreeT1 where
   toForest (OrdTreeT1 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT1 . Forest $ helper m [(Just n, Forest [])]
+  fromEntry (Entry p n) = OrdTreeT1 . Forest $ helper 31 [(Just n, Forest [])]
     where Prefix (Address a) (Mask m) = p
-          helper 0 x = x
-          helper i x = if a `testBit` (31 - m + i)
-                       then (Nothing, Forest []) : y
-                       else [(Nothing, Forest y)]
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then (Nothing, Forest []) : y
+                            else [(Nothing, Forest y)]
             where y = helper (pred i) x
 
   lookupState (Address a) = helper 31 . getNodes . toForest
@@ -148,7 +149,7 @@ newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT2 where
   mempty = OrdTreeT2 $ Forest []
 
-  tx `mappend` ty = OrdTreeT2 $ Forest $
+  tx `mappend` ty = OrdTreeT2 . Forest $
                     helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper [] ys = ys
           helper xs [] = xs
@@ -160,12 +161,13 @@ instance Monoid OrdTreeT2 where
 instance OrdTree OrdTreeT2 where
   toForest (OrdTreeT2 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT2 . Forest $ helper m [(Just n, Forest [])]
+  fromEntry (Entry p n) = OrdTreeT2 . Forest $ helper 31 [(Just n, Forest [])]
     where Prefix (Address a) (Mask m) = p
-          helper 0 x = x
-          helper i x = if a `testBit` (31 - m + i)
-                       then y ++ [(Nothing, Forest [])]
-                       else [(Nothing, Forest y)]
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then y ++ [(Nothing, Forest [])]
+                            else [(Nothing, Forest y)]
             where y = helper (pred i) x
 
   lookupState (Address a) = helper 31 . getNodes . toForest
@@ -212,7 +214,7 @@ newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT3 where
   mempty = OrdTreeT3 $ Forest []
 
-  tx `mappend` ty = OrdTreeT3 $ Forest $
+  tx `mappend` ty = OrdTreeT3 . Forest $
                     helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper []                   ys                   = ys
           helper xs                   []                   = xs
@@ -222,12 +224,13 @@ instance Monoid OrdTreeT3 where
 instance OrdTree OrdTreeT3 where
   toForest (OrdTreeT3 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT3 . Forest $ helper m [(Just n, Forest [])]
+  fromEntry (Entry p n) = OrdTreeT3 . Forest $ helper 31 [(Just n, Forest [])]
     where Prefix (Address a) (Mask m) = p
-          helper 0 x = x
-          helper i x = if a `testBit` (31 - m + i)
-                       then [(Nothing, Forest y)]
-                       else (Nothing, Forest []) : y
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then [(Nothing, Forest y)]
+                            else (Nothing, Forest []) : y
             where y = helper (pred i) x
 
   lookupState (Address a) = helper 31 . getNodes . toForest
@@ -268,7 +271,7 @@ newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT4 where
   mempty = OrdTreeT4 $ Forest []
 
-  tx `mappend` ty = OrdTreeT4 $ Forest $
+  tx `mappend` ty = OrdTreeT4 . Forest $
                     helper (getNodes $ toForest tx) (getNodes $ toForest ty)
     where helper [] ys = ys
           helper xs [] = xs
@@ -280,12 +283,13 @@ instance Monoid OrdTreeT4 where
 instance OrdTree OrdTreeT4 where
   toForest (OrdTreeT4 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT4 . Forest $ helper m [(Just n, Forest [])]
+  fromEntry (Entry p n) = OrdTreeT4 . Forest $ helper 31 [(Just n, Forest [])]
     where Prefix (Address a) (Mask m) = p
-          helper 0 x = x
-          helper i x = if a `testBit` (31 - m + i)
-                       then [(Nothing, Forest y)]
-                       else y ++ [(Nothing, Forest [])]
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then [(Nothing, Forest y)]
+                            else y ++ [(Nothing, Forest [])]
             where y = helper (pred i) x
 
   delSubtree a b = OrdTreeT4 . Forest $
