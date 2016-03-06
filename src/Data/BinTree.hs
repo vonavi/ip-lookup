@@ -29,12 +29,13 @@ instance Monoid BinTree where
   x `mappend` y = BinTree $ getTree x `mappend` getTree y
 
 fromEntry :: Entry -> BinTree
-fromEntry (Entry p n) = BinTree $ helper m (Bin Tip (Just n) Tip)
+fromEntry (Entry p n) = BinTree $ helper 31 (Bin Tip (Just n) Tip)
     where Prefix (Address a) (Mask m) = p
-          helper 0 x = x
-          helper i x = if a `testBit` (31 - m + i)
-                       then Bin Tip Nothing y
-                       else Bin y Nothing Tip
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then Bin Tip Nothing y
+                            else Bin y Nothing Tip
             where y = helper (pred i) x
 
 lookupState :: Address -> Tree (Maybe Int) -> State (Maybe Int) ()
