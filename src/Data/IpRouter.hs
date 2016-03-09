@@ -7,12 +7,10 @@ module Data.IpRouter
        , IpRouter(..)
        , strToAddr
        , strToMask
-       , prefixMatch
        ) where
 
 import Data.Word
 import Data.Bits
-import Data.Function (on)
 import Data.List.Split (splitOn)
 
 newtype Address = Address Word32 deriving Eq
@@ -47,12 +45,6 @@ data Entry = Entry { prefix  :: {-# UNPACK #-} !Prefix
                    , nextHop :: {-# UNPACK #-} !Int
                    }
            deriving (Eq, Show)
-
-prefixMatch :: Address -> Entry -> Bool
-prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
-  where Address a = address p
-        Mask m    = mask p
-        offset    = 32 - m
 
 class IpRouter a where
   mkTable       :: [Entry] -> a

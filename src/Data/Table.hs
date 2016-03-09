@@ -4,6 +4,7 @@ module Data.Table
        ) where
 
 import Data.List
+import Data.Bits
 import Data.Function (on)
 
 import Data.IpRouter
@@ -16,6 +17,12 @@ instance Show Table where
           maxLen     = maximum lenList
           helper p l = (show . prefix) p ++ replicate (maxLen - l + 2) ' ' ++
                        (show . nextHop) p ++ "\n"
+
+prefixMatch :: Address -> Entry -> Bool
+prefixMatch (Address x) (Entry p _) = ((==) `on` (`shiftR` offset)) x a
+  where Address a = address p
+        Mask m    = mask p
+        offset    = 32 - m
 
 instance {-# OVERLAPPING #-} IpRouter Table where
   mkTable = Table
