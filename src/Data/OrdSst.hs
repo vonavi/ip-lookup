@@ -35,6 +35,10 @@ class OrdSst a where
 maxPageSize :: Int
 maxPageSize = 256
 
+isPageEmpty :: Page a -> Bool
+isPageEmpty Empty = True
+isPageEmpty _     = False
+
 pageSize :: (OrdTree a, Monoid a) => Page a -> Int
 pageSize Empty = 0
 pageSize x     = 18 * numOfPrefixes t + 3 * size t + 1
@@ -136,25 +140,22 @@ ordSstLookup a t = execState (lookupState a t) Nothing
 
 lookupState :: OrdTree a => Address -> Page a -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
-  where helper _    Empty = return ()
-        helper (-1) page  = modify (bRoot (iTree page) <|>)
-        helper n    page  = do
-          let t = iTree page
-          if isEmpty t
-            then do let Leaf p = oTree page
-                    helper n p
-            else do modify (bRoot t <|>)
-                    if a `testBit` n
-                      then do let Node _ r = oTree page
-                              helper (pred n) Page { iTree = bRightSubtree t
-                                                   , depth = depth page
-                                                   , oTree = r
-                                                   }
-                      else do let Node l _ = oTree page
-                              helper (pred n) Page { iTree = bLeftSubtree t
-                                                   , depth = depth page
-                                                   , oTree = l
-                                                   }
+  where helper n page
+          | isPageEmpty page = return ()
+          | isEmpty t        = do let Leaf p = oTree page
+                                  helper n p
+          | otherwise        = do
+              modify (bRoot t <|>)
+              when (n >= 0) $
+                if a `testBit` n
+                then helper (pred n) page { iTree = bRightSubtree t
+                                          , oTree = r
+                                          }
+                else helper (pred n) page { iTree = bLeftSubtree t
+                                          , oTree = l
+                                          }
+          where t        = iTree page
+                Node l r = oTree page
 
 foldOrdSst :: (Page a -> Int -> Int) -> Page a -> Int
 foldOrdSst f p = execState (foldState f p) (f p 0)
