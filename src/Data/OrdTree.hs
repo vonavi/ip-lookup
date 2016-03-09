@@ -4,6 +4,7 @@
 module Data.OrdTree
        (
          OrdTree( isEmpty
+                , fromEntry
                 , size
                 , bRoot
                 , bLeftSubtree

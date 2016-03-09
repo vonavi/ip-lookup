@@ -152,6 +152,18 @@ insEntriesSpec = do
     it "Check ordinal tree T4" $ do
       numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
 
+    it "Check min-height SST for ordinal tree T1" $ do
+      numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T2" $ do
+      numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT2) e) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T3" $ do
+      numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT3) e) `shouldBe` n
+
+    it "Check min-height SST for ordinal tree T4" $ do
+      numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT4) e) `shouldBe` n
+
 delEntriesSpec :: Spec
 delEntriesSpec = do
   describe "Deletion of random entries" $ do
