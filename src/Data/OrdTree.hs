@@ -5,6 +5,7 @@ module Data.OrdTree
        (
          OrdTree( isEmpty
                 , fromEntry
+                , collapse
                 , size
                 , bRoot
                 , bLeftSubtree
@@ -23,6 +24,7 @@ import Data.Bits
 import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
 import Control.Monad.State
+import Control.Arrow (second)
 
 import Data.IpRouter
 import Data.Paren
@@ -34,6 +36,7 @@ class OrdTree t where
   isEmpty     :: t       -> Bool
   fromEntry   :: Entry   -> t
   lookupState :: Address -> t -> State (Maybe Int) ()
+  collapse    :: t       -> t
   delSubtree  :: t       -> t -> t
 
   size          :: t         -> Int
@@ -118,15 +121,25 @@ instance OrdTree OrdTreeT1 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  delSubtree a b = OrdTreeT1 . Forest $
+  collapse = OrdTreeT1 . collapseF . toForest
+    where collapseF x = Forest $ helper m y
+            where y = map (second collapseF) . getNodes $ x
+                  m = length . filter nonempty $ y
+                  nonempty (Nothing, Forest []) = False
+                  nonempty _                    = True
+                  helper _ []     = []
+                  helper 0 z      = z
+                  helper n (z:zs) = if nonempty z
+                                    then helper (pred n) zs
+                                    else helper n zs
+
+  delSubtree a b = collapse . OrdTreeT1 . Forest $
                    helper (getNodes . toForest $ a) (getNodes . toForest $ b)
     where helper []                    _                     = []
           helper t                     []                    = t
           helper ((x, Forest lx) : rx) ((y, Forest ly) : ry) =
-            collapse $ (z, Forest (helper lx ly)) : helper rx ry
+            (z, Forest (helper lx ly)) : helper rx ry
             where z = if x == y then Nothing else x
-                  collapse [(Nothing, Forest [])] = []
-                  collapse t                      = t
 
   bRoot = helper . getNodes . toForest
     where helper []           = Nothing
@@ -179,19 +192,22 @@ instance OrdTree OrdTreeT2 where
               where (x, Forest l) = last xs
                     r             = init xs
 
-  delSubtree a b = OrdTreeT2 . Forest $
+  collapse = OrdTreeT2 . collapseF . toForest
+    where collapseF = Forest . dropWhile empty .
+                      map (second collapseF) . getNodes
+            where empty (Nothing, Forest []) = True
+                  empty _                    = False
+
+  delSubtree a b = collapse . OrdTreeT2 . Forest $
                    helper (getNodes . toForest $ a) (getNodes . toForest $ b)
     where helper [] _   = []
           helper t  []  = t
-          helper tx ty  =
-            collapse $ helper rx ry ++ [(z, Forest (helper lx ly))]
+          helper tx ty  = helper rx ry ++ [(z, Forest (helper lx ly))]
             where (x, Forest lx) = last tx
                   rx             = init tx
                   (y, Forest ly) = last ty
                   ry             = init ty
                   z              = if x == y then Nothing else x
-                  collapse [(Nothing, Forest [])] = []
-                  collapse t                      = t
 
   bRoot = helper . getNodes . toForest
     where helper [] = Nothing
@@ -240,15 +256,25 @@ instance OrdTree OrdTreeT3 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  delSubtree a b = OrdTreeT3 . Forest $
+  collapse = OrdTreeT3 . collapseF . toForest
+    where collapseF x = Forest $ helper m y
+            where y = map (second collapseF) . getNodes $ x
+                  m = length . filter nonempty $ y
+                  nonempty (Nothing, Forest []) = False
+                  nonempty _                    = True
+                  helper _ []     = []
+                  helper 0 z      = z
+                  helper n (z:zs) = if nonempty z
+                                    then helper (pred n) zs
+                                    else helper n zs
+
+  delSubtree a b = collapse . OrdTreeT3 . Forest $
                    helper (getNodes . toForest $ a) (getNodes . toForest $ b)
     where helper []                    _                     = []
           helper t                     []                    = t
           helper ((x, Forest rx) : lx) ((y, Forest ry) : ly) =
-            collapse $ (z, Forest (helper rx ry)) : helper lx ly
+            (z, Forest (helper rx ry)) : helper lx ly
             where z = if x == y then Nothing else x
-                  collapse [(Nothing, Forest [])] = []
-                  collapse t                      = t
 
   bRoot = helper . getNodes . toForest
     where helper []           = Nothing
@@ -293,19 +319,22 @@ instance OrdTree OrdTreeT4 where
                             else y ++ [(Nothing, Forest [])]
             where y = helper (pred i) x
 
-  delSubtree a b = OrdTreeT4 . Forest $
+  collapse = OrdTreeT4 . collapseF . toForest
+    where collapseF = Forest . dropWhile empty .
+                      map (second collapseF) . getNodes
+            where empty (Nothing, Forest []) = True
+                  empty _                    = False
+
+  delSubtree a b = collapse . OrdTreeT4 . Forest $
                    helper (getNodes . toForest $ a) (getNodes . toForest $ b)
     where helper [] _   = []
           helper t  []  = t
-          helper tx ty  =
-            collapse $ helper lx ly ++ [(z, Forest (helper rx ry))]
+          helper tx ty  = helper lx ly ++ [(z, Forest (helper rx ry))]
             where (x, Forest rx) = last tx
                   lx             = init tx
                   (y, Forest ry) = last ty
                   ly             = init ty
                   z              = if x == y then Nothing else x
-                  collapse [(Nothing, Forest [])] = []
-                  collapse t                      = t
 
   lookupState (Address a) = helper 31 . getNodes . toForest
     where helper _ [] = return ()
