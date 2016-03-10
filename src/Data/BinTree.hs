@@ -38,6 +38,13 @@ fromEntry (Entry p n) = BinTree $ helper 31 (Bin Tip (Just n) Tip)
                             else Bin y Nothing Tip
             where y = helper (pred i) x
 
+collapse :: BinTree -> BinTree
+collapse = BinTree . helper . getTree
+  where helper Tip         = Tip
+        helper (Bin l x r) = reduce $ Bin (helper l) x (helper r)
+          where reduce (Bin Tip Nothing Tip) = Tip
+                reduce t                     = t
+
 lookupState :: Address -> Tree (Maybe Int) -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
   where helper _ Tip         = return ()
@@ -50,15 +57,13 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   insEntry e t = t `mappend` fromEntry e
 
-  delEntry e (BinTree a) = let BinTree b = fromEntry e
-                           in BinTree $ helper a b
-    where helper Tip           _             = Tip
+  delEntry e (BinTree a) = collapse . BinTree $ helper a b
+    where BinTree b = fromEntry e
+          helper Tip           _             = Tip
           helper t             Tip           = t
           helper (Bin lx x rx) (Bin ly y ry) =
-            collapse $ Bin (helper lx ly) z (helper rx ry)
+            Bin (helper lx ly) z (helper rx ry)
             where z = if x == y then Nothing else x
-                  collapse (Bin Tip Nothing Tip) = Tip
-                  collapse t                     = t
 
   ipLookup a (BinTree t) = execState (lookupState a t) Nothing
 
