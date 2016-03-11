@@ -4,6 +4,7 @@ module IpRouterSpec
        , numOfPrefixesSpec
        , insEntriesSpec
        , delEntriesSpec
+       , ordSstCheckSpec
        ) where
 
 import Test.Hspec
@@ -186,3 +187,34 @@ delEntriesSpec = do
 
     it "Check ordinal tree T4" $ do
       delEntries (mkTable e :: OrdTreeT4) e `shouldBe` (mkTable [] :: OrdTreeT4)
+
+ordSstCheckSpec :: Spec
+ordSstCheckSpec = do
+  let n = 1000
+      e = genRandomEntries n
+
+  describe "Check pages built by 'mkTable'" $ do
+    it "Check min-height SST for ordinal tree T1" $ do
+      checkPages (mkTable e :: MhOrdSstT1) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T2" $ do
+      checkPages (mkTable e :: MhOrdSstT2) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T3" $ do
+      checkPages (mkTable e :: MhOrdSstT3) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T4" $ do
+      checkPages (mkTable e :: MhOrdSstT4) `shouldBe` True
+
+  describe "Check pages built by 'insEntries'" $ do
+    it "Check min-height SST for ordinal tree T1" $ do
+      checkPages (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T2" $ do
+      checkPages (insEntries (mkTable [] :: MhOrdSstT2) e) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T3" $ do
+      checkPages (insEntries (mkTable [] :: MhOrdSstT3) e) `shouldBe` True
+
+    it "Check min-height SST for ordinal tree T4" $ do
+      checkPages (insEntries (mkTable [] :: MhOrdSstT4) e) `shouldBe` True

@@ -30,6 +30,7 @@ class OrdSst a where
   height     :: a -> Int
   numOfPages :: a -> Int
   fillSize   :: a -> Int
+  checkPages :: a -> Bool
 
 
 maxPageSize :: Int
@@ -207,6 +208,24 @@ minHeightInsert = helper . fromEntry
 minHeightDelete :: OrdTree a => Entry -> Page a -> Page a
 minHeightDelete = undefined
 
+checkPage :: OrdTree a => Page a -> Bool
+checkPage Empty                              = True
+checkPage Page { iTree = t, oTree = Leaf _ } = isEmpty t
+checkPage Page { iTree = t }                 = not . isEmpty $ t
+
+checkPagesS :: OrdTree a => Page a -> State Bool ()
+checkPagesS Empty = return ()
+checkPagesS page  = case oTree page of
+                     Leaf p   -> case p of
+                                  Empty -> return ()
+                                  _     -> do modify (&& checkPage p)
+                                              checkPagesS p
+                     Node l r -> do checkPagesS page { oTree = l }
+                                    checkPagesS page { oTree = r }
+
+checkPages' :: OrdTree a => Page a -> Bool
+checkPages' p = execState (checkPagesS p) $ checkPage p
+
 
 newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
 
@@ -222,6 +241,7 @@ instance OrdSst MhOrdSstT1 where
   height (MhOrdSstT1 t)     = pageDepth t
   numOfPages (MhOrdSstT1 t) = numOfPages' t
   fillSize (MhOrdSstT1 t)   = fillSize' t
+  checkPages (MhOrdSstT1 t) = checkPages' t
 
 
 newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
@@ -238,6 +258,7 @@ instance OrdSst MhOrdSstT2 where
   height (MhOrdSstT2 t)     = pageDepth t
   numOfPages (MhOrdSstT2 t) = numOfPages' t
   fillSize (MhOrdSstT2 t)   = fillSize' t
+  checkPages (MhOrdSstT2 t) = checkPages' t
 
 
 newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
@@ -254,6 +275,7 @@ instance OrdSst MhOrdSstT3 where
   height (MhOrdSstT3 t)     = pageDepth t
   numOfPages (MhOrdSstT3 t) = numOfPages' t
   fillSize (MhOrdSstT3 t)   = fillSize' t
+  checkPages (MhOrdSstT3 t) = checkPages' t
 
 
 newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
@@ -270,3 +292,4 @@ instance OrdSst MhOrdSstT4 where
   height (MhOrdSstT4 t)     = pageDepth t
   numOfPages (MhOrdSstT4 t) = numOfPages' t
   fillSize (MhOrdSstT4 t)   = fillSize' t
+  checkPages (MhOrdSstT4 t) = checkPages' t

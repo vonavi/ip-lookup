@@ -11,6 +11,7 @@ main = do
   hspec numOfPrefixesSpec
   hspec insEntriesSpec
   hspec delEntriesSpec
+  hspec ordSstCheckSpec
 
   hspec ordSizeSpec
   hspec ordBpSpec
