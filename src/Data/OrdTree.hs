@@ -14,10 +14,10 @@ module Data.OrdTree
                 )
        , ordToBp
        , ordToDfuds
-       , OrdTreeT1
-       , OrdTreeT2
-       , OrdTreeT3
-       , OrdTreeT4
+       , OldTreeT1
+       , OldTreeT2
+       , OldTreeT3
+       , OldTreeT4
        ) where
 
 import Data.Bits
@@ -91,22 +91,22 @@ ordToDfuds x = (Nothing, ps) : forestToDfuds f
         ps = replicate (length $ getNodes f) Open ++ [Close]
 
 
-newtype OrdTreeT1 = OrdTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
+newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
 
-instance Monoid OrdTreeT1 where
-  mempty = OrdTreeT1 $ OldForest []
+instance Monoid OldTreeT1 where
+  mempty = OldTreeT1 $ OldForest []
 
-  tx `mappend` ty = OrdTreeT1 . OldForest $
+  tx `mappend` ty = OldTreeT1 . OldForest $
                     helper (getNodes $ toOldForest tx) (getNodes $ toOldForest ty)
     where helper []                   ys                         = ys
           helper xs                   []                         = xs
           helper ((a, OldForest x) : xs) ((b, OldForest y) : ys) =
             (a <|> b, OldForest (helper x y)) : helper xs ys
 
-instance OrdTree OrdTreeT1 where
-  toOldForest (OrdTreeT1 x) = x
+instance OrdTree OldTreeT1 where
+  toOldForest (OldTreeT1 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT1 . OldForest $ helper 31 [(Just n, OldForest [])]
+  fromEntry (Entry p n) = OldTreeT1 . OldForest $ helper 31 [(Just n, OldForest [])]
     where Prefix (Address a) (Mask m) = p
           helper i x
             | i == 31 - m = x
@@ -121,7 +121,7 @@ instance OrdTree OrdTreeT1 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  collapse = OrdTreeT1 . collapseF . toOldForest
+  collapse = OldTreeT1 . collapseF . toOldForest
     where collapseF x = OldForest $ helper m y
             where y = map (second collapseF) . getNodes $ x
                   m = length . filter nonempty $ y
@@ -133,7 +133,7 @@ instance OrdTree OrdTreeT1 where
                                     then helper (pred n) zs
                                     else helper n zs
 
-  delSubtree a b = collapse . OrdTreeT1 . OldForest $
+  delSubtree a b = collapse . OldTreeT1 . OldForest $
                    helper (getNodes . toOldForest $ a) (getNodes . toOldForest $ b)
     where helper []                    _                           = []
           helper t                     []                          = t
@@ -145,25 +145,25 @@ instance OrdTree OrdTreeT1 where
     where helper []           = Nothing
           helper ((x, _) : _) = x
 
-  bLeftSubtree = OrdTreeT1 . OldForest . helper . toOldForest
+  bLeftSubtree = OldTreeT1 . OldForest . helper . toOldForest
     where helper (OldForest [])                     = []
           helper (OldForest ((_, OldForest l) : _)) = l
 
-  bRightSubtree = OrdTreeT1 . OldForest . helper . toOldForest
+  bRightSubtree = OldTreeT1 . OldForest . helper . toOldForest
     where helper (OldForest []) = []
           helper (OldForest x)  = tail x
 
   bInsertRoot x ltree rtree =
-    OrdTreeT1 . OldForest $
+    OldTreeT1 . OldForest $
     (x, toOldForest ltree) : (getNodes . toOldForest $ rtree)
 
 
-newtype OrdTreeT2 = OrdTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
+newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
 
-instance Monoid OrdTreeT2 where
-  mempty = OrdTreeT2 $ OldForest []
+instance Monoid OldTreeT2 where
+  mempty = OldTreeT2 $ OldForest []
 
-  tx `mappend` ty = OrdTreeT2 . OldForest $
+  tx `mappend` ty = OldTreeT2 . OldForest $
                     helper (getNodes $ toOldForest tx) (getNodes $ toOldForest ty)
     where helper [] ys = ys
           helper xs [] = xs
@@ -172,10 +172,10 @@ instance Monoid OrdTreeT2 where
             where (a, OldForest x) = last xs
                   (b, OldForest y) = last ys
 
-instance OrdTree OrdTreeT2 where
-  toOldForest (OrdTreeT2 x) = x
+instance OrdTree OldTreeT2 where
+  toOldForest (OldTreeT2 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT2 . OldForest $ helper 31 [(Just n, OldForest [])]
+  fromEntry (Entry p n) = OldTreeT2 . OldForest $ helper 31 [(Just n, OldForest [])]
     where Prefix (Address a) (Mask m) = p
           helper i x
             | i == 31 - m = x
@@ -192,13 +192,13 @@ instance OrdTree OrdTreeT2 where
               where (x, OldForest l) = last xs
                     r                = init xs
 
-  collapse = OrdTreeT2 . collapseF . toOldForest
+  collapse = OldTreeT2 . collapseF . toOldForest
     where collapseF = OldForest . dropWhile empty .
                       map (second collapseF) . getNodes
             where empty (Nothing, OldForest []) = True
                   empty _                       = False
 
-  delSubtree a b = collapse . OrdTreeT2 . OldForest $
+  delSubtree a b = collapse . OldTreeT2 . OldForest $
                    helper (getNodes . toOldForest $ a) (getNodes . toOldForest $ b)
     where helper [] _   = []
           helper t  []  = t
@@ -213,35 +213,35 @@ instance OrdTree OrdTreeT2 where
     where helper [] = Nothing
           helper x  = fst . last $ x
 
-  bLeftSubtree = OrdTreeT2 . OldForest . helper . toOldForest
+  bLeftSubtree = OldTreeT2 . OldForest . helper . toOldForest
     where helper (OldForest []) = []
           helper (OldForest x)  = getNodes . snd . last $ x
 
-  bRightSubtree = OrdTreeT2 . OldForest . helper . toOldForest
+  bRightSubtree = OldTreeT2 . OldForest . helper . toOldForest
     where helper (OldForest []) = []
           helper (OldForest x)  = init x
 
   bInsertRoot x ltree rtree =
-    OrdTreeT2 . OldForest $
+    OldTreeT2 . OldForest $
     (getNodes . toOldForest $ rtree) ++ [(x, toOldForest ltree)]
 
 
-newtype OrdTreeT3 = OrdTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
+newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
-instance Monoid OrdTreeT3 where
-  mempty = OrdTreeT3 $ OldForest []
+instance Monoid OldTreeT3 where
+  mempty = OldTreeT3 $ OldForest []
 
-  tx `mappend` ty = OrdTreeT3 . OldForest $
+  tx `mappend` ty = OldTreeT3 . OldForest $
                     helper (getNodes $ toOldForest tx) (getNodes $ toOldForest ty)
     where helper []                   ys                         = ys
           helper xs                   []                         = xs
           helper ((a, OldForest x) : xs) ((b, OldForest y) : ys) =
             (a <|> b, OldForest (helper x y)) : helper xs ys
 
-instance OrdTree OrdTreeT3 where
-  toOldForest (OrdTreeT3 x) = x
+instance OrdTree OldTreeT3 where
+  toOldForest (OldTreeT3 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT3 . OldForest $ helper 31 [(Just n, OldForest [])]
+  fromEntry (Entry p n) = OldTreeT3 . OldForest $ helper 31 [(Just n, OldForest [])]
     where Prefix (Address a) (Mask m) = p
           helper i x
             | i == 31 - m = x
@@ -256,7 +256,7 @@ instance OrdTree OrdTreeT3 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  collapse = OrdTreeT3 . collapseF . toOldForest
+  collapse = OldTreeT3 . collapseF . toOldForest
     where collapseF x = OldForest $ helper m y
             where y = map (second collapseF) . getNodes $ x
                   m = length . filter nonempty $ y
@@ -268,7 +268,7 @@ instance OrdTree OrdTreeT3 where
                                     then helper (pred n) zs
                                     else helper n zs
 
-  delSubtree a b = collapse . OrdTreeT3 . OldForest $
+  delSubtree a b = collapse . OldTreeT3 . OldForest $
                    helper (getNodes . toOldForest $ a) (getNodes . toOldForest $ b)
     where helper []                    _                           = []
           helper t                     []                          = t
@@ -280,25 +280,25 @@ instance OrdTree OrdTreeT3 where
     where helper []           = Nothing
           helper ((x, _) : _) = x
 
-  bLeftSubtree = OrdTreeT3 . OldForest . helper . toOldForest
+  bLeftSubtree = OldTreeT3 . OldForest . helper . toOldForest
     where helper (OldForest []) = []
           helper (OldForest x)  = tail x
 
-  bRightSubtree = OrdTreeT3 . OldForest . helper . toOldForest
+  bRightSubtree = OldTreeT3 . OldForest . helper . toOldForest
     where helper (OldForest [])                     = []
           helper (OldForest ((_, OldForest r) : _)) = r
 
   bInsertRoot x ltree rtree =
-    OrdTreeT3 . OldForest $
+    OldTreeT3 . OldForest $
     (x, toOldForest rtree) : (getNodes . toOldForest $ ltree)
 
 
-newtype OrdTreeT4 = OrdTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
+newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
 
-instance Monoid OrdTreeT4 where
-  mempty = OrdTreeT4 $ OldForest []
+instance Monoid OldTreeT4 where
+  mempty = OldTreeT4 $ OldForest []
 
-  tx `mappend` ty = OrdTreeT4 . OldForest $
+  tx `mappend` ty = OldTreeT4 . OldForest $
                     helper (getNodes $ toOldForest tx) (getNodes $ toOldForest ty)
     where helper [] ys = ys
           helper xs [] = xs
@@ -307,10 +307,10 @@ instance Monoid OrdTreeT4 where
             where (a, OldForest x) = last xs
                   (b, OldForest y) = last ys
 
-instance OrdTree OrdTreeT4 where
-  toOldForest (OrdTreeT4 x) = x
+instance OrdTree OldTreeT4 where
+  toOldForest (OldTreeT4 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT4 . OldForest $ helper 31 [(Just n, OldForest [])]
+  fromEntry (Entry p n) = OldTreeT4 . OldForest $ helper 31 [(Just n, OldForest [])]
     where Prefix (Address a) (Mask m) = p
           helper i x
             | i == 31 - m = x
@@ -319,13 +319,13 @@ instance OrdTree OrdTreeT4 where
                             else y ++ [(Nothing, OldForest [])]
             where y = helper (pred i) x
 
-  collapse = OrdTreeT4 . collapseF . toOldForest
+  collapse = OldTreeT4 . collapseF . toOldForest
     where collapseF = OldForest . dropWhile empty .
                       map (second collapseF) . getNodes
             where empty (Nothing, OldForest []) = True
                   empty _                       = False
 
-  delSubtree a b = collapse . OrdTreeT4 . OldForest $
+  delSubtree a b = collapse . OldTreeT4 . OldForest $
                    helper (getNodes . toOldForest $ a) (getNodes . toOldForest $ b)
     where helper [] _   = []
           helper t  []  = t
@@ -348,14 +348,14 @@ instance OrdTree OrdTreeT4 where
     where helper [] = Nothing
           helper x  = fst . last $ x
 
-  bLeftSubtree = OrdTreeT4 . OldForest . helper . toOldForest
+  bLeftSubtree = OldTreeT4 . OldForest . helper . toOldForest
     where helper (OldForest []) = []
           helper (OldForest x)  = init x
 
-  bRightSubtree = OrdTreeT4 . OldForest . helper . toOldForest
+  bRightSubtree = OldTreeT4 . OldForest . helper . toOldForest
     where helper (OldForest []) = []
           helper (OldForest x)  = getNodes . snd . last $ x
 
   bInsertRoot x ltree rtree =
-    OrdTreeT4 . OldForest $
+    OldTreeT4 . OldForest $
     (getNodes . toOldForest $ ltree) ++ [(x, toOldForest rtree)]

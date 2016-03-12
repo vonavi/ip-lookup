@@ -137,7 +137,7 @@ child n i bp
 
 newtype BpT1 = BpT1 [(Maybe Int, Paren)]
 
-ordToBpT1 :: OrdTreeT1 -> BpT1
+ordToBpT1 :: OldTreeT1 -> BpT1
 ordToBpT1 = BpT1 . ordToBp
 
 instance Bp BpT1 where
@@ -150,7 +150,7 @@ instance Bp BpT1 where
 
 newtype BpT2 = BpT2 [(Maybe Int, Paren)]
 
-ordToBpT2 :: OrdTreeT2 -> BpT2
+ordToBpT2 :: OldTreeT2 -> BpT2
 ordToBpT2 = BpT2 . ordToBp
 
 instance Bp BpT2 where
@@ -163,7 +163,7 @@ instance Bp BpT2 where
 
 newtype BpT3 = BpT3 [(Maybe Int, Paren)]
 
-ordToBpT3 :: OrdTreeT3 -> BpT3
+ordToBpT3 :: OldTreeT3 -> BpT3
 ordToBpT3 = BpT3 . ordToBp
 
 instance Bp BpT3 where
@@ -176,7 +176,7 @@ instance Bp BpT3 where
 
 newtype BpT4 = BpT4 [(Maybe Int, Paren)]
 
-ordToBpT4 :: OrdTreeT4 -> BpT4
+ordToBpT4 :: OldTreeT4 -> BpT4
 ordToBpT4 = BpT4 . ordToBp
 
 instance Bp BpT4 where
