@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances,
-             UndecidableInstances #-}
+             UndecidableInstances,
+             ViewPatterns #-}
 
 module Data.OrdTree
        (
@@ -20,6 +21,8 @@ module Data.OrdTree
        , OldTreeT4
        ) where
 
+import qualified Data.Sequence as S
+import Data.Sequence ((<|), (|>), ViewL(EmptyL, (:<)), ViewR(EmptyR, (:>)))
 import Data.Bits
 import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
@@ -29,9 +32,12 @@ import Control.Arrow (second)
 import Data.IpRouter
 import Data.Paren
 
+newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
+
 newtype OldForest a = OldForest { getNodes :: [(a, OldForest a)] } deriving (Eq, Show)
 
 class OrdTree t where
+  toForest    :: t       -> Forest (Maybe Int)
   toOldForest :: t       -> OldForest (Maybe Int)
   isEmpty     :: t       -> Bool
   fromEntry   :: Entry   -> t
@@ -89,6 +95,24 @@ ordToDfuds :: OrdTree a => a -> [(Maybe Int, [Paren])]
 ordToDfuds x = (Nothing, ps) : forestToDfuds f
   where f  = toOldForest x
         ps = replicate (length $ getNodes f) Open ++ [Close]
+
+
+newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
+
+instance Monoid OrdTreeT1 where
+  mempty = OrdTreeT1 $ Forest S.empty
+
+  tx `mappend` ty = OrdTreeT1 . Forest $
+                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where helper xs                   (S.viewl -> EmptyL)  = xs
+          helper (S.viewl -> EmptyL)  ys                   = ys
+          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+            in (a <|> b, Forest (helper fa fb)) <| helper xs ys
+
+instance OrdTree OrdTreeT1 where
+  toForest (OrdTreeT1 x) = x
 
 
 newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -156,6 +180,24 @@ instance OrdTree OldTreeT1 where
   bInsertRoot x ltree rtree =
     OldTreeT1 . OldForest $
     (x, toOldForest ltree) : (getNodes . toOldForest $ rtree)
+
+
+newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving (Eq, Show)
+
+instance Monoid OrdTreeT2 where
+  mempty = OrdTreeT2 $ Forest S.empty
+
+  tx `mappend` ty = OrdTreeT2 . Forest $
+                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where helper xs                   (S.viewr -> EmptyR)  = xs
+          helper (S.viewr -> EmptyR)  ys                   = ys
+          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+            in helper xs ys |> (a <|> b, Forest (helper fa fb))
+
+instance OrdTree OrdTreeT2 where
+  toForest (OrdTreeT2 x) = x
 
 
 newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -226,6 +268,24 @@ instance OrdTree OldTreeT2 where
     (getNodes . toOldForest $ rtree) ++ [(x, toOldForest ltree)]
 
 
+newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving (Eq, Show)
+
+instance Monoid OrdTreeT3 where
+  mempty = OrdTreeT3 $ Forest S.empty
+
+  tx `mappend` ty = OrdTreeT3 . Forest $
+                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where helper xs                   (S.viewl -> EmptyL)  = xs
+          helper (S.viewl -> EmptyL)  ys                   = ys
+          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+            in (a <|> b, Forest (helper fa fb)) <| helper xs ys
+
+instance OrdTree OrdTreeT3 where
+  toForest (OrdTreeT3 x) = x
+
+
 newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OldTreeT3 where
@@ -291,6 +351,24 @@ instance OrdTree OldTreeT3 where
   bInsertRoot x ltree rtree =
     OldTreeT3 . OldForest $
     (x, toOldForest rtree) : (getNodes . toOldForest $ ltree)
+
+
+newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving (Eq, Show)
+
+instance Monoid OrdTreeT4 where
+  mempty = OrdTreeT4 $ Forest S.empty
+
+  tx `mappend` ty = OrdTreeT4 . Forest $
+                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where helper xs                   (S.viewr -> EmptyR)  = xs
+          helper (S.viewr -> EmptyR)  ys                   = ys
+          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+            in helper xs ys |> (a <|> b, Forest (helper fa fb))
+
+instance OrdTree OrdTreeT4 where
+  toForest (OrdTreeT4 x) = x
 
 
 newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
