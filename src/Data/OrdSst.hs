@@ -203,9 +203,11 @@ minHeightInsert = flip helper . fromEntry
           | otherwise        =
               let lpage  = case otree of
                             Node l _   -> page { iTree = bLeftSubtree itree
+                                               , depth = succ $ treeDepth l
                                                , oTree = l
                                                }
                             Leaf Empty -> page { iTree = bLeftSubtree itree
+                                               , depth = 1
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
@@ -213,9 +215,11 @@ minHeightInsert = flip helper . fromEntry
 
                   rpage  = case otree of
                             Node _ r   -> page { iTree = bRightSubtree itree
+                                               , depth = succ $ treeDepth r
                                                , oTree = r
                                                }
                             Leaf Empty -> page { iTree = bRightSubtree itree
+                                               , depth = 1
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
