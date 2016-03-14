@@ -49,6 +49,10 @@ pageDepth :: Page a -> Int
 pageDepth Empty              = 0
 pageDepth Page { depth = d } = d
 
+treeDepth :: Tree (Page a) -> Int
+treeDepth (Leaf x)   = pageDepth x
+treeDepth (Node l r) = max (treeDepth l) (treeDepth r)
+
 pageSize :: (OrdTree a, Monoid a) => Page a -> Int
 pageSize Empty = 0
 pageSize x     = 18 * numOfPrefixes t + 3 * size t + 1
@@ -266,9 +270,16 @@ minHeightDelete = flip helper . fromEntry
           where itree = iTree page
 
 checkPage :: OrdTree a => Page a -> Bool
-checkPage Empty                              = True
-checkPage Page { iTree = t, oTree = Leaf _ } = isEmpty t
-checkPage Page { iTree = t }                 = not . isEmpty $ t
+checkPage page
+  | isPageEmpty page              = True
+  | isPageLast page               = dpt == 1
+  | dpt /= succ (treeDepth otree) = False
+  | otherwise                     = case otree of
+                                     Leaf _   -> isEmpty itree
+                                     Node _ _ -> not . isEmpty $ itree
+  where itree = iTree page
+        dpt   = depth page
+        otree = oTree page
 
 checkPagesS :: OrdTree a => Page a -> State Bool ()
 checkPagesS Empty = return ()
