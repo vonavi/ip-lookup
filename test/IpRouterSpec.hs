@@ -188,6 +188,22 @@ delEntriesSpec = do
     it "Check ordinal tree T4" $ do
       delEntries (mkTable e :: OrdTreeT4) e `shouldBe` (mkTable [] :: OrdTreeT4)
 
+    it "Check min-height SST for ordinal tree T1" $ do
+      delEntries (mkTable e :: MhOrdSstT1) e
+        `shouldBe` (mkTable [] :: MhOrdSstT1)
+
+    it "Check min-height SST for ordinal tree T2" $ do
+      delEntries (mkTable e :: MhOrdSstT2) e
+        `shouldBe` (mkTable [] :: MhOrdSstT2)
+
+    it "Check min-height SST for ordinal tree T3" $ do
+      delEntries (mkTable e :: MhOrdSstT3) e
+        `shouldBe` (mkTable [] :: MhOrdSstT3)
+
+    it "Check min-height SST for ordinal tree T4" $ do
+      delEntries (mkTable e :: MhOrdSstT4) e
+        `shouldBe` (mkTable [] :: MhOrdSstT4)
+
 ordSstCheckSpec :: Spec
 ordSstCheckSpec = do
   let n = 1000

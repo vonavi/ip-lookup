@@ -17,14 +17,14 @@ import Control.Monad.State
 import Data.IpRouter
 import Data.OrdTree
 
-data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving Show
+data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 
 data Page a = Empty
             | Page { iTree :: a
                    , depth :: {-# UNPACK #-} !Int
                    , oTree :: Tree (Page a)
                    }
-            deriving Show
+            deriving (Eq, Show)
 
 class OrdSst a where
   height     :: a -> Int
@@ -39,6 +39,11 @@ maxPageSize = 256
 isPageEmpty :: Page a -> Bool
 isPageEmpty Empty = True
 isPageEmpty _     = False
+
+isPageLast :: Page a -> Bool
+isPageLast Empty                       = True
+isPageLast Page { oTree = Leaf Empty } = True
+isPageLast _                           = False
 
 pageSize :: (OrdTree a, Monoid a) => Page a -> Int
 pageSize Empty = 0
@@ -205,8 +210,60 @@ minHeightInsert = helper . fromEntry
                                 , oTree = r
                                 }
 
-minHeightDelete :: OrdTree a => Entry -> Page a -> Page a
-minHeightDelete = undefined
+collapseLast :: OrdTree a => Page a -> Page a
+collapseLast page
+  | isPageEmpty page                 = Empty
+  | isPageLast page && isEmpty ntree = Empty
+  | isPageLast page                  = page { iTree = ntree }
+  | otherwise                        = page
+  where ntree = collapse . iTree $ page
+
+collapsePage :: (OrdTree a, Monoid a) => Page a -> Page a
+collapsePage page
+  | isPageEmpty page                 = Empty
+  | isPageLast page && isEmpty ntree = Empty
+  | isPageLast page                  = page { iTree = ntree }
+  | otherwise                        =
+      collapseLast $ case oTree page of
+                      Leaf p   -> page { oTree = Leaf $ collapsePage p }
+                      Node l r -> mhInsertRoot (bRoot itree) lpage rpage
+                        where itree = iTree page
+                              lpage = collapsePage $
+                                      page { iTree = bLeftSubtree itree
+                                           , oTree = l
+                                           }
+                              rpage = collapsePage $
+                                      page { iTree = bRightSubtree itree
+                                           , oTree = r
+                                           }
+  where ntree = collapse . iTree $ page
+
+minHeightDelete :: (OrdTree a, Monoid a) => Entry -> Page a -> Page a
+minHeightDelete = flip helper . fromEntry
+  where helper :: (OrdTree a, Monoid a) => Page a -> a -> Page a
+        helper page tree
+          | isPageEmpty page = Empty
+          | isEmpty tree     = page
+          | isPageLast page  =
+              collapseLast $ page { iTree = delSubtree itree tree
+                                  , oTree = Leaf Empty
+                                  }
+          | otherwise        =
+              collapsePage $
+              case oTree page of
+               Leaf p   -> page { oTree = Leaf $ helper p tree }
+               Node l r -> mhInsertRoot z lpage rpage
+                 where troot = bRoot itree
+                       z     = if bRoot tree == troot then Nothing else troot
+                       lpage = page { iTree = bLeftSubtree itree
+                                    , oTree = l
+                                    }
+                               `helper` bLeftSubtree tree
+                       rpage = page { iTree = bRightSubtree itree
+                                    , oTree = r
+                                    }
+                               `helper` bRightSubtree tree
+          where itree = iTree page
 
 checkPage :: OrdTree a => Page a -> Bool
 checkPage Empty                              = True
@@ -227,7 +284,7 @@ checkPages' :: OrdTree a => Page a -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
 
 
-newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
+newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT1 where
   mkTable                      =
@@ -244,7 +301,7 @@ instance OrdSst MhOrdSstT1 where
   checkPages (MhOrdSstT1 t) = checkPages' t
 
 
-newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
+newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT2 where
   mkTable                      =
@@ -261,7 +318,7 @@ instance OrdSst MhOrdSstT2 where
   checkPages (MhOrdSstT2 t) = checkPages' t
 
 
-newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
+newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT3 where
   mkTable                      =
@@ -278,7 +335,7 @@ instance OrdSst MhOrdSstT3 where
   checkPages (MhOrdSstT3 t) = checkPages' t
 
 
-newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
+newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT4 where
   mkTable                      =
