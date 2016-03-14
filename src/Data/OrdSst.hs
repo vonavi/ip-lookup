@@ -45,6 +45,10 @@ isPageLast Empty                       = True
 isPageLast Page { oTree = Leaf Empty } = True
 isPageLast _                           = False
 
+pageDepth :: Page a -> Int
+pageDepth Empty              = 0
+pageDepth Page { depth = d } = d
+
 pageSize :: (OrdTree a, Monoid a) => Page a -> Int
 pageSize Empty = 0
 pageSize x     = 18 * numOfPrefixes t + 3 * size t + 1
@@ -52,10 +56,6 @@ pageSize x     = 18 * numOfPrefixes t + 3 * size t + 1
 
 isFitted :: (OrdTree a, Monoid a) => [Page a] -> Bool
 isFitted = (<= maxPageSize) . sum . map pageSize
-
-pageDepth :: OrdTree a => Page a -> Int
-pageDepth Empty              = 0
-pageDepth Page { depth = d } = d
 
 
 pageMergeBoth :: (OrdTree a, Monoid a) => Maybe Int
@@ -190,25 +190,25 @@ fillSize' :: (OrdTree a, Monoid a) => Page a -> Int
 fillSize' = foldOrdSst $ (+) . pageSize
 
 minHeightInsert :: (OrdTree a, Monoid a) => Entry -> Page a -> Page a
-minHeightInsert = helper . fromEntry
-  where helper :: (OrdTree a, Monoid a) => a -> Page a -> Page a
-        helper tree page
+minHeightInsert = flip helper . fromEntry
+  where helper :: (OrdTree a, Monoid a) => Page a -> a -> Page a
+        helper page tree
           | isPageEmpty page = minHeightOrdSst tree
           | isEmpty tree     = page
           | isEmpty t        = let Leaf p = oTree page
-                               in helper tree p
+                               in helper p tree
           | otherwise        =
               mhInsertRoot (bRoot tree <|> bRoot t) lpage rpage
           where t        = iTree page
                 Node l r = oTree page
-                lpage    = helper (bLeftSubtree tree)
-                           page { iTree = bLeftSubtree t
+                lpage    = page { iTree = bLeftSubtree t
                                 , oTree = l
                                 }
-                rpage    = helper (bRightSubtree tree)
-                           page { iTree = bRightSubtree t
+                           `helper` bLeftSubtree tree
+                rpage    = page { iTree = bRightSubtree t
                                 , oTree = r
                                 }
+                           `helper` bRightSubtree tree
 
 collapseLast :: OrdTree a => Page a -> Page a
 collapseLast page
