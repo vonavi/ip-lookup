@@ -197,22 +197,32 @@ minHeightInsert :: (OrdTree a, Monoid a) => Entry -> Page a -> Page a
 minHeightInsert = flip helper . fromEntry
   where helper :: (OrdTree a, Monoid a) => Page a -> a -> Page a
         helper page tree
-          | isPageEmpty page = minHeightOrdSst tree
           | isEmpty tree     = page
-          | isEmpty t        = let Leaf p = oTree page
-                               in helper p tree
+          | isPageEmpty page = minHeightOrdSst tree
+          | isEmpty itree    = let Leaf p = otree in helper p tree
           | otherwise        =
-              mhInsertRoot (bRoot tree <|> bRoot t) lpage rpage
-          where t        = iTree page
-                Node l r = oTree page
-                lpage    = page { iTree = bLeftSubtree t
-                                , oTree = l
-                                }
-                           `helper` bLeftSubtree tree
-                rpage    = page { iTree = bRightSubtree t
-                                , oTree = r
-                                }
-                           `helper` bRightSubtree tree
+              let lpage  = case otree of
+                            Node l _   -> page { iTree = bLeftSubtree itree
+                                               , oTree = l
+                                               }
+                            Leaf Empty -> page { iTree = bLeftSubtree itree
+                                               , oTree = Leaf Empty
+                                               }
+                            Leaf _     -> error "Not linked page"
+                  lpage' = helper lpage (bLeftSubtree tree)
+
+                  rpage  = case otree of
+                            Node _ r   -> page { iTree = bRightSubtree itree
+                                               , oTree = r
+                                               }
+                            Leaf Empty -> page { iTree = bRightSubtree itree
+                                               , oTree = Leaf Empty
+                                               }
+                            Leaf _     -> error "Not linked page"
+                  rpage' = helper rpage (bRightSubtree tree)
+              in mhInsertRoot (bRoot tree <|> bRoot itree) lpage' rpage'
+          where itree = iTree page
+                otree = oTree page
 
 collapseLast :: OrdTree a => Page a -> Page a
 collapseLast page
