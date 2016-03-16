@@ -130,6 +130,12 @@ instance OrdTree OrdTreeT1 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
+  collapse = OrdTreeT1 . collapseF . toForest
+    where collapseF = Forest . S.dropWhileR empty .
+                      fmap (second collapseF) . getSeq
+          empty (Nothing, Forest x) = S.null x
+          empty _                   = False
+
 
 newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -230,6 +236,12 @@ instance OrdTree OrdTreeT2 where
           helper n (S.viewr -> r :> (x, Forest l)) = do
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
+
+  collapse = OrdTreeT2 . collapseF . toForest
+    where collapseF = Forest . S.dropWhileL empty .
+                      fmap (second collapseF) . getSeq
+          empty (Nothing, Forest x) = S.null x
+          empty _                   = False
 
 
 newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -333,6 +345,12 @@ instance OrdTree OrdTreeT3 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
+  collapse = OrdTreeT3 . collapseF . toForest
+    where collapseF = Forest . S.dropWhileR empty .
+                      fmap (second collapseF) . getSeq
+          empty (Nothing, Forest x) = S.null x
+          empty _                   = False
+
 
 newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -433,6 +451,12 @@ instance OrdTree OrdTreeT4 where
           helper n (S.viewr -> l :> (x, Forest r)) = do
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
+
+  collapse = OrdTreeT4 . collapseF . toForest
+    where collapseF = Forest . S.dropWhileL empty .
+                      fmap (second collapseF) . getSeq
+          empty (Nothing, Forest x) = S.null x
+          empty _                   = False
 
 
 newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
