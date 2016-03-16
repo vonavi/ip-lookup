@@ -75,25 +75,24 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
                                                helper r
                                                when (isJust x) $ modify succ
 
-forestToBp :: OldForest a -> [(a, Paren)]
-forestToBp = helper . getNodes
-  where helper = concatMap (\(x, OldForest l)
-                            -> [(x, Open)] ++ helper l ++ [(x, Close)])
+forestToBp :: Forest a -> [(a, Paren)]
+forestToBp = concatMap f . getSeq
+  where f (x, l) = [(x, Open)] ++ forestToBp l ++ [(x, Close)]
 
 ordToBp :: OrdTree a => a -> [(Maybe Int, Paren)]
-ordToBp x = [(Nothing, Open)] ++ forestToBp (toOldForest x) ++ [(Nothing, Close)]
+ordToBp x = [(Nothing, Open)] ++ forestToBp (toForest x) ++ [(Nothing, Close)]
 
-forestToDfuds :: OldForest a -> [(a, [Paren])]
-forestToDfuds (OldForest t) = helper t
-  where helper []                     = []
-        helper ((x, OldForest l) : r) =
-          let p = replicate (length l) Open ++ [Close]
-          in (x, p) : helper l ++ helper r
+forestToDfuds :: Forest a -> [(a, [Paren])]
+forestToDfuds = helper . getSeq
+  where helper t = case S.viewl t of
+                    EmptyL             -> []
+                    (x, Forest l) :< r -> (x, p) : helper l ++ helper r
+                      where p = replicate (S.length l) Open ++ [Close]
 
 ordToDfuds :: OrdTree a => a -> [(Maybe Int, [Paren])]
 ordToDfuds x = (Nothing, ps) : forestToDfuds f
-  where f  = toOldForest x
-        ps = replicate (length $ getNodes f) Open ++ [Close]
+  where f  = toForest x
+        ps = replicate (length $ getSeq f) Open ++ [Close]
 
 
 newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
