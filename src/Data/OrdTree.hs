@@ -91,6 +91,9 @@ ordToDfuds x = (Nothing, ps) : forestToDfuds f
   where f  = toForest x
         ps = replicate (length $ getSeq f) Open ++ [Close]
 
+delRoot :: Maybe Int -> Maybe Int -> Maybe Int
+delRoot x y = if x == y then Nothing else x
+
 
 newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
 
@@ -138,8 +141,7 @@ instance OrdTree OrdTreeT1 where
           helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
             let (a, Forest fa) = x
                 (b, Forest fb) = y
-                z              = if a == b then Nothing else a
-            in (z, Forest (helper fa fb)) <| helper xs ys
+            in (a `delRoot` b, Forest (helper fa fb)) <| helper xs ys
 
   bRoot t = case (S.viewl . getSeq . toForest) t of
              EmptyL      -> Nothing
@@ -206,8 +208,7 @@ instance OrdTree OrdTreeT2 where
           helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
             let (a, Forest fa) = x
                 (b, Forest fb) = y
-                z              = if a == b then Nothing else a
-            in helper xs ys |> (z, Forest (helper fa fb))
+            in helper xs ys |> (a `delRoot` b, Forest (helper fa fb))
 
   bRoot t = case (S.viewr . getSeq . toForest) t of
              EmptyR      -> Nothing
@@ -274,8 +275,7 @@ instance OrdTree OrdTreeT3 where
           helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
             let (a, Forest fa) = x
                 (b, Forest fb) = y
-                z              = if a == b then Nothing else a
-            in (z, Forest (helper fa fb)) <| helper xs ys
+            in (a `delRoot` b, Forest (helper fa fb)) <| helper xs ys
 
   bRoot t = case (S.viewl . getSeq . toForest) t of
              EmptyL      -> Nothing
@@ -342,8 +342,7 @@ instance OrdTree OrdTreeT4 where
           helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
             let (a, Forest fa) = x
                 (b, Forest fb) = y
-                z              = if a == b then Nothing else a
-            in helper xs ys |> (z, Forest (helper fa fb))
+            in helper xs ys |> (a `delRoot` b, Forest (helper fa fb))
 
   bRoot t = case (S.viewr . getSeq . toForest) t of
              EmptyR      -> Nothing
