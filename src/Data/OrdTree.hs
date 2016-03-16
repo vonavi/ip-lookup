@@ -136,6 +136,16 @@ instance OrdTree OrdTreeT1 where
           empty (Nothing, Forest x) = S.null x
           empty _                   = False
 
+  delSubtree a b = collapse . OrdTreeT1 . Forest $
+                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
+    where helper (S.viewl -> EmptyL)  _                    = S.empty
+          helper t                    (S.viewl -> EmptyL)  = t
+          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+                z              = if a == b then Nothing else a
+            in (z, Forest (helper fa fb)) <| helper xs ys
+
 
 newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -242,6 +252,16 @@ instance OrdTree OrdTreeT2 where
                       fmap (second collapseF) . getSeq
           empty (Nothing, Forest x) = S.null x
           empty _                   = False
+
+  delSubtree a b = collapse . OrdTreeT2 . Forest $
+                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
+    where helper (S.viewr -> EmptyR)  _                    = S.empty
+          helper t                    (S.viewr -> EmptyR)  = t
+          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+                z              = if a == b then Nothing else a
+            in helper xs ys |> (z, Forest (helper fa fb))
 
 
 newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -351,6 +371,16 @@ instance OrdTree OrdTreeT3 where
           empty (Nothing, Forest x) = S.null x
           empty _                   = False
 
+  delSubtree a b = collapse . OrdTreeT3 . Forest $
+                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
+    where helper (S.viewl -> EmptyL)  _                    = S.empty
+          helper t                    (S.viewl -> EmptyL)  = t
+          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+                z              = if a == b then Nothing else a
+            in (z, Forest (helper fa fb)) <| helper xs ys
+
 
 newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -457,6 +487,16 @@ instance OrdTree OrdTreeT4 where
                       fmap (second collapseF) . getSeq
           empty (Nothing, Forest x) = S.null x
           empty _                   = False
+
+  delSubtree a b = collapse . OrdTreeT4 . Forest $
+                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
+    where helper (S.viewr -> EmptyR)  _                    = S.empty
+          helper t                    (S.viewr -> EmptyR)  = t
+          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
+            let (a, Forest fa) = x
+                (b, Forest fb) = y
+                z              = if a == b then Nothing else a
+            in helper xs ys |> (z, Forest (helper fa fb))
 
 
 newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
