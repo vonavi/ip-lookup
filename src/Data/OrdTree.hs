@@ -51,11 +51,11 @@ class OrdTree t where
   bRightSubtree :: t         -> t
   bInsertRoot   :: Maybe Int -> t -> t -> t
 
-  isEmpty = null . getNodes . toOldForest
+  isEmpty = S.null . getSeq . toForest
 
-  size x = pred $ execState (helper . toOldForest $ x) 0
-    where helper :: OldForest (Maybe Int) -> State Int ()
-          helper (OldForest xs) = do
+  size x = pred $ execState (helper . toForest $ x) 0
+    where helper :: Forest (Maybe Int) -> State Int ()
+          helper (Forest xs) = do
             mapM_ (helper . snd) xs
             modify succ
 
@@ -68,13 +68,12 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
 
   ipLookup a t = execState (lookupState a t) Nothing
 
-  numOfPrefixes t = execState (helper . toOldForest $ t) 0
-    where helper :: OldForest (Maybe Int) -> State Int ()
-          helper (OldForest [])           = return ()
-          helper (OldForest ((x, l) : r)) = do
-            helper l
-            helper (OldForest r)
-            when (isJust x) $ modify succ
+  numOfPrefixes tree = execState (helper . getSeq . toForest $ tree) 0
+    where helper t = case S.viewl t of
+                      EmptyL             -> return ()
+                      (x, Forest l) :< r -> do helper l
+                                               helper r
+                                               when (isJust x) $ modify succ
 
 forestToBp :: OldForest a -> [(a, Paren)]
 forestToBp = helper . getNodes
