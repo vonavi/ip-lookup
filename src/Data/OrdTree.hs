@@ -146,6 +146,24 @@ instance OrdTree OrdTreeT1 where
                 z              = if a == b then Nothing else a
             in (z, Forest (helper fa fb)) <| helper xs ys
 
+  bRoot t = case (S.viewl . getSeq . toForest) t of
+             EmptyL      -> Nothing
+             (x, _) :< _ -> x
+
+  bLeftSubtree t = OrdTreeT1 . Forest $
+                   case (S.viewl . getSeq . toForest) t of
+                    EmptyL             -> S.empty
+                    (_, Forest l) :< _ -> l
+
+  bRightSubtree t = OrdTreeT1 . Forest $
+                    case (S.viewl . getSeq . toForest) t of
+                     EmptyL -> S.empty
+                     _ :< r -> r
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT1 . Forest $
+    (x, toForest ltree) <| (getSeq . toForest $ rtree)
+
 
 newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -262,6 +280,24 @@ instance OrdTree OrdTreeT2 where
                 (b, Forest fb) = y
                 z              = if a == b then Nothing else a
             in helper xs ys |> (z, Forest (helper fa fb))
+
+  bRoot t = case (S.viewr . getSeq . toForest) t of
+             EmptyR      -> Nothing
+             _ :> (x, _) -> x
+
+  bLeftSubtree t = OrdTreeT2 . Forest $
+                   case (S.viewr . getSeq . toForest) t of
+                    EmptyR             -> S.empty
+                    _ :> (_, Forest l) -> l
+
+  bRightSubtree t = OrdTreeT2 . Forest $
+                    case (S.viewr . getSeq . toForest) t of
+                     EmptyR -> S.empty
+                     r :> _ -> r
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT2 . Forest $
+    (getSeq . toForest $ rtree) |> (x, toForest ltree)
 
 
 newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -381,6 +417,24 @@ instance OrdTree OrdTreeT3 where
                 z              = if a == b then Nothing else a
             in (z, Forest (helper fa fb)) <| helper xs ys
 
+  bRoot t = case (S.viewl . getSeq . toForest) t of
+             EmptyL      -> Nothing
+             (x, _) :< _ -> x
+
+  bLeftSubtree t = OrdTreeT3 . Forest $
+                   case (S.viewl . getSeq . toForest) t of
+                    EmptyL -> S.empty
+                    _ :< l -> l
+
+  bRightSubtree t = OrdTreeT3 . Forest $
+                    case (S.viewl . getSeq . toForest) t of
+                     EmptyL             -> S.empty
+                     (_, Forest r) :< _ -> r
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT3 . Forest $
+    (x, toForest rtree) <| (getSeq . toForest $ ltree)
+
 
 newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -497,6 +551,24 @@ instance OrdTree OrdTreeT4 where
                 (b, Forest fb) = y
                 z              = if a == b then Nothing else a
             in helper xs ys |> (z, Forest (helper fa fb))
+
+  bRoot t = case (S.viewr . getSeq . toForest) t of
+             EmptyR      -> Nothing
+             _ :> (x, _) -> x
+
+  bLeftSubtree t = OrdTreeT4 . Forest $
+                   case (S.viewr . getSeq . toForest) t of
+                    EmptyR -> S.empty
+                    l :> _ -> l
+
+  bRightSubtree t = OrdTreeT4 . Forest $
+                    case (S.viewr . getSeq . toForest) t of
+                     EmptyR             -> S.empty
+                     _ :> (_, Forest r) -> r
+
+  bInsertRoot x ltree rtree =
+    OrdTreeT4 . Forest $
+    (getSeq . toForest $ ltree) |> (x, toForest rtree)
 
 
 newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
