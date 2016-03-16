@@ -35,6 +35,7 @@ executable ip-lookup-hs
                        -threaded
                        -Wall
                        -fno-warn-orphans
+                       -fno-warn-incomplete-patterns
 
 test-suite tests
   type:                exitcode-stdio-1.0
@@ -52,5 +53,6 @@ test-suite tests
                        -threaded
                        -Wall
                        -fno-warn-orphans
+                       -fno-warn-incomplete-patterns
                        -fprof-auto
                        "-with-rtsopts=-N -p -s -h -i0.1"
