@@ -114,6 +114,16 @@ instance Monoid OrdTreeT1 where
 instance OrdTree OrdTreeT1 where
   toForest (OrdTreeT1 x) = x
 
+  fromEntry (Entry p n) = OrdTreeT1 . Forest . helper 31 $
+                          S.singleton (Just n, Forest S.empty)
+    where Prefix (Address a) (Mask m) = p
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then (Nothing, Forest S.empty) <| y
+                            else S.singleton (Nothing, Forest y)
+            where y = helper (pred i) x
+
 
 newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -198,6 +208,16 @@ instance Monoid OrdTreeT2 where
 
 instance OrdTree OrdTreeT2 where
   toForest (OrdTreeT2 x) = x
+
+  fromEntry (Entry p n) = OrdTreeT2 . Forest . helper 31 $
+                          S.singleton (Just n, Forest S.empty)
+    where Prefix (Address a) (Mask m) = p
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then y |> (Nothing, Forest S.empty)
+                            else S.singleton (Nothing, Forest y)
+            where y = helper (pred i) x
 
 
 newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -285,6 +305,16 @@ instance Monoid OrdTreeT3 where
 instance OrdTree OrdTreeT3 where
   toForest (OrdTreeT3 x) = x
 
+  fromEntry (Entry p n) = OrdTreeT3 . Forest . helper 31 $
+                          S.singleton (Just n, Forest S.empty)
+    where Prefix (Address a) (Mask m) = p
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then S.singleton (Nothing, Forest y)
+                            else (Nothing, Forest S.empty) <| y
+            where y = helper (pred i) x
+
 
 newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -369,6 +399,16 @@ instance Monoid OrdTreeT4 where
 
 instance OrdTree OrdTreeT4 where
   toForest (OrdTreeT4 x) = x
+
+  fromEntry (Entry p n) = OrdTreeT4 . Forest . helper 31 $
+                          S.singleton (Just n, Forest S.empty)
+    where Prefix (Address a) (Mask m) = p
+          helper i x
+            | i == 31 - m = x
+            | otherwise   = if a `testBit` i
+                            then S.singleton (Nothing, Forest y)
+                            else y |> (Nothing, Forest S.empty)
+            where y = helper (pred i) x
 
 
 newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
