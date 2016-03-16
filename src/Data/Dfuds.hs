@@ -102,7 +102,7 @@ child n i dfuds
 
 newtype DfudsT1 = DfudsT1 [(Maybe Int, [Paren])]
 
-ordToDfudsT1 :: OldTreeT1 -> DfudsT1
+ordToDfudsT1 :: OrdTreeT1 -> DfudsT1
 ordToDfudsT1 = DfudsT1 . ordToDfuds
 
 instance Dfuds DfudsT1 where
@@ -115,7 +115,7 @@ instance Dfuds DfudsT1 where
 
 newtype DfudsT2 = DfudsT2 [(Maybe Int, [Paren])]
 
-ordToDfudsT2 :: OldTreeT2 -> DfudsT2
+ordToDfudsT2 :: OrdTreeT2 -> DfudsT2
 ordToDfudsT2 = DfudsT2 . ordToDfuds
 
 instance Dfuds DfudsT2 where
@@ -128,7 +128,7 @@ instance Dfuds DfudsT2 where
 
 newtype DfudsT3 = DfudsT3 [(Maybe Int, [Paren])]
 
-ordToDfudsT3 :: OldTreeT3 -> DfudsT3
+ordToDfudsT3 :: OrdTreeT3 -> DfudsT3
 ordToDfudsT3 = DfudsT3 . ordToDfuds
 
 instance Dfuds DfudsT3 where
@@ -141,7 +141,7 @@ instance Dfuds DfudsT3 where
 
 newtype DfudsT4 = DfudsT4 [(Maybe Int, [Paren])]
 
-ordToDfudsT4 :: OldTreeT4 -> DfudsT4
+ordToDfudsT4 :: OrdTreeT4 -> DfudsT4
 ordToDfudsT4 = DfudsT4 . ordToDfuds
 
 instance Dfuds DfudsT4 where

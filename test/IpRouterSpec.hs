@@ -72,16 +72,16 @@ ipLookupSpec = do
       testIpLookup (testIpRouter :: BinTree) `shouldBe` True
 
     it "Check ordinal tree T1" $ do
-      testIpLookup (testIpRouter :: OldTreeT1) `shouldBe` True
+      testIpLookup (testIpRouter :: OrdTreeT1) `shouldBe` True
 
     it "Check ordinal tree T2" $ do
-      testIpLookup (testIpRouter :: OldTreeT2) `shouldBe` True
+      testIpLookup (testIpRouter :: OrdTreeT2) `shouldBe` True
 
     it "Check ordinal tree T3" $ do
-      testIpLookup (testIpRouter :: OldTreeT3) `shouldBe` True
+      testIpLookup (testIpRouter :: OrdTreeT3) `shouldBe` True
 
     it "Check ordinal tree T4" $ do
-      testIpLookup (testIpRouter :: OldTreeT4) `shouldBe` True
+      testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T1" $ do
       testIpLookup (testIpRouter :: MhOrdSstT1) `shouldBe` True
@@ -107,16 +107,16 @@ numOfPrefixesSpec = do
       numOfPrefixes (mkTable e :: BinTree) `shouldBe` n
 
     it "Check ordinal tree T1" $ do
-      numOfPrefixes (mkTable e :: OldTreeT1) `shouldBe` n
+      numOfPrefixes (mkTable e :: OrdTreeT1) `shouldBe` n
 
     it "Check ordinal tree T2" $ do
-      numOfPrefixes (mkTable e :: OldTreeT2) `shouldBe` n
+      numOfPrefixes (mkTable e :: OrdTreeT2) `shouldBe` n
 
     it "Check ordinal tree T3" $ do
-      numOfPrefixes (mkTable e :: OldTreeT3) `shouldBe` n
+      numOfPrefixes (mkTable e :: OrdTreeT3) `shouldBe` n
 
     it "Check ordinal tree T4" $ do
-      numOfPrefixes (mkTable e :: OldTreeT4) `shouldBe` n
+      numOfPrefixes (mkTable e :: OrdTreeT4) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
       numOfPrefixes (mkTable e :: MhOrdSstT1) `shouldBe` n
@@ -142,16 +142,16 @@ insEntriesSpec = do
       numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
 
     it "Check ordinal tree T1" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OldTreeT1) e) `shouldBe` n
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT1) e) `shouldBe` n
 
     it "Check ordinal tree T2" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OldTreeT2) e) `shouldBe` n
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT2) e) `shouldBe` n
 
     it "Check ordinal tree T3" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OldTreeT3) e) `shouldBe` n
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT3) e) `shouldBe` n
 
     it "Check ordinal tree T4" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OldTreeT4) e) `shouldBe` n
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` n
@@ -177,16 +177,16 @@ delEntriesSpec = do
       delEntries (mkTable e :: BinTree) e `shouldBe` (mkTable [] :: BinTree)
 
     it "Check ordinal tree T1" $ do
-      delEntries (mkTable e :: OldTreeT1) e `shouldBe` (mkTable [] :: OldTreeT1)
+      delEntries (mkTable e :: OrdTreeT1) e `shouldBe` (mkTable [] :: OrdTreeT1)
 
     it "Check ordinal tree T2" $ do
-      delEntries (mkTable e :: OldTreeT2) e `shouldBe` (mkTable [] :: OldTreeT2)
+      delEntries (mkTable e :: OrdTreeT2) e `shouldBe` (mkTable [] :: OrdTreeT2)
 
     it "Check ordinal tree T3" $ do
-      delEntries (mkTable e :: OldTreeT3) e `shouldBe` (mkTable [] :: OldTreeT3)
+      delEntries (mkTable e :: OrdTreeT3) e `shouldBe` (mkTable [] :: OrdTreeT3)
 
     it "Check ordinal tree T4" $ do
-      delEntries (mkTable e :: OldTreeT4) e `shouldBe` (mkTable [] :: OldTreeT4)
+      delEntries (mkTable e :: OrdTreeT4) e `shouldBe` (mkTable [] :: OrdTreeT4)
 
 ordSstCheckSpec :: Spec
 ordSstCheckSpec = do

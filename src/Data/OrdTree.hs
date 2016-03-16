@@ -15,6 +15,10 @@ module Data.OrdTree
                 )
        , ordToBp
        , ordToDfuds
+       , OrdTreeT1
+       , OrdTreeT2
+       , OrdTreeT3
+       , OrdTreeT4
        , OldTreeT1
        , OldTreeT2
        , OldTreeT3

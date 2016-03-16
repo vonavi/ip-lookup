@@ -227,11 +227,11 @@ checkPages' :: OrdTree a => Page a -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
 
 
-newtype MhOrdSstT1 = MhOrdSstT1 (Page OldTreeT1) deriving Show
+newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving Show
 
 instance IpRouter MhOrdSstT1 where
   mkTable                      =
-    MhOrdSstT1 . minHeightOrdSst . (mkTable :: [Entry] -> OldTreeT1)
+    MhOrdSstT1 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT1)
   insEntry e (MhOrdSstT1 t)    = MhOrdSstT1 $ minHeightInsert e t
   delEntry e (MhOrdSstT1 t)    = MhOrdSstT1 $ minHeightDelete e t
   ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
@@ -244,11 +244,11 @@ instance OrdSst MhOrdSstT1 where
   checkPages (MhOrdSstT1 t) = checkPages' t
 
 
-newtype MhOrdSstT2 = MhOrdSstT2 (Page OldTreeT2) deriving Show
+newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving Show
 
 instance IpRouter MhOrdSstT2 where
   mkTable                      =
-    MhOrdSstT2 . minHeightOrdSst . (mkTable :: [Entry] -> OldTreeT2)
+    MhOrdSstT2 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT2)
   insEntry e (MhOrdSstT2 t)    = MhOrdSstT2 $ minHeightInsert e t
   delEntry e (MhOrdSstT2 t)    = MhOrdSstT2 $ minHeightDelete e t
   ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
@@ -261,11 +261,11 @@ instance OrdSst MhOrdSstT2 where
   checkPages (MhOrdSstT2 t) = checkPages' t
 
 
-newtype MhOrdSstT3 = MhOrdSstT3 (Page OldTreeT3) deriving Show
+newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving Show
 
 instance IpRouter MhOrdSstT3 where
   mkTable                      =
-    MhOrdSstT3 . minHeightOrdSst . (mkTable :: [Entry] -> OldTreeT3)
+    MhOrdSstT3 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT3)
   insEntry e (MhOrdSstT3 t)    = MhOrdSstT3 $ minHeightInsert e t
   delEntry e (MhOrdSstT3 t)    = MhOrdSstT3 $ minHeightDelete e t
   ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
@@ -278,11 +278,11 @@ instance OrdSst MhOrdSstT3 where
   checkPages (MhOrdSstT3 t) = checkPages' t
 
 
-newtype MhOrdSstT4 = MhOrdSstT4 (Page OldTreeT4) deriving Show
+newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving Show
 
 instance IpRouter MhOrdSstT4 where
   mkTable                      =
-    MhOrdSstT4 . minHeightOrdSst . (mkTable :: [Entry] -> OldTreeT4)
+    MhOrdSstT4 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT4)
   insEntry e (MhOrdSstT4 t)    = MhOrdSstT4 $ minHeightInsert e t
   delEntry e (MhOrdSstT4 t)    = MhOrdSstT4 $ minHeightDelete e t
   ipLookup addr (MhOrdSstT4 t) = ordSstLookup addr t
