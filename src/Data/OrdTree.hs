@@ -124,6 +124,12 @@ instance OrdTree OrdTreeT1 where
                             else S.singleton (Nothing, Forest y)
             where y = helper (pred i) x
 
+  lookupState (Address a) = helper 31 . getSeq . toForest
+    where helper _ (S.viewl -> EmptyL)             = return ()
+          helper n (S.viewl -> (x, Forest l) :< r) = do
+            modify (x <|>)
+            helper (pred n) $ if a `testBit` n then r else l
+
 
 newtype OldTreeT1 = OldTreeT1 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -218,6 +224,12 @@ instance OrdTree OrdTreeT2 where
                             then y |> (Nothing, Forest S.empty)
                             else S.singleton (Nothing, Forest y)
             where y = helper (pred i) x
+
+  lookupState (Address a) = helper 31 . getSeq . toForest
+    where helper _ (S.viewr -> EmptyR)             = return ()
+          helper n (S.viewr -> r :> (x, Forest l)) = do
+            modify (x <|>)
+            helper (pred n) $ if a `testBit` n then r else l
 
 
 newtype OldTreeT2 = OldTreeT2 (OldForest (Maybe Int)) deriving (Eq, Show)
@@ -315,6 +327,12 @@ instance OrdTree OrdTreeT3 where
                             else (Nothing, Forest S.empty) <| y
             where y = helper (pred i) x
 
+  lookupState (Address a) = helper 31 . getSeq . toForest
+    where helper _ (S.viewl -> EmptyL)             = return ()
+          helper n (S.viewl -> (x, Forest r) :< l) = do
+            modify (x <|>)
+            helper (pred n) $ if a `testBit` n then r else l
+
 
 newtype OldTreeT3 = OldTreeT3 (OldForest (Maybe Int)) deriving (Eq, Show)
 
@@ -409,6 +427,12 @@ instance OrdTree OrdTreeT4 where
                             then S.singleton (Nothing, Forest y)
                             else y |> (Nothing, Forest S.empty)
             where y = helper (pred i) x
+
+  lookupState (Address a) = helper 31 . getSeq . toForest
+    where helper _ (S.viewr -> EmptyR)             = return ()
+          helper n (S.viewr -> l :> (x, Forest r)) = do
+            modify (x <|>)
+            helper (pred n) $ if a `testBit` n then r else l
 
 
 newtype OldTreeT4 = OldTreeT4 (OldForest (Maybe Int)) deriving (Eq, Show)
