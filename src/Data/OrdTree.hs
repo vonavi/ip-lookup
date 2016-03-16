@@ -137,12 +137,12 @@ instance OrdTree OrdTreeT1 where
 
   delSubtree a b = collapse . OrdTreeT1 . Forest $
                    helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewl -> EmptyL)  _                    = S.empty
-          helper t                    (S.viewl -> EmptyL)  = t
-          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in (a `delRoot` b, Forest (helper fa fb)) <| helper xs ys
+    where helper (S.viewl -> EmptyL)    _                      = S.empty
+          helper t                      (S.viewl -> EmptyL)    = t
+          helper (S.viewl -> xs :< xss) (S.viewl -> ys :< yss) =
+            let (x, Forest fx) = xs
+                (y, Forest fy) = ys
+            in (x `delRoot` y, Forest (helper fx fy)) <| helper xss yss
 
   bRoot t = case (S.viewl . getSeq . toForest) t of
              EmptyL      -> Nothing
@@ -204,12 +204,12 @@ instance OrdTree OrdTreeT2 where
 
   delSubtree a b = collapse . OrdTreeT2 . Forest $
                    helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewr -> EmptyR)  _                    = S.empty
-          helper t                    (S.viewr -> EmptyR)  = t
-          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in helper xs ys |> (a `delRoot` b, Forest (helper fa fb))
+    where helper (S.viewr -> EmptyR)    _                      = S.empty
+          helper t                      (S.viewr -> EmptyR)    = t
+          helper (S.viewr -> xss :> xs) (S.viewr -> yss :> ys) =
+            let (x, Forest fx) = xs
+                (y, Forest fy) = ys
+            in helper xss yss |> (x `delRoot` y, Forest (helper fx fy))
 
   bRoot t = case (S.viewr . getSeq . toForest) t of
              EmptyR      -> Nothing
@@ -271,12 +271,12 @@ instance OrdTree OrdTreeT3 where
 
   delSubtree a b = collapse . OrdTreeT3 . Forest $
                    helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewl -> EmptyL)  _                    = S.empty
-          helper t                    (S.viewl -> EmptyL)  = t
-          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in (a `delRoot` b, Forest (helper fa fb)) <| helper xs ys
+    where helper (S.viewl -> EmptyL)    _                      = S.empty
+          helper t                      (S.viewl -> EmptyL)    = t
+          helper (S.viewl -> xs :< xss) (S.viewl -> ys :< yss) =
+            let (x, Forest fx) = xs
+                (y, Forest fy) = ys
+            in (x `delRoot` y, Forest (helper fx fy)) <| helper xss yss
 
   bRoot t = case (S.viewl . getSeq . toForest) t of
              EmptyL      -> Nothing
@@ -338,12 +338,12 @@ instance OrdTree OrdTreeT4 where
 
   delSubtree a b = collapse . OrdTreeT4 . Forest $
                    helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewr -> EmptyR)  _                    = S.empty
-          helper t                    (S.viewr -> EmptyR)  = t
-          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in helper xs ys |> (a `delRoot` b, Forest (helper fa fb))
+    where helper (S.viewr -> EmptyR)    _                      = S.empty
+          helper t                      (S.viewr -> EmptyR)    = t
+          helper (S.viewr -> xss :> xs) (S.viewr -> yss :> ys) =
+            let (x, Forest fx) = xs
+                (y, Forest fy) = ys
+            in helper xss yss |> (x `delRoot` y, Forest (helper fx fy))
 
   bRoot t = case (S.viewr . getSeq . toForest) t of
              EmptyR      -> Nothing
