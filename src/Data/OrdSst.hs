@@ -119,29 +119,6 @@ pageMergeRight x lp rp = Page { iTree = bInsertRoot x mempty (iTree rp)
                               , oTree = Node (Leaf lp) (oTree rp)
                               }
 
-mhInsertRoot :: (OrdTree a, Monoid a)
-                => Maybe Int -> Page a -> Page a -> Page a
-mhInsertRoot x lpage rpage
-  | lht == rht =
-      if isFitted [npage, lpage, rpage]
-      then pageMergeBoth x lpage rpage
-      else npage
-  | lht > rht  =
-      if isFitted [npage, lpage]
-      then pageMergeLeft x lpage rpage
-      else npage
-  | otherwise  =
-      if isFitted [npage, rpage]
-      then pageMergeRight x lpage rpage
-      else npage
-  where xt    = bInsertRoot x mempty mempty
-        lht   = pageDepth lpage
-        rht   = pageDepth rpage
-        npage = Page { iTree = xt
-                     , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
-                     , oTree = Node (Leaf lpage) (Leaf rpage)
-                     }
-
 ordSstBuild :: (OrdTree a, Monoid a)
                => (Maybe Int -> Page a -> Page a -> Page a)
                -> a -> Page a
@@ -150,50 +127,6 @@ ordSstBuild merge t = if isEmpty t
                       else merge (bRoot t) lpage rpage
   where lpage = ordSstBuild merge . bLeftSubtree $ t
         rpage = ordSstBuild merge . bRightSubtree $ t
-
-ordSstLookup :: OrdTree a => Address -> Page a -> Maybe Int
-ordSstLookup a t = execState (lookupState a t) Nothing
-
-lookupState :: OrdTree a => Address -> Page a -> State (Maybe Int) ()
-lookupState (Address a) = helper 31
-  where helper n page
-          | isPageEmpty page = return ()
-          | isEmpty t        = do let Leaf p = oTree page
-                                  helper n p
-          | otherwise        = do
-              modify (bRoot t <|>)
-              when (n >= 0) $
-                if a `testBit` n
-                then helper (pred n) page { iTree = bRightSubtree t
-                                          , oTree = r
-                                          }
-                else helper (pred n) page { iTree = bLeftSubtree t
-                                          , oTree = l
-                                          }
-          where t        = iTree page
-                Node l r = oTree page
-
-foldOrdSst :: (Page a -> Int -> Int) -> Page a -> Int
-foldOrdSst f p = execState (foldState f p) (f p 0)
-
-foldState :: (Page a -> Int -> Int) -> Page a -> State Int ()
-foldState _ Empty = return ()
-foldState f page  = case oTree page of
-                     Leaf p   -> case p of
-                                  Empty -> return ()
-                                  _     -> do modify (f p)
-                                              foldState f p
-                     Node l r -> do foldState f $ page { oTree = l }
-                                    foldState f $ page { oTree = r }
-
-numOfPrefixes' :: (OrdTree a, Monoid a) => Page a -> Int
-numOfPrefixes' = foldOrdSst $ (+) . numOfPrefixes . iTree
-
-numOfPages' :: OrdTree a => Page a -> Int
-numOfPages' = foldOrdSst $ const succ
-
-fillSize' :: (OrdTree a, Monoid a) => Page a -> Int
-fillSize' = foldOrdSst $ (+) . pageSize
 
 ordSstInsert :: (OrdTree a, Monoid a)
                 => (Maybe Int -> Page a -> Page a -> Page a)
@@ -296,6 +229,50 @@ ordSstDelete m = flip (helper m) . fromEntry
                        rpage' = helper merge rpage (bRightSubtree tree)
           where itree = iTree page
 
+ordSstLookup :: OrdTree a => Address -> Page a -> Maybe Int
+ordSstLookup a t = execState (lookupState a t) Nothing
+
+lookupState :: OrdTree a => Address -> Page a -> State (Maybe Int) ()
+lookupState (Address a) = helper 31
+  where helper n page
+          | isPageEmpty page = return ()
+          | isEmpty t        = do let Leaf p = oTree page
+                                  helper n p
+          | otherwise        = do
+              modify (bRoot t <|>)
+              when (n >= 0) $
+                if a `testBit` n
+                then helper (pred n) page { iTree = bRightSubtree t
+                                          , oTree = r
+                                          }
+                else helper (pred n) page { iTree = bLeftSubtree t
+                                          , oTree = l
+                                          }
+          where t        = iTree page
+                Node l r = oTree page
+
+foldOrdSst :: (Page a -> Int -> Int) -> Page a -> Int
+foldOrdSst f p = execState (foldState f p) (f p 0)
+
+foldState :: (Page a -> Int -> Int) -> Page a -> State Int ()
+foldState _ Empty = return ()
+foldState f page  = case oTree page of
+                     Leaf p   -> case p of
+                                  Empty -> return ()
+                                  _     -> do modify (f p)
+                                              foldState f p
+                     Node l r -> do foldState f $ page { oTree = l }
+                                    foldState f $ page { oTree = r }
+
+numOfPrefixes' :: (OrdTree a, Monoid a) => Page a -> Int
+numOfPrefixes' = foldOrdSst $ (+) . numOfPrefixes . iTree
+
+numOfPages' :: OrdTree a => Page a -> Int
+numOfPages' = foldOrdSst $ const succ
+
+fillSize' :: (OrdTree a, Monoid a) => Page a -> Int
+fillSize' = foldOrdSst $ (+) . pageSize
+
 checkPage :: OrdTree a => Page a -> Bool
 checkPage page
   | isPageEmpty page              = True
@@ -321,6 +298,29 @@ checkPagesS page  = case oTree page of
 checkPages' :: OrdTree a => Page a -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
 
+
+mhInsertRoot :: (OrdTree a, Monoid a)
+                => Maybe Int -> Page a -> Page a -> Page a
+mhInsertRoot x lpage rpage
+  | lht == rht =
+      if isFitted [npage, lpage, rpage]
+      then pageMergeBoth x lpage rpage
+      else npage
+  | lht > rht  =
+      if isFitted [npage, lpage]
+      then pageMergeLeft x lpage rpage
+      else npage
+  | otherwise  =
+      if isFitted [npage, rpage]
+      then pageMergeRight x lpage rpage
+      else npage
+  where xt    = bInsertRoot x mempty mempty
+        lht   = pageDepth lpage
+        rht   = pageDepth rpage
+        npage = Page { iTree = xt
+                     , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
+                     , oTree = Node (Leaf lpage) (Leaf rpage)
+                     }
 
 newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving (Eq, Show)
 
