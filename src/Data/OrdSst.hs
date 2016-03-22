@@ -8,6 +8,10 @@ module Data.OrdSst
        , MhOrdSstT2
        , MhOrdSstT3
        , MhOrdSstT4
+       , MsOrdSstT1
+       , MsOrdSstT2
+       , MsOrdSstT3
+       , MsOrdSstT4
        ) where
 
 import Data.Bits
@@ -388,3 +392,88 @@ instance OrdSst MhOrdSstT4 where
   numOfPages (MhOrdSstT4 t) = numOfPages' t
   fillSize (MhOrdSstT4 t)   = fillSize' t
   checkPages (MhOrdSstT4 t) = checkPages' t
+
+
+msInsertRoot :: (OrdTree a, Monoid a)
+                => Maybe Int -> Page a -> Page a -> Page a
+msInsertRoot x lpage rpage
+  | isFitted [npage, lpage, rpage]  = pageMergeBoth x lpage rpage
+  | pageSize lpage < pageSize rpage =
+      if isFitted [npage, lpage]
+      then pageMergeLeft x lpage rpage
+      else npage
+  | otherwise                       =
+      if isFitted [npage, rpage]
+      then pageMergeRight x lpage rpage
+      else npage
+  where npage = Page { iTree = bInsertRoot x mempty mempty
+                     , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
+                     , oTree = Node (Leaf lpage) (Leaf rpage)
+                     }
+
+newtype MsOrdSstT1 = MsOrdSstT1 (Page OrdTreeT1) deriving (Eq, Show)
+
+instance IpRouter MsOrdSstT1 where
+  mkTable                      = MsOrdSstT1 . ordSstBuild msInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT1)
+  insEntry e (MsOrdSstT1 t)    = MsOrdSstT1 $ ordSstInsert msInsertRoot e t
+  delEntry e (MsOrdSstT1 t)    = MsOrdSstT1 $ ordSstDelete msInsertRoot e t
+  ipLookup addr (MsOrdSstT1 t) = ordSstLookup addr t
+  numOfPrefixes (MsOrdSstT1 t) = numOfPrefixes' t
+
+instance OrdSst MsOrdSstT1 where
+  height (MsOrdSstT1 t)     = pageDepth t
+  numOfPages (MsOrdSstT1 t) = numOfPages' t
+  fillSize (MsOrdSstT1 t)   = fillSize' t
+  checkPages (MsOrdSstT1 t) = checkPages' t
+
+
+newtype MsOrdSstT2 = MsOrdSstT2 (Page OrdTreeT2) deriving (Eq, Show)
+
+instance IpRouter MsOrdSstT2 where
+  mkTable                      = MsOrdSstT2 . ordSstBuild msInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT2)
+  insEntry e (MsOrdSstT2 t)    = MsOrdSstT2 $ ordSstInsert msInsertRoot e t
+  delEntry e (MsOrdSstT2 t)    = MsOrdSstT2 $ ordSstDelete msInsertRoot e t
+  ipLookup addr (MsOrdSstT2 t) = ordSstLookup addr t
+  numOfPrefixes (MsOrdSstT2 t) = numOfPrefixes' t
+
+instance OrdSst MsOrdSstT2 where
+  height (MsOrdSstT2 t)     = pageDepth t
+  numOfPages (MsOrdSstT2 t) = numOfPages' t
+  fillSize (MsOrdSstT2 t)   = fillSize' t
+  checkPages (MsOrdSstT2 t) = checkPages' t
+
+
+newtype MsOrdSstT3 = MsOrdSstT3 (Page OrdTreeT3) deriving (Eq, Show)
+
+instance IpRouter MsOrdSstT3 where
+  mkTable                      = MsOrdSstT3 . ordSstBuild msInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT3)
+  insEntry e (MsOrdSstT3 t)    = MsOrdSstT3 $ ordSstInsert msInsertRoot e t
+  delEntry e (MsOrdSstT3 t)    = MsOrdSstT3 $ ordSstDelete msInsertRoot e t
+  ipLookup addr (MsOrdSstT3 t) = ordSstLookup addr t
+  numOfPrefixes (MsOrdSstT3 t) = numOfPrefixes' t
+
+instance OrdSst MsOrdSstT3 where
+  height (MsOrdSstT3 t)     = pageDepth t
+  numOfPages (MsOrdSstT3 t) = numOfPages' t
+  fillSize (MsOrdSstT3 t)   = fillSize' t
+  checkPages (MsOrdSstT3 t) = checkPages' t
+
+
+newtype MsOrdSstT4 = MsOrdSstT4 (Page OrdTreeT4) deriving (Eq, Show)
+
+instance IpRouter MsOrdSstT4 where
+  mkTable                      = MsOrdSstT4 . ordSstBuild msInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT4)
+  insEntry e (MsOrdSstT4 t)    = MsOrdSstT4 $ ordSstInsert msInsertRoot e t
+  delEntry e (MsOrdSstT4 t)    = MsOrdSstT4 $ ordSstDelete msInsertRoot e t
+  ipLookup addr (MsOrdSstT4 t) = ordSstLookup addr t
+  numOfPrefixes (MsOrdSstT4 t) = numOfPrefixes' t
+
+instance OrdSst MsOrdSstT4 where
+  height (MsOrdSstT4 t)     = pageDepth t
+  numOfPages (MsOrdSstT4 t) = numOfPages' t
+  fillSize (MsOrdSstT4 t)   = fillSize' t
+  checkPages (MsOrdSstT4 t) = checkPages' t
