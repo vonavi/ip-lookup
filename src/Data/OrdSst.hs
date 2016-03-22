@@ -119,8 +119,8 @@ pageMergeRight x lp rp = Page { iTree = bInsertRoot x mempty (iTree rp)
                               , oTree = Node (Leaf lp) (oTree rp)
                               }
 
-mhInsertRoot :: (OrdTree a, Monoid a) => Maybe Int
-                -> Page a -> Page a -> Page a
+mhInsertRoot :: (OrdTree a, Monoid a)
+                => Maybe Int -> Page a -> Page a -> Page a
 mhInsertRoot x lpage rpage
   | lht == rht =
       if isFitted [npage, lpage, rpage]
@@ -142,12 +142,14 @@ mhInsertRoot x lpage rpage
                      , oTree = Node (Leaf lpage) (Leaf rpage)
                      }
 
-minHeightOrdSst :: (OrdTree a, Monoid a) => a -> Page a
-minHeightOrdSst t
-  | isEmpty t  = Empty
-  | otherwise  = mhInsertRoot (bRoot t) lpage rpage
-  where lpage = minHeightOrdSst . bLeftSubtree $ t
-        rpage = minHeightOrdSst . bRightSubtree $ t
+ordSstBuild :: (OrdTree a, Monoid a)
+               => (Maybe Int -> Page a -> Page a -> Page a)
+               -> a -> Page a
+ordSstBuild merge t = if isEmpty t
+                      then Empty
+                      else merge (bRoot t) lpage rpage
+  where lpage = ordSstBuild merge . bLeftSubtree $ t
+        rpage = ordSstBuild merge . bRightSubtree $ t
 
 ordSstLookup :: OrdTree a => Address -> Page a -> Maybe Int
 ordSstLookup a t = execState (lookupState a t) Nothing
@@ -193,13 +195,17 @@ numOfPages' = foldOrdSst $ const succ
 fillSize' :: (OrdTree a, Monoid a) => Page a -> Int
 fillSize' = foldOrdSst $ (+) . pageSize
 
-minHeightInsert :: (OrdTree a, Monoid a) => Entry -> Page a -> Page a
-minHeightInsert = flip helper . fromEntry
-  where helper :: (OrdTree a, Monoid a) => Page a -> a -> Page a
-        helper page tree
+ordSstInsert :: (OrdTree a, Monoid a)
+                => (Maybe Int -> Page a -> Page a -> Page a)
+                -> Entry -> Page a -> Page a
+ordSstInsert m = flip (helper m) . fromEntry
+  where helper :: (OrdTree a, Monoid a)
+                  => (Maybe Int -> Page a -> Page a -> Page a)
+                  -> Page a -> a -> Page a
+        helper merge page tree
           | isEmpty tree     = page
-          | isPageEmpty page = minHeightOrdSst tree
-          | isEmpty itree    = let Leaf p = otree in helper p tree
+          | isPageEmpty page = ordSstBuild merge tree
+          | isEmpty itree    = let Leaf p = otree in helper merge p tree
           | otherwise        =
               let lpage  = case otree of
                             Node l _   -> page { iTree = bLeftSubtree itree
@@ -211,7 +217,7 @@ minHeightInsert = flip helper . fromEntry
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
-                  lpage' = helper lpage (bLeftSubtree tree)
+                  lpage' = helper merge lpage (bLeftSubtree tree)
 
                   rpage  = case otree of
                             Node _ r   -> page { iTree = bRightSubtree itree
@@ -223,8 +229,8 @@ minHeightInsert = flip helper . fromEntry
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
-                  rpage' = helper rpage (bRightSubtree tree)
-              in mhInsertRoot (bRoot tree <|> bRoot itree) lpage' rpage'
+                  rpage' = helper merge rpage (bRightSubtree tree)
+              in merge (bRoot tree <|> bRoot itree) lpage' rpage'
           where itree = iTree page
                 otree = oTree page
 
@@ -236,30 +242,36 @@ collapseLast page
   | otherwise                        = page
   where ntree = collapse . iTree $ page
 
-collapsePage :: (OrdTree a, Monoid a) => Page a -> Page a
-collapsePage page
+collapsePage :: (OrdTree a, Monoid a)
+                => (Maybe Int -> Page a -> Page a -> Page a)
+                -> Page a -> Page a
+collapsePage merge page
   | isPageEmpty page                 = Empty
   | isPageLast page && isEmpty ntree = Empty
   | isPageLast page                  = page { iTree = ntree }
   | otherwise                        =
       collapseLast $ case oTree page of
-                      Leaf p   -> page { oTree = Leaf $ collapsePage p }
-                      Node l r -> mhInsertRoot (bRoot itree) lpage rpage
+                      Leaf p   -> page { oTree = Leaf $ collapsePage merge p }
+                      Node l r -> merge (bRoot itree) lpage rpage
                         where itree = iTree page
-                              lpage = collapsePage $
+                              lpage = collapsePage merge $
                                       page { iTree = bLeftSubtree itree
                                            , oTree = l
                                            }
-                              rpage = collapsePage $
+                              rpage = collapsePage merge $
                                       page { iTree = bRightSubtree itree
                                            , oTree = r
                                            }
   where ntree = collapse . iTree $ page
 
-minHeightDelete :: (OrdTree a, Monoid a) => Entry -> Page a -> Page a
-minHeightDelete = flip helper . fromEntry
-  where helper :: (OrdTree a, Monoid a) => Page a -> a -> Page a
-        helper page tree
+ordSstDelete :: (OrdTree a, Monoid a)
+                => (Maybe Int -> Page a -> Page a -> Page a)
+                -> Entry -> Page a -> Page a
+ordSstDelete m = flip (helper m) . fromEntry
+  where helper :: (OrdTree a, Monoid a)
+                  => (Maybe Int -> Page a -> Page a -> Page a)
+                  -> Page a -> a -> Page a
+        helper merge page tree
           | isPageEmpty page = Empty
           | isEmpty tree     = page
           | isPageLast page  =
@@ -267,20 +279,21 @@ minHeightDelete = flip helper . fromEntry
                                   , oTree = Leaf Empty
                                   }
           | otherwise        =
-              collapsePage $
+              collapsePage merge $
               case oTree page of
-               Leaf p   -> page { oTree = Leaf $ helper p tree }
-               Node l r -> mhInsertRoot z lpage rpage
-                 where troot = bRoot itree
-                       z     = if bRoot tree == troot then Nothing else troot
-                       lpage = page { iTree = bLeftSubtree itree
-                                    , oTree = l
-                                    }
-                               `helper` bLeftSubtree tree
-                       rpage = page { iTree = bRightSubtree itree
-                                    , oTree = r
-                                    }
-                               `helper` bRightSubtree tree
+               Leaf p   -> page { oTree = Leaf $ helper merge p tree }
+               Node l r -> merge z lpage' rpage'
+                 where troot  = bRoot itree
+                       z      = if bRoot tree == troot then Nothing else troot
+                       lpage  = page { iTree = bLeftSubtree itree
+                                     , oTree = l
+                                     }
+                       lpage' = helper merge lpage (bLeftSubtree tree)
+
+                       rpage  = page { iTree = bRightSubtree itree
+                                     , oTree = r
+                                     }
+                       rpage' = helper merge rpage (bRightSubtree tree)
           where itree = iTree page
 
 checkPage :: OrdTree a => Page a -> Bool
@@ -312,10 +325,10 @@ checkPages' p = execState (checkPagesS p) $ checkPage p
 newtype MhOrdSstT1 = MhOrdSstT1 (Page OrdTreeT1) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT1 where
-  mkTable                      =
-    MhOrdSstT1 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT1)
-  insEntry e (MhOrdSstT1 t)    = MhOrdSstT1 $ minHeightInsert e t
-  delEntry e (MhOrdSstT1 t)    = MhOrdSstT1 $ minHeightDelete e t
+  mkTable                      = MhOrdSstT1 . ordSstBuild mhInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT1)
+  insEntry e (MhOrdSstT1 t)    = MhOrdSstT1 $ ordSstInsert mhInsertRoot e t
+  delEntry e (MhOrdSstT1 t)    = MhOrdSstT1 $ ordSstDelete mhInsertRoot e t
   ipLookup addr (MhOrdSstT1 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT1 t) = numOfPrefixes' t
 
@@ -329,10 +342,10 @@ instance OrdSst MhOrdSstT1 where
 newtype MhOrdSstT2 = MhOrdSstT2 (Page OrdTreeT2) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT2 where
-  mkTable                      =
-    MhOrdSstT2 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT2)
-  insEntry e (MhOrdSstT2 t)    = MhOrdSstT2 $ minHeightInsert e t
-  delEntry e (MhOrdSstT2 t)    = MhOrdSstT2 $ minHeightDelete e t
+  mkTable                      = MhOrdSstT2 . ordSstBuild mhInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT2)
+  insEntry e (MhOrdSstT2 t)    = MhOrdSstT2 $ ordSstInsert mhInsertRoot e t
+  delEntry e (MhOrdSstT2 t)    = MhOrdSstT2 $ ordSstDelete mhInsertRoot e t
   ipLookup addr (MhOrdSstT2 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT2 t) = numOfPrefixes' t
 
@@ -346,10 +359,10 @@ instance OrdSst MhOrdSstT2 where
 newtype MhOrdSstT3 = MhOrdSstT3 (Page OrdTreeT3) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT3 where
-  mkTable                      =
-    MhOrdSstT3 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT3)
-  insEntry e (MhOrdSstT3 t)    = MhOrdSstT3 $ minHeightInsert e t
-  delEntry e (MhOrdSstT3 t)    = MhOrdSstT3 $ minHeightDelete e t
+  mkTable                      = MhOrdSstT3 . ordSstBuild mhInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT3)
+  insEntry e (MhOrdSstT3 t)    = MhOrdSstT3 $ ordSstInsert mhInsertRoot e t
+  delEntry e (MhOrdSstT3 t)    = MhOrdSstT3 $ ordSstDelete mhInsertRoot e t
   ipLookup addr (MhOrdSstT3 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT3 t) = numOfPrefixes' t
 
@@ -363,10 +376,10 @@ instance OrdSst MhOrdSstT3 where
 newtype MhOrdSstT4 = MhOrdSstT4 (Page OrdTreeT4) deriving (Eq, Show)
 
 instance IpRouter MhOrdSstT4 where
-  mkTable                      =
-    MhOrdSstT4 . minHeightOrdSst . (mkTable :: [Entry] -> OrdTreeT4)
-  insEntry e (MhOrdSstT4 t)    = MhOrdSstT4 $ minHeightInsert e t
-  delEntry e (MhOrdSstT4 t)    = MhOrdSstT4 $ minHeightDelete e t
+  mkTable                      = MhOrdSstT4 . ordSstBuild mhInsertRoot .
+                                 (mkTable :: [Entry] -> OrdTreeT4)
+  insEntry e (MhOrdSstT4 t)    = MhOrdSstT4 $ ordSstInsert mhInsertRoot e t
+  delEntry e (MhOrdSstT4 t)    = MhOrdSstT4 $ ordSstDelete mhInsertRoot e t
   ipLookup addr (MhOrdSstT4 t) = ordSstLookup addr t
   numOfPrefixes (MhOrdSstT4 t) = numOfPrefixes' t
 
