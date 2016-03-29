@@ -60,9 +60,9 @@ lookupState (Address a) = helper 31
           helper (pred n) $ if a `testBit` n then r else l
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
-  mkTable = foldr (mappend . fromEntry) mempty
+  mkTable = foldr insEntry mempty
 
-  insEntry e t = t `mappend` fromEntry e
+  insEntry = mappend . fromEntry
 
   delEntry e (BinTree a) = collapse . BinTree $ helper a b
     where BinTree b = fromEntry e
