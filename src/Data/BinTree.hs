@@ -5,6 +5,7 @@ module Data.BinTree
          BinTree
        ) where
 
+import Data.Monoid
 import Data.Bits
 import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
@@ -14,19 +15,25 @@ import Data.IpRouter
 
 data Tree a = Tip | Bin (Tree a) !a (Tree a) deriving (Eq, Show)
 
-newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving (Eq, Show)
+instance Foldable Tree where
+  foldMap _ Tip         = mempty
+  foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
 
 instance Monoid (Tree (Maybe Int)) where
   mempty = Tip
 
-  Tip `mappend` x = x
-  x `mappend` Tip = x
+  Tip           `mappend` x             = x
+  x             `mappend` Tip           = x
   (Bin ll x lr) `mappend` (Bin rl y rr) =
     Bin (ll `mappend` rl) (x <|> y) (lr `mappend` rr)
+
+
+newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving (Eq, Show)
 
 instance Monoid BinTree where
   mempty        = BinTree mempty
   x `mappend` y = BinTree $ getTree x `mappend` getTree y
+
 
 fromEntry :: Entry -> BinTree
 fromEntry (Entry p n) = BinTree $ helper 31 (Bin Tip (Just n) Tip)
@@ -67,9 +74,5 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   ipLookup a (BinTree t) = execState (lookupState a t) Nothing
 
-  numOfPrefixes (BinTree t) = execState (helperS t) 0
-    where helperS :: Tree (Maybe Int) -> State Int ()
-          helperS Tip         = return ()
-          helperS (Bin l x r) = do helperS l
-                                   helperS r
-                                   when (isJust x) $ modify succ
+  numOfPrefixes = getSum . foldMap isPrefix . getTree
+    where isPrefix x = if isJust x then Sum 1 else Sum 0
