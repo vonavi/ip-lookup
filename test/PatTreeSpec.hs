@@ -26,38 +26,38 @@ patTreeSpec = do
     it "Check building" $ do
       (testIpRouter :: PatTree) `shouldBe`
         PatTree (Bin (Bin Tip
-                          Node { stride = 0
-                               , string = 0
-                               , label  = Just 0
-                               }
+                          PatNode { stride = 0
+                                  , string = 0
+                                  , label  = Just 0
+                                  }
                           (Bin Tip
-                               Node { stride = 0
-                                    , string = 4227858432
-                                    , label  = Just 1
-                                    }
+                               PatNode { stride = 0
+                                       , string = 4227858432
+                                       , label  = Just 1
+                                       }
                                (Bin Tip
-                                    Node { stride = 1
-                                         , string = 2013265920
-                                         , label  = Just 2
-                                         }
+                                    PatNode { stride = 1
+                                            , string = 2013265920
+                                            , label  = Just 2
+                                            }
                                     Tip)))
-                     Node { stride = 0
-                          , string = 4026531840
-                          , label  = Nothing
-                          }
+                     PatNode { stride = 0
+                             , string = 4026531840
+                             , label  = Nothing
+                             }
                      (Bin Tip
-                          Node { stride = 0
-                               , string = 4261412864
-                               , label  = Just 3
-                               }
+                          PatNode { stride = 0
+                                  , string = 4261412864
+                                  , label  = Just 3
+                                  }
                           (Bin Tip
-                               Node { stride = 2
-                                    , string = 2080374784
-                                    , label  = Just 4
-                                    }
+                               PatNode { stride = 2
+                                       , string = 2080374784
+                                       , label  = Just 4
+                                       }
                                (Bin Tip
-                                    Node { stride = 0
-                                         , string = 3758096384
-                                         , label  = Just 5
-                                         }
+                                    PatNode { stride = 0
+                                            , string = 3758096384
+                                            , label  = Just 5
+                                            }
                                     Tip))))
