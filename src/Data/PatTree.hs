@@ -5,6 +5,8 @@ module Data.PatTree
          PatNode(..)
        , Tree(..)
        , PatTree(..)
+       , gammaSize
+       , deltaSize
        ) where
 
 import Data.Word
@@ -95,3 +97,31 @@ instance IpRouter PatTree where
 
   numOfPrefixes = getSum . foldMap isPrefix . getTree
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0
+
+
+gammaSize :: PatTree -> Int
+gammaSize = getSum . foldMap nodeSize . getTree
+  where nodeSize PatNode { stride = k } =
+          {- The node size is built from the following parts:
+             parenthesis expression (2 bits), internal prefix (1 bit),
+             gamma-code of stride (the stride should be increased by
+             one), and node string. -}
+          Sum $ 3 + gammaCodeSize (k + 1) + k
+
+gammaCodeSize :: Int -> Int
+gammaCodeSize x = 2 * k + 1
+  where k = floor . logBase (2 :: Double) . fromIntegral $ x
+
+deltaSize :: PatTree -> Int
+deltaSize = getSum . foldMap nodeSize . getTree
+  where nodeSize PatNode { stride = k } =
+          {- The node size is built from the following parts:
+             parenthesis expression (2 bits), internal prefix (1 bit),
+             delta-code of stride (the stride should be increased by
+             one), and node string. -}
+          Sum $ 3 + deltaCodeSize (k + 1) + k
+
+deltaCodeSize :: Int -> Int
+deltaCodeSize x = 2 * l + k + 1
+  where k = floor . logBase (2 :: Double) . fromIntegral $ x
+        l = floor . logBase (2 :: Double) . fromIntegral . succ $ k

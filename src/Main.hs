@@ -2,6 +2,7 @@ module Main where
 
 import Data.IpRouter
 import RandomPrefixes
+import Data.PatTree
 import Data.OrdSst
 
 randomIpRouter :: IpRouter a => Int -> a
@@ -11,8 +12,16 @@ randomIpRouter n
   where zeroEntry = Entry (Prefix (Address 0) (Mask 0)) 0
         entries   = zeroEntry : randomEntries (32, 32) [1 .. pred n]
 
-main :: IO ()
-main = do
+putPatTree :: IO ()
+putPatTree = do
+  putStrLn "PATRICIA tree"
+  putStrLn . (++) "  Size with gamma code: " . show $ gammaSize t + 18 * n
+  putStrLn . (++) "  Size with delta code: " . show $ deltaSize t + 18 * n
+    where n = 1000000
+          t = randomIpRouter n :: PatTree
+
+putMhOrdSst :: IO ()
+putMhOrdSst = do
   putStrLn "Min-height SST for ordinal tree T1"
   putStrLn . (++) "  Height:          " . show . height $ t1
   putStrLn . (++) "  Number of pages: " . show . numOfPages $ t1
@@ -37,3 +46,6 @@ main = do
         t2 = randomIpRouter n :: MhOrdSstT2
         t3 = randomIpRouter n :: MhOrdSstT3
         t4 = randomIpRouter n :: MhOrdSstT4
+
+main :: IO ()
+main = putPatTree
