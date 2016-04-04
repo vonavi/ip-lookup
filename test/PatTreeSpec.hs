@@ -3,10 +3,21 @@ module PatTreeSpec
          patTreeSpec
        ) where
 
+import Data.Bits
 import Test.Hspec
 
 import Data.IpRouter
 import Data.PatTree
+
+data SimpleNode = SimpleNode { list :: [Bool]
+                             , pref :: Maybe Int
+                             } deriving (Show, Eq)
+
+simplifyNodes :: PatTree -> Tree SimpleNode
+simplifyNodes = fmap f . getTree
+  where f PatNode { stride = k, string = v, label = p } =
+          SimpleNode { list = l, pref = p }
+          where l = map (\x -> v `testBit` (31 - x)) [0 .. pred k]
 
 testIpRouter :: IpRouter a => a
 testIpRouter = mkTable . map toEntry $ l
@@ -20,44 +31,46 @@ testIpRouter = mkTable . map toEntry $ l
             , ("223.0.0.0", "/5", 5)
             ]
 
+testTree :: Tree SimpleNode
+testTree = Bin (Bin Tip
+                    SimpleNode { list = []
+                               , pref = Just 0
+                               }
+                    (Bin Tip
+                         SimpleNode { list = []
+                                    , pref = Just 1
+                                    }
+                         (Bin Tip
+                              SimpleNode { list = [False]
+                                         , pref = Just 2
+                                         }
+                              Tip)))
+               SimpleNode { list = []
+                          , pref = Nothing
+                          }
+               (Bin Tip
+                    SimpleNode { list = []
+                               , pref = Just 3
+                               }
+                    (Bin Tip
+                         SimpleNode { list = [False, True]
+                                    , pref = Just 4
+                                    }
+                         (Bin Tip
+                              SimpleNode { list = []
+                                         , pref = Just 5
+                                         }
+                              Tip)))
+
 patTreeSpec :: Spec
 patTreeSpec = do
   describe "Simple PATRICIA tree" $ do
     it "Check building" $ do
-      (testIpRouter :: PatTree) `shouldBe`
-        PatTree (Bin (Bin Tip
-                          PatNode { stride = 0
-                                  , string = 0
-                                  , label  = Just 0
-                                  }
-                          (Bin Tip
-                               PatNode { stride = 0
-                                       , string = 4227858432
-                                       , label  = Just 1
-                                       }
-                               (Bin Tip
-                                    PatNode { stride = 1
-                                            , string = 2013265920
-                                            , label  = Just 2
-                                            }
-                                    Tip)))
-                     PatNode { stride = 0
-                             , string = 4026531840
-                             , label  = Nothing
-                             }
-                     (Bin Tip
-                          PatNode { stride = 0
-                                  , string = 4261412864
-                                  , label  = Just 3
-                                  }
-                          (Bin Tip
-                               PatNode { stride = 2
-                                       , string = 2080374784
-                                       , label  = Just 4
-                                       }
-                               (Bin Tip
-                                    PatNode { stride = 0
-                                            , string = 3758096384
-                                            , label  = Just 5
-                                            }
-                                    Tip))))
+      simplifyNodes (testIpRouter :: PatTree) `shouldBe` testTree
+
+    it "Check merging" $ do
+      simplifyNodes (bInsertRoot x l r) `shouldBe` testTree
+        where t = testIpRouter :: PatTree
+              x = bRoot t
+              l = bLeftSubtree t
+              r = bRightSubtree t

@@ -32,6 +32,10 @@ data PatNode = PatNode { stride :: Int
 
 data Tree a = Tip | Bin (Tree a) a (Tree a) deriving (Show, Eq)
 
+instance Functor Tree where
+  fmap _ Tip         = Tip
+  fmap f (Bin l x r) = Bin (fmap f l) (f x) (fmap f r)
+
 instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
