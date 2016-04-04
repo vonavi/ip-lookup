@@ -13,6 +13,7 @@ import Data.IpRouter
 import RandomPrefixes
 import Data.Table
 import Data.BinTree
+import Data.PatTree
 import Data.OrdTree
 import Data.OrdSst
 
@@ -106,6 +107,9 @@ numOfPrefixesSpec = do
     it "Check binary tree" $ do
       numOfPrefixes (mkTable e :: BinTree) `shouldBe` n
 
+    it "Check PATRICIA tree" $ do
+      numOfPrefixes (mkTable e :: PatTree) `shouldBe` n
+
     it "Check ordinal tree T1" $ do
       numOfPrefixes (mkTable e :: OrdTreeT1) `shouldBe` n
 
@@ -140,6 +144,9 @@ insEntriesSpec = do
 
     it "Check binary tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
+
+    it "Check PATRICIA tree" $ do
+      numOfPrefixes (insEntries (mkTable [] :: PatTree) e) `shouldBe` n
 
     it "Check ordinal tree T1" $ do
       numOfPrefixes (insEntries (mkTable [] :: OrdTreeT1) e) `shouldBe` n

@@ -2,7 +2,9 @@
 
 module Data.PatTree
        (
-         PatTree(..)
+         Node(..)
+       , Tree(..)
+       , PatTree(..)
        ) where
 
 import Data.Word
