@@ -69,8 +69,42 @@ patTreeSpec = do
       simplifyNodes (testIpRouter :: PatTree) `shouldBe` testTree
 
     it "Check merging" $ do
-      simplifyNodes (bInsertRoot x l r) `shouldBe` testTree
-        where t = testIpRouter :: PatTree
-              x = bRoot t
-              l = bLeftSubtree t
-              r = bRightSubtree t
+      simplifyNodes (bInsertRoot (bRoot t) l' r') `shouldBe` testTree
+        where t   = testIpRouter :: PatTree
+              l   = bLeftSubtree t
+              r   = bRightSubtree t
+              ll  = bLeftSubtree l
+              lr  = bRightSubtree l
+              rl  = bLeftSubtree r
+              rr  = bRightSubtree r
+              lll = bLeftSubtree ll
+              llr = bRightSubtree ll
+              lrl = bLeftSubtree lr
+              lrr = bRightSubtree lr
+              rll = bLeftSubtree rl
+              rlr = bRightSubtree rl
+              rrl = bLeftSubtree rr
+              rrr = bRightSubtree rr
+
+              l'   = bInsertRoot (bRoot l) ll' lr'
+              r'   = bInsertRoot (bRoot r) rl' rr'
+              ll'  = bInsertRoot (bRoot ll) lll' llr'
+              lr'  = bInsertRoot (bRoot lr) lrl' lrr'
+              rl'  = bInsertRoot (bRoot rl) rll' rlr'
+              rr'  = bInsertRoot (bRoot rr) rrl' rrr'
+              lll' = bInsertRoot (bRoot lll)
+                     (bLeftSubtree lll) (bRightSubtree lll)
+              llr' = bInsertRoot (bRoot llr)
+                     (bLeftSubtree llr) (bRightSubtree llr)
+              lrl' = bInsertRoot (bRoot lrl)
+                     (bLeftSubtree lrl) (bRightSubtree lrl)
+              lrr' = bInsertRoot (bRoot lrr)
+                     (bLeftSubtree lrr) (bRightSubtree lrr)
+              rll' = bInsertRoot (bRoot rll)
+                     (bLeftSubtree rll) (bRightSubtree rll)
+              rlr' = bInsertRoot (bRoot rlr)
+                     (bLeftSubtree rlr) (bRightSubtree rlr)
+              rrl' = bInsertRoot (bRoot rrl)
+                     (bLeftSubtree rrl) (bRightSubtree rrl)
+              rrr' = bInsertRoot (bRoot rrr)
+                     (bLeftSubtree rrr) (bRightSubtree rrr)
