@@ -8,7 +8,6 @@ module Data.PatTree
        , fromEntry
        , gammaSize
        , deltaSize
-         -- not realized yet
        , isEmpty
        , collapse
        , delSubtree
@@ -146,13 +145,54 @@ delSubtree :: PatTree -> PatTree -> PatTree
 delSubtree = undefined
 
 bRoot :: PatTree -> Maybe Int
-bRoot = undefined
+bRoot (PatTree Tip) = Nothing
+bRoot (PatTree (Bin _ x _))
+  | stride x == 0 = label x
+  | otherwise     = Nothing
 
 bLeftSubtree :: PatTree -> PatTree
-bLeftSubtree = undefined
+bLeftSubtree (PatTree Tip) = PatTree Tip
+bLeftSubtree (PatTree (Bin l x r))
+  | k == 0         = PatTree l
+  | v `testBit` 31 = PatTree Tip
+  | otherwise      = PatTree $ Bin l x' r
+  where k  = stride x
+        v  = string x
+        x' = x { stride = pred k
+               , string = v `shiftL` 1
+               }
 
 bRightSubtree :: PatTree -> PatTree
-bRightSubtree = undefined
+bRightSubtree (PatTree Tip) = PatTree Tip
+bRightSubtree (PatTree (Bin l x r))
+  | k == 0         = PatTree r
+  | v `testBit` 31 = PatTree $ Bin l x' r
+  | otherwise      = PatTree Tip
+  where k  = stride x
+        v  = string x
+        x' = x { stride = pred k
+               , string = v `shiftL` 1
+               }
 
 bInsertRoot :: Maybe Int -> PatTree -> PatTree -> PatTree
-bInsertRoot = undefined
+bInsertRoot x l r = PatTree $ Bin Tip node Tip <> lsub <> rsub
+  where node = PatNode { stride = 0
+                       , string = 0
+                       , label  = x
+                       }
+        lsub = case getTree l of
+                Tip          -> Tip
+                Bin ll xl rl ->
+                  let xl' = xl { stride = succ $ stride xl
+                               , string = (`clearBit` 31) . (`shiftR` 1) $
+                                          string xl
+                               }
+                  in Bin ll xl' rl
+        rsub = case getTree r of
+                Tip          -> Tip
+                Bin lr xr rr ->
+                  let xr' = xr { stride = succ $ stride xr
+                               , string = (`setBit` 31) . (`shiftR` 1) $
+                                          string xr
+                               }
+                  in Bin lr xr' rr
