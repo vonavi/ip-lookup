@@ -4,6 +4,7 @@ module PatTreeSpec
        ) where
 
 import Data.Bits
+import Data.Word
 import Test.Hspec
 
 import Data.IpRouter
@@ -13,11 +14,21 @@ data Node = Node { list :: [Bool]
                  , pref :: Maybe Int
                  } deriving (Show, Eq)
 
-simplifyNodes :: PatTree -> Tree Node
-simplifyNodes = fmap f . getTree
+fromPatTree :: PatTree -> Tree Node
+fromPatTree = fmap f . getTree
   where f PatNode { stride = k, string = v, label = p } =
           Node { list = l, pref = p }
           where l = map (\x -> v `testBit` (31 - x)) [0 .. pred k]
+
+toPatTree :: Tree Node -> PatTree
+toPatTree = PatTree . fmap f
+  where f Node { list = l, pref = p } =
+          PatNode { stride = k, string = v, label = p }
+          where k = length l
+                v = foldr helper (0 :: Word32) l
+                helper b = if b
+                           then (`setBit` 31) . (`shiftR` 1)
+                           else (`shiftR` 1)
 
 testIpRouter :: IpRouter a => a
 testIpRouter = mkTable . map toEntry $ l
@@ -62,14 +73,17 @@ testTree = Bin (Bin Tip
                                    }
                               Tip)))
 
+testPatTree :: PatTree
+testPatTree = toPatTree testTree
+
 patTreeSpec :: Spec
 patTreeSpec = do
   describe "Simple PATRICIA tree" $ do
     it "Check building" $ do
-      simplifyNodes (testIpRouter :: PatTree) `shouldBe` testTree
+      (testIpRouter :: PatTree) `shouldBe` testPatTree
 
     it "Check merging" $ do
-      simplifyNodes (bInsertRoot (bRoot t) l' r') `shouldBe` testTree
+      bInsertRoot (bRoot t) l' r' `shouldBe` testPatTree
         where t   = testIpRouter :: PatTree
               l   = bLeftSubtree t
               r   = bRightSubtree t
