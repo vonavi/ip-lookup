@@ -28,7 +28,14 @@ import Data.IpRouter
 data PatNode = PatNode { stride :: Int
                        , string :: Word32
                        , label  :: Maybe Int
-                       } deriving (Show, Eq)
+                       } deriving Show
+
+instance Eq PatNode where
+  x == y = kx == ky && n >= kx && label x == label y
+    where kx = stride x
+          ky = stride y
+          n  = countLeadingZeros $ string x `xor` string y
+
 
 data Tree a = Tip | Bin (Tree a) a (Tree a) deriving (Show, Eq)
 
