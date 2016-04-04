@@ -9,14 +9,14 @@ import Test.Hspec
 import Data.IpRouter
 import Data.PatTree
 
-data SimpleNode = SimpleNode { list :: [Bool]
-                             , pref :: Maybe Int
-                             } deriving (Show, Eq)
+data Node = Node { list :: [Bool]
+                 , pref :: Maybe Int
+                 } deriving (Show, Eq)
 
-simplifyNodes :: PatTree -> Tree SimpleNode
+simplifyNodes :: PatTree -> Tree Node
 simplifyNodes = fmap f . getTree
   where f PatNode { stride = k, string = v, label = p } =
-          SimpleNode { list = l, pref = p }
+          Node { list = l, pref = p }
           where l = map (\x -> v `testBit` (31 - x)) [0 .. pred k]
 
 testIpRouter :: IpRouter a => a
@@ -31,35 +31,35 @@ testIpRouter = mkTable . map toEntry $ l
             , ("223.0.0.0", "/5", 5)
             ]
 
-testTree :: Tree SimpleNode
+testTree :: Tree Node
 testTree = Bin (Bin Tip
-                    SimpleNode { list = []
-                               , pref = Just 0
-                               }
+                    Node { list = []
+                         , pref = Just 0
+                         }
                     (Bin Tip
-                         SimpleNode { list = []
-                                    , pref = Just 1
-                                    }
+                         Node { list = []
+                              , pref = Just 1
+                              }
                          (Bin Tip
-                              SimpleNode { list = [False]
-                                         , pref = Just 2
-                                         }
+                              Node { list = [False]
+                                   , pref = Just 2
+                                   }
                               Tip)))
-               SimpleNode { list = []
-                          , pref = Nothing
-                          }
+               Node { list = []
+                    , pref = Nothing
+                    }
                (Bin Tip
-                    SimpleNode { list = []
-                               , pref = Just 3
-                               }
+                    Node { list = []
+                         , pref = Just 3
+                         }
                     (Bin Tip
-                         SimpleNode { list = [False, True]
-                                    , pref = Just 4
-                                    }
+                         Node { list = [False, True]
+                              , pref = Just 4
+                              }
                          (Bin Tip
-                              SimpleNode { list = []
-                                         , pref = Just 5
-                                         }
+                              Node { list = []
+                                   , pref = Just 5
+                                   }
                               Tip)))
 
 patTreeSpec :: Spec
