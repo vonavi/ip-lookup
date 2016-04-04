@@ -5,8 +5,17 @@ module Data.PatTree
          PatNode(..)
        , Tree(..)
        , PatTree(..)
+       , fromEntry
        , gammaSize
        , deltaSize
+         -- not realized yet
+       , isEmpty
+       , collapse
+       , delSubtree
+       , bRoot
+       , bLeftSubtree
+       , bRightSubtree
+       , bInsertRoot
        ) where
 
 import Data.Word
@@ -125,3 +134,25 @@ deltaCodeSize :: Int -> Int
 deltaCodeSize x = 2 * l + k + 1
   where k = floor . logBase (2 :: Double) . fromIntegral $ x
         l = floor . logBase (2 :: Double) . fromIntegral . succ $ k
+
+isEmpty :: PatTree -> Bool
+isEmpty (PatTree Tip) = True
+isEmpty _             = False
+
+collapse :: PatTree -> PatTree
+collapse = undefined
+
+delSubtree :: PatTree -> PatTree -> PatTree
+delSubtree = undefined
+
+bRoot :: PatTree -> Maybe Int
+bRoot = undefined
+
+bLeftSubtree :: PatTree -> PatTree
+bLeftSubtree = undefined
+
+bRightSubtree :: PatTree -> PatTree
+bRightSubtree = undefined
+
+bInsertRoot :: Maybe Int -> PatTree -> PatTree -> PatTree
+bInsertRoot = undefined
