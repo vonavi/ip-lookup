@@ -4,6 +4,7 @@ module IpRouterSpec
        , numOfPrefixesSpec
        , insEntriesSpec
        , delEntriesSpec
+       , patSstCheckSpec
        , ordSstCheckSpec
        ) where
 
@@ -15,7 +16,10 @@ import Data.Table
 import Data.BinTree
 import Data.PatTree
 import Data.OrdTree
-import Data.OrdSst
+import qualified Data.PatSst as PS
+import Data.PatSst (MhPatSst)
+import qualified Data.OrdSst as OS
+import Data.OrdSst (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
 
 testIpRouter :: IpRouter a => a
 testIpRouter = mkTable . map toEntry $ l
@@ -87,6 +91,9 @@ ipLookupSpec = do
     it "Check ordinal tree T4" $ do
       testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
 
+    it "Check min-height SST for PATRICIA tree" $ do
+      testIpLookup (testIpRouter :: MhPatSst) `shouldBe` True
+
     it "Check min-height SST for ordinal tree T1" $ do
       testIpLookup (testIpRouter :: MhOrdSstT1) `shouldBe` True
 
@@ -125,6 +132,9 @@ numOfPrefixesSpec = do
     it "Check ordinal tree T4" $ do
       numOfPrefixes (mkTable e :: OrdTreeT4) `shouldBe` n
 
+    it "Check min-height SST for PATRICIA tree" $ do
+      numOfPrefixes (mkTable e :: MhPatSst) `shouldBe` n
+
     it "Check min-height SST for ordinal tree T1" $ do
       numOfPrefixes (mkTable e :: MhOrdSstT1) `shouldBe` n
 
@@ -162,6 +172,9 @@ insEntriesSpec = do
 
     it "Check ordinal tree T4" $ do
       numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
+
+    it "Check min-height SST for PATRICIA tree" $ do
+      numOfPrefixes (insEntries (mkTable [] :: MhPatSst) e) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` n
@@ -214,6 +227,19 @@ delEntriesSpec = do
       delEntries (mkTable e :: MhOrdSstT4) e
         `shouldBe` (mkTable [] :: MhOrdSstT4)
 
+patSstCheckSpec :: Spec
+patSstCheckSpec = do
+  let n = 1000
+      e = genRandomEntries n
+
+  describe "Check pages built by 'mkTable'" $ do
+    it "Check min-height SST for PATRICIA tree" $ do
+      PS.checkPages (mkTable e :: MhPatSst) `shouldBe` True
+
+  describe "Check pages built by 'insEntries'" $ do
+    it "Check min-height SST for PATRICIA tree" $ do
+      PS.checkPages (insEntries (mkTable [] :: MhPatSst) e) `shouldBe` True
+
 ordSstCheckSpec :: Spec
 ordSstCheckSpec = do
   let n = 1000
@@ -221,26 +247,26 @@ ordSstCheckSpec = do
 
   describe "Check pages built by 'mkTable'" $ do
     it "Check min-height SST for ordinal tree T1" $ do
-      checkPages (mkTable e :: MhOrdSstT1) `shouldBe` True
+      OS.checkPages (mkTable e :: MhOrdSstT1) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T2" $ do
-      checkPages (mkTable e :: MhOrdSstT2) `shouldBe` True
+      OS.checkPages (mkTable e :: MhOrdSstT2) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T3" $ do
-      checkPages (mkTable e :: MhOrdSstT3) `shouldBe` True
+      OS.checkPages (mkTable e :: MhOrdSstT3) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T4" $ do
-      checkPages (mkTable e :: MhOrdSstT4) `shouldBe` True
+      OS.checkPages (mkTable e :: MhOrdSstT4) `shouldBe` True
 
   describe "Check pages built by 'insEntries'" $ do
     it "Check min-height SST for ordinal tree T1" $ do
-      checkPages (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` True
+      OS.checkPages (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T2" $ do
-      checkPages (insEntries (mkTable [] :: MhOrdSstT2) e) `shouldBe` True
+      OS.checkPages (insEntries (mkTable [] :: MhOrdSstT2) e) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T3" $ do
-      checkPages (insEntries (mkTable [] :: MhOrdSstT3) e) `shouldBe` True
+      OS.checkPages (insEntries (mkTable [] :: MhOrdSstT3) e) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T4" $ do
-      checkPages (insEntries (mkTable [] :: MhOrdSstT4) e) `shouldBe` True
+      OS.checkPages (insEntries (mkTable [] :: MhOrdSstT4) e) `shouldBe` True
