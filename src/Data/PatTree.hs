@@ -186,7 +186,9 @@ bRightSubtree (PatTree (Bin l x r))
                }
 
 bInsertRoot :: Maybe Int -> PatTree -> PatTree -> PatTree
-bInsertRoot x l r = PatTree $ Bin Tip node Tip <> lsub <> rsub
+bInsertRoot x l r
+  | isJust x  = PatTree $ Bin Tip node Tip <> lsub <> rsub
+  | otherwise = PatTree $ lsub <> rsub
   where node = PatNode { stride = 0
                        , string = 0
                        , label  = x
