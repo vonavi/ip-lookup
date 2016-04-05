@@ -76,7 +76,7 @@ instance Monoid (Tree PatNode) where
                                 , countLeadingZeros $ vx `xor` vy
                                 ]
           node        = PatNode { stride = kmin
-                                , string = vx `shiftL` (kx - kmin)
+                                , string = vx
                                 , label  = Nothing
                                 }
           xright      = vx `testBit` (31 - kmin)
