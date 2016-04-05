@@ -32,7 +32,11 @@ class PatSst a where
 
 
 maxPageSize :: Int
-maxPageSize = 256
+{- Withing the maximal page size, some place is reserved for 'plpm'
+   folder (18 bits) and ordinal-tree root (its size can be reduced
+   from 2 to 1, because the position of its open parenthesis is
+   well-known). -}
+maxPageSize = 256 - 18 - 1
 
 isPageEmpty :: Page a -> Bool
 isPageEmpty Empty = True
@@ -54,11 +58,9 @@ treeDepth (Node l r) = max (treeDepth l) (treeDepth r)
 pageSize :: Page PatTree -> Int
 pageSize Empty = 0
 pageSize x     =
-  {- The page size is build from the following parts: 'plpm' folder
-     (18 bits), RE indexes (18 bits for each), ordinal-tree root (its
-     size can be reduced from 2 to 1, because the position of its open
-     parenthesis is well-known), PATRICIA-trie size. -}
-  let t = iTree x in 18 + 18 * numOfPrefixes t + 1 + gammaSize t
+  {- The page size is build from RE indexes (18 bits for each) and
+     PATRICIA-trie size. -}
+  let t = iTree x in 18 * numOfPrefixes t + gammaSize t
 
 isFitted :: [Page PatTree] -> Bool
 isFitted = (<= maxPageSize) . sum . map pageSize
@@ -264,7 +266,11 @@ numOfPages' :: Page PatTree -> Int
 numOfPages' = foldPatSst $ const succ
 
 fillSize' :: Page PatTree -> Int
-fillSize' = foldPatSst $ (+) . pageSize
+{- Withing the maximal page size, some place is already used for
+   'plpm' folder (18 bits) and ordinal-tree root (its size can be
+   reduced from 2 to 1, because the position of its open parenthesis
+   is well-known). -}
+fillSize' = foldPatSst $ \x -> (+) (18 + 1 + pageSize x)
 
 checkPage :: Page PatTree -> Bool
 checkPage page
