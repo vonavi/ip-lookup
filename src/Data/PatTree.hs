@@ -22,6 +22,7 @@ import Data.Bits
 import Data.Monoid
 import Data.Maybe (isJust)
 import Control.Applicative ((<|>))
+import Control.Monad.State
 
 import Data.IpRouter
 
@@ -105,6 +106,18 @@ fromEntry (Entry p n) = PatTree $ Bin Tip node Tip
                                               , label  = Just n
                                               }
 
+lookupState :: Address -> Tree PatNode -> State (Maybe Int) ()
+lookupState (Address a) = helper a
+  where helper :: Word32 -> Tree PatNode -> State (Maybe Int) ()
+        helper v t | t == Tip || k < kx = return ()
+                   | otherwise          = do
+                       modify (label x <|>)
+                       helper (v `shiftL` (kx + 1)) $
+                         if v `testBit` (31 - kx) then r else l
+          where Bin l x r = t
+                kx        = stride x
+                k         = countLeadingZeros $ v `xor` string x
+
 instance IpRouter PatTree where
   mkTable = foldr insEntry mempty
 
@@ -112,7 +125,7 @@ instance IpRouter PatTree where
 
   delEntry = undefined
 
-  ipLookup = undefined
+  ipLookup a (PatTree t) = execState (lookupState a t) Nothing
 
   numOfPrefixes = getSum . foldMap isPrefix . getTree
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0

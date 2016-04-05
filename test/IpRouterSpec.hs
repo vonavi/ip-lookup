@@ -72,6 +72,9 @@ ipLookupSpec = do
     it "Check binary tree" $ do
       testIpLookup (testIpRouter :: BinTree) `shouldBe` True
 
+    it "Check PATRICIA tree" $ do
+      testIpLookup (testIpRouter :: PatTree) `shouldBe` True
+
     it "Check ordinal tree T1" $ do
       testIpLookup (testIpRouter :: OrdTreeT1) `shouldBe` True
 
