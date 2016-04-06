@@ -14,6 +14,7 @@ module Data.PatTree
        , bRoot
        , bLeftSubtree
        , bRightSubtree
+       , bSingleton
        , bMerge
        ) where
 
@@ -198,15 +199,18 @@ bRightSubtree (PatTree (Bin l x r))
                , string = v `shiftL` 1
                }
 
-bMerge :: Maybe Int -> PatTree -> PatTree -> PatTree
-bMerge x l r
-  | isJust x  = PatTree $ Bin Tip node Tip <> lsub <> rsub
-  | otherwise = PatTree $ lsub <> rsub
+bSingleton :: Maybe Int -> PatTree
+bSingleton x = PatTree $ Bin Tip node Tip
   where node = PatNode { stride = 0
                        , string = 0
                        , label  = x
                        }
-        lsub = case getTree l of
+
+bMerge :: Maybe Int -> PatTree -> PatTree -> PatTree
+bMerge x l r
+  | isJust x  = bSingleton x <> PatTree lsub <> PatTree rsub
+  | otherwise = PatTree lsub <> PatTree rsub
+  where lsub = case getTree l of
                 Tip          -> Tip
                 Bin ll xl rl ->
                   let xl' = xl { stride = succ $ stride xl

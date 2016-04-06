@@ -9,6 +9,7 @@ module Data.PatSst
        ) where
 
 import Data.Bits
+import Data.Monoid
 import Control.Applicative ((<|>))
 import Control.Monad.State
 
@@ -79,7 +80,8 @@ pageMergeBoth x Empty rp = Page { iTree = bMerge x mempty (iTree rp)
                                 , depth = depth rp
                                 , oTree = Node (Leaf Empty) (oTree rp)
                                 }
-pageMergeBoth x lp rp = Page { iTree = bMerge x (iTree lp) (iTree rp)
+pageMergeBoth x lp rp = Page { iTree = bSingleton x <>
+                                       bMerge Nothing (iTree lp) (iTree rp)
                              , depth = max (depth lp) (depth rp)
                              , oTree = Node (oTree lp) (oTree rp)
                              }
@@ -97,7 +99,8 @@ pageMergeLeft x Empty rp = Page { iTree = bMerge x mempty mempty
                                 , depth = succ . depth $ rp
                                 , oTree = Node (Leaf Empty) (Leaf rp)
                                 }
-pageMergeLeft x lp rp = Page { iTree = bMerge x (iTree lp) mempty
+pageMergeLeft x lp rp = Page { iTree = bSingleton x <>
+                                       bMerge Nothing (iTree lp) mempty
                              , depth = max (depth lp) (succ . depth $ rp)
                              , oTree = Node (oTree lp) (Leaf rp)
                              }
@@ -115,10 +118,20 @@ pageMergeRight x Empty rp = Page { iTree = bMerge x mempty (iTree rp)
                                  , depth = depth rp
                                  , oTree = Node (Leaf Empty) (oTree rp)
                                  }
-pageMergeRight x lp rp = Page { iTree = bMerge x mempty (iTree rp)
+pageMergeRight x lp rp = Page { iTree = bSingleton x <>
+                                        bMerge Nothing mempty (iTree rp)
                               , depth = max (succ . depth $ lp) (depth rp)
                               , oTree = Node (Leaf lp) (oTree rp)
                               }
+
+pageInsertNew :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
+pageInsertNew x lp rp
+  | lp == Empty || rp == Empty = npage
+  | otherwise                  = npage { iTree = bSingleton x }
+  where npage = Page { iTree = bMerge x mempty mempty
+                     , depth = succ $ max (pageDepth lp) (pageDepth rp)
+                     , oTree = Node (Leaf lp) (Leaf rp)
+                     }
 
 patSstBuild :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
                -> PatTree -> Page PatTree
@@ -312,13 +325,9 @@ mhMerge x lpage rpage
       if isFitted [npage, rpage]
       then pageMergeRight x lpage rpage
       else npage
-  where xt    = bMerge x mempty mempty
-        lht   = pageDepth lpage
+  where lht   = pageDepth lpage
         rht   = pageDepth rpage
-        npage = Page { iTree = xt
-                     , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
-                     , oTree = Node (Leaf lpage) (Leaf rpage)
-                     }
+        npage = pageInsertNew x lpage rpage
 
 newtype MhPatSst = MhPatSst (Page PatTree) deriving (Eq, Show)
 
@@ -348,10 +357,7 @@ msMerge x lpage rpage
       if isFitted [npage, rpage]
       then pageMergeRight x lpage rpage
       else npage
-  where npage = Page { iTree = bMerge x mempty mempty
-                     , depth = succ $ max (pageDepth lpage) (pageDepth rpage)
-                     , oTree = Node (Leaf lpage) (Leaf rpage)
-                     }
+  where npage = pageInsertNew x lpage rpage
 
 newtype MsPatSst = MsPatSst (Page PatTree) deriving (Eq, Show)
 
