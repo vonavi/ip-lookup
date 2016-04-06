@@ -57,8 +57,7 @@ testIpLookup router = and $ zipWith (==) testHopList nextHopList
                   ]
 
 genRandomEntries :: Int -> [Entry]
-genRandomEntries n = Entry (Prefix (Address 0) (Mask 0)) 0 :
-                     randomEntries (32, 32) [1 .. pred n]
+genRandomEntries n = randomEntries (32, 32) [1 .. n]
 
 insEntries :: IpRouter a => a -> [Entry] -> a
 insEntries = foldr insEntry

@@ -9,11 +9,7 @@ import qualified Data.OrdSst as OT
 import Data.OrdSst (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
 
 randomIpRouter :: IpRouter a => Int -> a
-randomIpRouter n
-  | n == 0    = mkTable []
-  | otherwise = mkTable entries
-  where zeroEntry = Entry (Prefix (Address 0) (Mask 0)) 0
-        entries   = zeroEntry : randomEntries (32, 32) [1 .. pred n]
+randomIpRouter n = mkTable $ randomEntries (32, 32) [1 .. n]
 
 putPatTree :: IO ()
 putPatTree = do
