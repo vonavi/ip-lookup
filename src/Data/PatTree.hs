@@ -14,7 +14,7 @@ module Data.PatTree
        , bRoot
        , bLeftSubtree
        , bRightSubtree
-       , bInsertRoot
+       , bMerge
        ) where
 
 import Data.Word
@@ -198,8 +198,8 @@ bRightSubtree (PatTree (Bin l x r))
                , string = v `shiftL` 1
                }
 
-bInsertRoot :: Maybe Int -> PatTree -> PatTree -> PatTree
-bInsertRoot x l r
+bMerge :: Maybe Int -> PatTree -> PatTree -> PatTree
+bMerge x l r
   | isJust x  = PatTree $ Bin Tip node Tip <> lsub <> rsub
   | otherwise = PatTree $ lsub <> rsub
   where node = PatNode { stride = 0
