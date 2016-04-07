@@ -201,7 +201,32 @@ patSstInsert c m = flip (helper c m) . fromEntry
                 otree = oTree page
 
 pagePress :: Page PatTree -> Page PatTree
-pagePress = undefined
+pagePress page
+  | page == Empty || npage == Empty = page
+  | isFitted [updPage]              = pagePress updPage
+  | otherwise                       = page
+  where updPage = npage { iTree = iTree page <> iTree npage }
+        npage   = helper . oTree $ page
+        helper :: Tree (Page PatTree) -> Page PatTree
+        helper (Leaf Empty)            = Empty
+        helper (Leaf p)                = Page { iTree = iTree p
+                                              , depth = succ $ depth p
+                                              , oTree = Leaf Empty
+                                              }
+        helper (Node l r)
+          | lp == Empty && rp == Empty = Empty
+          | rp == Empty                = lpMerged
+          | lp == Empty                = rpMerged
+          | pageSize lp < pageSize rp  = lpMerged
+          | otherwise                  = rpMerged
+          where lp       = helper l
+                rp       = helper r
+                lpMerged = lp { iTree = bMerge Nothing (iTree lp) mempty
+                              , oTree = Node (oTree lp) r
+                              }
+                rpMerged = rp { iTree = bMerge Nothing mempty (iTree rp)
+                              , oTree = Node l (oTree rp)
+                              }
 
 collapseLast :: Page PatTree -> Page PatTree
 collapseLast page
