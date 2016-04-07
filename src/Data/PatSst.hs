@@ -5,7 +5,9 @@ module Data.PatSst
        (
          PatSst(..)
        , MhPatSst
+       , MhPatSstM
        , MsPatSst
+       , MsPatSstM
        ) where
 
 import Data.Bits
@@ -94,70 +96,82 @@ pageMergeBoth x lp rp = Page { iTree = bSingleton x <>
                              , oTree = Node (oTree lp) (oTree rp)
                              }
 
-pageMergeLeft :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
-pageMergeLeft x Empty Empty = Page { iTree = bMerge x mempty mempty
-                                   , depth = 1
-                                   , oTree = Leaf Empty
+pageMergeLeft :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                 -> Page PatTree
+pageMergeLeft _ x Empty Empty = Page { iTree = bMerge x mempty mempty
+                                     , depth = 1
+                                     , oTree = Leaf Empty
+                                     }
+pageMergeLeft _ x lp Empty = Page { iTree = bMerge x (iTree lp) mempty
+                                  , depth = depth lp
+                                  , oTree = Node (oTree lp) (Leaf Empty)
+                                  }
+pageMergeLeft c x Empty rp = let rp' = if c then pagePress rp else rp
+                             in Page { iTree = bMerge x mempty mempty
+                                     , depth = succ . depth $ rp'
+                                     , oTree = Node (Leaf Empty) (Leaf rp')
+                                     }
+pageMergeLeft c x lp rp = let rp' = if c then pagePress rp else rp
+                          in Page { iTree = bSingleton x <>
+                                            bMerge Nothing (iTree lp) mempty
+                                  , depth = max (depth lp) (succ . depth $ rp')
+                                  , oTree = Node (oTree lp) (Leaf rp')
+                                  }
+
+pageMergeRight :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                  -> Page PatTree
+pageMergeRight _ x Empty Empty = Page { iTree = bMerge x mempty mempty
+                                      , depth = 1
+                                      , oTree = Leaf Empty
+                                      }
+pageMergeRight c x lp Empty = let lp' = if c then pagePress lp else lp
+                              in Page { iTree = bMerge x mempty mempty
+                                      , depth = succ . depth $ lp'
+                                      , oTree = Node (Leaf lp') (Leaf Empty)
+                                      }
+pageMergeRight _ x Empty rp = Page { iTree = bMerge x mempty (iTree rp)
+                                   , depth = depth rp
+                                   , oTree = Node (Leaf Empty) (oTree rp)
                                    }
-pageMergeLeft x lp Empty = Page { iTree = bMerge x (iTree lp) mempty
-                                , depth = depth lp
-                                , oTree = Node (oTree lp) (Leaf Empty)
-                                }
-pageMergeLeft x Empty rp = Page { iTree = bMerge x mempty mempty
-                                , depth = succ . depth $ rp
-                                , oTree = Node (Leaf Empty) (Leaf rp)
-                                }
-pageMergeLeft x lp rp = Page { iTree = bSingleton x <>
-                                       bMerge Nothing (iTree lp) mempty
-                             , depth = max (depth lp) (succ . depth $ rp)
-                             , oTree = Node (oTree lp) (Leaf rp)
-                             }
+pageMergeRight c x lp rp = let lp' = if c then pagePress lp else lp
+                           in Page { iTree = bSingleton x <>
+                                             bMerge Nothing mempty (iTree rp)
+                                   , depth = max (succ . depth $ lp') (depth rp)
+                                   , oTree = Node (Leaf lp') (oTree rp)
+                                   }
 
-pageMergeRight :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
-pageMergeRight x Empty Empty = Page { iTree = bMerge x mempty mempty
-                                    , depth = 1
-                                    , oTree = Leaf Empty
-                                    }
-pageMergeRight x lp Empty = Page { iTree = bMerge x mempty mempty
-                                 , depth = succ . depth $ lp
-                                 , oTree = Node (Leaf lp) (Leaf Empty)
-                                 }
-pageMergeRight x Empty rp = Page { iTree = bMerge x mempty (iTree rp)
-                                 , depth = depth rp
-                                 , oTree = Node (Leaf Empty) (oTree rp)
-                                 }
-pageMergeRight x lp rp = Page { iTree = bSingleton x <>
-                                        bMerge Nothing mempty (iTree rp)
-                              , depth = max (succ . depth $ lp) (depth rp)
-                              , oTree = Node (Leaf lp) (oTree rp)
-                              }
-
-pageInsertNew :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
-pageInsertNew x lp rp
+pageInsertNew :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                 -> Page PatTree
+pageInsertNew c x lp rp
   | lp == Empty || rp == Empty = npage
   | otherwise                  = npage { iTree = bSingleton x }
   where npage = Page { iTree = bMerge x mempty mempty
-                     , depth = succ $ max (pageDepth lp) (pageDepth rp)
-                     , oTree = Node (Leaf lp) (Leaf rp)
+                     , depth = succ $ max (pageDepth lp') (pageDepth rp')
+                     , oTree = Node (Leaf lp') (Leaf rp')
                      }
+        lp'   = if c then pagePress lp else lp
+        rp'   = if c then pagePress rp else rp
 
-patSstBuild :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
+patSstBuild :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                        -> Page PatTree)
                -> PatTree -> Page PatTree
-patSstBuild merge t = if isEmpty t
-                      then Empty
-                      else merge (bRoot t) lpage rpage
-  where lpage = patSstBuild merge . bLeftSubtree $ t
-        rpage = patSstBuild merge . bRightSubtree $ t
+patSstBuild c merge t = if isEmpty t
+                        then Empty
+                        else merge c (bRoot t) lpage rpage
+  where lpage = patSstBuild c merge . bLeftSubtree $ t
+        rpage = patSstBuild c merge . bRightSubtree $ t
 
-patSstInsert :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
+patSstInsert :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                         -> Page PatTree)
                 -> Entry -> Page PatTree -> Page PatTree
-patSstInsert m = flip (helper m) . fromEntry
-  where helper :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
+patSstInsert c m = flip (helper c m) . fromEntry
+  where helper :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                           -> Page PatTree)
                   -> Page PatTree -> PatTree -> Page PatTree
-        helper merge page tree
+        helper c' merge page tree
           | isEmpty tree     = page
-          | isPageEmpty page = patSstBuild merge tree
-          | isEmpty itree    = let Leaf p = otree in helper merge p tree
+          | isPageEmpty page = patSstBuild c' merge tree
+          | isEmpty itree    = let Leaf p = otree in helper c' merge p tree
           | otherwise        =
               let lpage  = case otree of
                             Node l _   -> page { iTree = bLeftSubtree itree
@@ -169,7 +183,7 @@ patSstInsert m = flip (helper m) . fromEntry
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
-                  lpage' = helper merge lpage (bLeftSubtree tree)
+                  lpage' = helper c' merge lpage (bLeftSubtree tree)
 
                   rpage  = case otree of
                             Node _ r   -> page { iTree = bRightSubtree itree
@@ -181,10 +195,13 @@ patSstInsert m = flip (helper m) . fromEntry
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
-                  rpage' = helper merge rpage (bRightSubtree tree)
-              in merge (bRoot tree <|> bRoot itree) lpage' rpage'
+                  rpage' = helper c' merge rpage (bRightSubtree tree)
+              in merge c' (bRoot tree <|> bRoot itree) lpage' rpage'
           where itree = iTree page
                 otree = oTree page
+
+pagePress :: Page PatTree -> Page PatTree
+pagePress = undefined
 
 collapseLast :: Page PatTree -> Page PatTree
 collapseLast page
@@ -194,33 +211,36 @@ collapseLast page
   | otherwise                        = page
   where ntree = collapse . iTree $ page
 
-collapsePage :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
+collapsePage :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                         -> Page PatTree)
                 -> Page PatTree -> Page PatTree
-collapsePage merge page
+collapsePage c merge page
   | isPageEmpty page                 = Empty
   | isPageLast page && isEmpty ntree = Empty
   | isPageLast page                  = page { iTree = ntree }
   | otherwise                        =
       collapseLast $ case oTree page of
-                      Leaf p   -> page { oTree = Leaf $ collapsePage merge p }
-                      Node l r -> merge (bRoot itree) lpage rpage
+                      Leaf p   -> page { oTree = Leaf $ collapsePage c merge p }
+                      Node l r -> merge c (bRoot itree) lpage rpage
                         where itree = iTree page
-                              lpage = collapsePage merge $
+                              lpage = collapsePage c merge $
                                       page { iTree = bLeftSubtree itree
                                            , oTree = l
                                            }
-                              rpage = collapsePage merge $
+                              rpage = collapsePage c merge $
                                       page { iTree = bRightSubtree itree
                                            , oTree = r
                                            }
   where ntree = collapse . iTree $ page
 
-patSstDelete :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
+patSstDelete :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                         -> Page PatTree)
                 -> Entry -> Page PatTree -> Page PatTree
-patSstDelete m = flip (helper m) . fromEntry
-  where helper :: (Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree)
+patSstDelete c m = flip (helper c m) . fromEntry
+  where helper :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
+                           -> Page PatTree)
                   -> Page PatTree -> PatTree -> Page PatTree
-        helper merge page tree
+        helper c' merge page tree
           | isPageEmpty page = Empty
           | isEmpty tree     = page
           | isPageLast page  =
@@ -228,21 +248,21 @@ patSstDelete m = flip (helper m) . fromEntry
                                   , oTree = Leaf Empty
                                   }
           | otherwise        =
-              collapsePage merge $
+              collapsePage c' merge $
               case oTree page of
-               Leaf p   -> page { oTree = Leaf $ helper merge p tree }
-               Node l r -> merge z lpage' rpage'
+               Leaf p   -> page { oTree = Leaf $ helper c' merge p tree }
+               Node l r -> merge c' z lpage' rpage'
                  where troot  = bRoot itree
                        z      = if bRoot tree == troot then Nothing else troot
                        lpage  = page { iTree = bLeftSubtree itree
                                      , oTree = l
                                      }
-                       lpage' = helper merge lpage (bLeftSubtree tree)
+                       lpage' = helper c' merge lpage (bLeftSubtree tree)
 
                        rpage  = page { iTree = bRightSubtree itree
                                      , oTree = r
                                      }
-                       rpage' = helper merge rpage (bRightSubtree tree)
+                       rpage' = helper c' merge rpage (bRightSubtree tree)
           where itree = iTree page
 
 patSstLookup :: Address -> Page PatTree -> Maybe Int
@@ -306,31 +326,32 @@ checkPages' :: Page PatTree -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
 
 
-mhMerge :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
-mhMerge x lpage rpage
+mhMerge :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
+           -> Page PatTree
+mhMerge c x lpage rpage
   | lht == rht =
       if isFitted [npage, lpage, rpage]
       then pageMergeBoth x lpage rpage
       else npage
   | lht > rht  =
       if isFitted [npage, lpage]
-      then pageMergeLeft x lpage rpage
+      then pageMergeLeft c x lpage rpage
       else npage
   | otherwise  =
       if isFitted [npage, rpage]
-      then pageMergeRight x lpage rpage
+      then pageMergeRight c x lpage rpage
       else npage
   where lht   = pageDepth lpage
         rht   = pageDepth rpage
-        npage = pageInsertNew x lpage rpage
+        npage = pageInsertNew c x lpage rpage
 
 newtype MhPatSst = MhPatSst (Page PatTree) deriving (Eq, Show)
 
 instance IpRouter MhPatSst where
-  mkTable                    = MhPatSst . patSstBuild mhMerge .
+  mkTable                    = MhPatSst . patSstBuild False mhMerge .
                                (mkTable :: [Entry] -> PatTree)
-  insEntry e (MhPatSst t)    = MhPatSst $ patSstInsert mhMerge e t
-  delEntry e (MhPatSst t)    = MhPatSst $ patSstDelete mhMerge e t
+  insEntry e (MhPatSst t)    = MhPatSst $ patSstInsert False mhMerge e t
+  delEntry e (MhPatSst t)    = MhPatSst $ patSstDelete False mhMerge e t
   ipLookup addr (MhPatSst t) = patSstLookup addr t
   numOfPrefixes (MhPatSst t) = numOfPrefixes' t
 
@@ -340,27 +361,44 @@ instance PatSst MhPatSst where
   fillSize (MhPatSst t)   = fillSize' t
   checkPages (MhPatSst t) = checkPages' t
 
+newtype MhPatSstM = MhPatSstM (Page PatTree) deriving (Eq, Show)
 
-msMerge :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
-msMerge x lpage rpage
+instance IpRouter MhPatSstM where
+  mkTable                     = MhPatSstM . patSstBuild True mhMerge .
+                                (mkTable :: [Entry] -> PatTree)
+  insEntry e (MhPatSstM t)    = MhPatSstM $ patSstInsert True mhMerge e t
+  delEntry e (MhPatSstM t)    = MhPatSstM $ patSstDelete True mhMerge e t
+  ipLookup addr (MhPatSstM t) = patSstLookup addr t
+  numOfPrefixes (MhPatSstM t) = numOfPrefixes' t
+
+instance PatSst MhPatSstM where
+  height (MhPatSstM t)     = pageDepth t
+  numOfPages (MhPatSstM t) = numOfPages' t
+  fillSize (MhPatSstM t)   = fillSize' t
+  checkPages (MhPatSstM t) = checkPages' t
+
+
+msMerge :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
+           -> Page PatTree
+msMerge c x lpage rpage
   | isFitted [npage, lpage, rpage]  = pageMergeBoth x lpage rpage
   | pageSize lpage < pageSize rpage =
       if isFitted [npage, lpage]
-      then pageMergeLeft x lpage rpage
+      then pageMergeLeft c x lpage rpage
       else npage
   | otherwise                       =
       if isFitted [npage, rpage]
-      then pageMergeRight x lpage rpage
+      then pageMergeRight c x lpage rpage
       else npage
-  where npage = pageInsertNew x lpage rpage
+  where npage = pageInsertNew c x lpage rpage
 
 newtype MsPatSst = MsPatSst (Page PatTree) deriving (Eq, Show)
 
 instance IpRouter MsPatSst where
-  mkTable                    = MsPatSst . patSstBuild msMerge .
+  mkTable                    = MsPatSst . patSstBuild False msMerge .
                                (mkTable :: [Entry] -> PatTree)
-  insEntry e (MsPatSst t)    = MsPatSst $ patSstInsert msMerge e t
-  delEntry e (MsPatSst t)    = MsPatSst $ patSstDelete msMerge e t
+  insEntry e (MsPatSst t)    = MsPatSst $ patSstInsert False msMerge e t
+  delEntry e (MsPatSst t)    = MsPatSst $ patSstDelete False msMerge e t
   ipLookup addr (MsPatSst t) = patSstLookup addr t
   numOfPrefixes (MsPatSst t) = numOfPrefixes' t
 
@@ -369,3 +407,19 @@ instance PatSst MsPatSst where
   numOfPages (MsPatSst t) = numOfPages' t
   fillSize (MsPatSst t)   = fillSize' t
   checkPages (MsPatSst t) = checkPages' t
+
+newtype MsPatSstM = MsPatSstM (Page PatTree) deriving (Eq, Show)
+
+instance IpRouter MsPatSstM where
+  mkTable                     = MsPatSstM . patSstBuild True msMerge .
+                                (mkTable :: [Entry] -> PatTree)
+  insEntry e (MsPatSstM t)    = MsPatSstM $ patSstInsert True msMerge e t
+  delEntry e (MsPatSstM t)    = MsPatSstM $ patSstDelete True msMerge e t
+  ipLookup addr (MsPatSstM t) = patSstLookup addr t
+  numOfPrefixes (MsPatSstM t) = numOfPrefixes' t
+
+instance PatSst MsPatSstM where
+  height (MsPatSstM t)     = pageDepth t
+  numOfPages (MsPatSstM t) = numOfPages' t
+  fillSize (MsPatSstM t)   = fillSize' t
+  checkPages (MsPatSstM t) = checkPages' t
