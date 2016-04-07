@@ -32,6 +32,12 @@ class PatSst a where
   checkPages :: a -> Bool
 
 
+instance Foldable Page where
+  foldMap _ Empty = mempty
+  foldMap f p     = f (iTree p) <> helper f (oTree p)
+    where helper g (Leaf x)   = foldMap g x
+          helper g (Node l r) = helper g l <> helper g r
+
 maxPageSize :: Int
 {- Withing the maximal page size, some place is reserved for 'plpm'
    folder (18 bits) and ordinal-tree root (its size can be reduced
@@ -58,10 +64,12 @@ treeDepth (Node l r) = max (treeDepth l) (treeDepth r)
 
 pageSize :: Page PatTree -> Int
 pageSize Empty = 0
-pageSize x     =
-  {- The page size is build from RE indexes (18 bits for each) and
-     PATRICIA-trie size. -}
-  let t = iTree x in 18 * numOfPrefixes t + gammaSize t
+pageSize x     = treeSize $ iTree x
+
+treeSize :: PatTree -> Int
+{- The page size is build from RE indexes (18 bits for each) and
+   PATRICIA-trie size. -}
+treeSize t = 18 * numOfPrefixes t + gammaSize t
 
 isFitted :: [Page PatTree] -> Bool
 isFitted = (<= maxPageSize) . sum . map pageSize
@@ -259,31 +267,18 @@ lookupState (Address a) = helper 31
           where t        = iTree page
                 Node l r = oTree page
 
-foldPatSst :: (Page a -> Int -> Int) -> Page a -> Int
-foldPatSst f p = execState (foldState f p) (f p 0)
-
-foldState :: (Page a -> Int -> Int) -> Page a -> State Int ()
-foldState _ Empty = return ()
-foldState f page  = case oTree page of
-                     Leaf p   -> case p of
-                                  Empty -> return ()
-                                  _     -> do modify (f p)
-                                              foldState f p
-                     Node l r -> do foldState f $ page { oTree = l }
-                                    foldState f $ page { oTree = r }
-
 numOfPrefixes' :: Page PatTree -> Int
-numOfPrefixes' = foldPatSst $ (+) . numOfPrefixes . iTree
+numOfPrefixes' = getSum . foldMap (Sum . numOfPrefixes)
 
 numOfPages' :: Page PatTree -> Int
-numOfPages' = foldPatSst $ const succ
+numOfPages' = getSum . foldMap (const (Sum 1))
 
 fillSize' :: Page PatTree -> Int
 {- Withing the maximal page size, some place is already used for
    'plpm' folder (18 bits) and ordinal-tree root (its size can be
    reduced from 2 to 1, because the position of its open parenthesis
    is well-known). -}
-fillSize' = foldPatSst $ \x -> (+) (18 + 1 + pageSize x)
+fillSize' = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
 
 checkPage :: Page PatTree -> Bool
 checkPage page
