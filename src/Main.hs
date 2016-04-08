@@ -11,6 +11,12 @@ import Data.OrdSst (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
 randomIpRouter :: IpRouter a => Int -> a
 randomIpRouter n = mkTable $ randomEntries (32, 32) [1 .. n]
 
+memUsage :: MhPatSst -> Int
+memUsage = (*) PT.maxPageSize . PT.numOfPages
+
+fillRatio :: MhPatSst -> Double
+fillRatio t = fromIntegral (PT.fillSize t) / fromIntegral (memUsage t)
+
 putPatTree :: IO ()
 putPatTree = do
   putStrLn "PATRICIA tree"
@@ -24,7 +30,9 @@ putMhPatSst = do
   putStrLn "Min-height SST for PATRICIA tree"
   putStrLn . (++) "  Height:          " . show . PT.height $ t
   putStrLn . (++) "  Number of pages: " . show . PT.numOfPages $ t
+  putStrLn . (++) "  Memory usage:    " . show . memUsage $ t
   putStrLn . (++) "  Fill size:       " . show . PT.fillSize $ t
+  putStrLn . (++) "  Fill ratio:      " . show . fillRatio $ t
     where n = 1000000
           t = randomIpRouter n :: MhPatSst
 

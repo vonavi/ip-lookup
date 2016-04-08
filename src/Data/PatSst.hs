@@ -8,6 +8,7 @@ module Data.PatSst
        , MhPatSstM
        , MsPatSst
        , MsPatSstM
+       , maxPageSize
        ) where
 
 import Data.Bits
@@ -41,11 +42,7 @@ instance Foldable Page where
           helper g (Node l r) = helper g l <> helper g r
 
 maxPageSize :: Int
-{- Withing the maximal page size, some place is reserved for 'plpm'
-   folder (18 bits) and ordinal-tree root (its size can be reduced
-   from 2 to 1, because the position of its open parenthesis is
-   well-known). -}
-maxPageSize = 256 - 18 - 1
+maxPageSize = 256
 
 isPageEmpty :: Page a -> Bool
 isPageEmpty Empty = True
@@ -74,7 +71,11 @@ treeSize :: PatTree -> Int
 treeSize t = 18 * numOfPrefixes t + gammaSize t
 
 isFitted :: [Page PatTree] -> Bool
-isFitted = (<= maxPageSize) . sum . map pageSize
+{- Withing the maximal page size, some place is reserved for 'plpm'
+   folder (18 bits) and ordinal-tree root (its size can be reduced
+   from 2 to 1, because the position of its open parenthesis is
+   well-known). -}
+isFitted = (maxPageSize - 18 - 1 >=) . sum . map pageSize
 
 
 pageMergeBoth :: Maybe Int -> Page PatTree -> Page PatTree -> Page PatTree
