@@ -44,10 +44,6 @@ instance Foldable Page where
 maxPageSize :: Int
 maxPageSize = 256
 
-isPageEmpty :: Page a -> Bool
-isPageEmpty Empty = True
-isPageEmpty _     = False
-
 isPageLast :: Page a -> Bool
 isPageLast Empty                       = True
 isPageLast Page { oTree = Leaf Empty } = True
@@ -170,10 +166,10 @@ patSstInsert c m = flip (helper c m) . fromEntry
                            -> Page PatTree)
                   -> Page PatTree -> PatTree -> Page PatTree
         helper c' merge page tree
-          | isEmpty tree     = page
-          | isPageEmpty page = patSstBuild c' merge tree
-          | isEmpty itree    = let Leaf p = otree in helper c' merge p tree
-          | otherwise        =
+          | isEmpty tree  = page
+          | page == Empty = patSstBuild c' merge tree
+          | isEmpty itree = let Leaf p = otree in helper c' merge p tree
+          | otherwise     =
               let lpage  = case otree of
                             Node l _   -> page { iTree = bLeftSubtree itree
                                                , depth = succ $ treeDepth l
@@ -231,7 +227,7 @@ pagePress page
 
 collapseLast :: Page PatTree -> Page PatTree
 collapseLast page
-  | isPageEmpty page                 = Empty
+  | page == Empty                    = Empty
   | isPageLast page && isEmpty ntree = Empty
   | isPageLast page                  = page { iTree = ntree }
   | otherwise                        = page
@@ -241,7 +237,7 @@ collapsePage :: Bool -> (Bool -> Maybe Int -> Page PatTree -> Page PatTree
                          -> Page PatTree)
                 -> Page PatTree -> Page PatTree
 collapsePage c merge page
-  | isPageEmpty page                 = Empty
+  | page == Empty                    = Empty
   | isPageLast page && isEmpty ntree = Empty
   | isPageLast page                  = page { iTree = ntree }
   | otherwise                        =
@@ -267,9 +263,9 @@ patSstDelete c m = flip (helper c m) . fromEntry
                            -> Page PatTree)
                   -> Page PatTree -> PatTree -> Page PatTree
         helper c' merge page tree
-          | isPageEmpty page = Empty
-          | isEmpty tree     = page
-          | isPageLast page  =
+          | page == Empty   = Empty
+          | isEmpty tree    = page
+          | isPageLast page =
               collapseLast $ page { iTree = delSubtree itree tree
                                   , oTree = Leaf Empty
                                   }
@@ -297,10 +293,10 @@ patSstLookup a t = execState (lookupState a t) Nothing
 lookupState :: Address -> Page PatTree -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
   where helper n page
-          | isPageEmpty page = return ()
-          | isEmpty t        = do let Leaf p = oTree page
-                                  helper n p
-          | otherwise        = do
+          | page == Empty = return ()
+          | isEmpty t     = let Leaf p = oTree page
+                            in helper n p
+          | otherwise     = do
               modify (bRoot t <|>)
               when (n >= 0) $
                 if a `testBit` n
@@ -328,7 +324,7 @@ fillSize' = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
 
 checkPage :: Page PatTree -> Bool
 checkPage page
-  | isPageEmpty page              = True
+  | page == Empty                 = True
   | isPageLast page               = dpt == 1
   | dpt /= succ (treeDepth otree) = False
   | otherwise                     = case otree of
