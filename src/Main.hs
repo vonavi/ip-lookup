@@ -4,17 +4,17 @@ import Data.IpRouter
 import RandomPrefixes
 import Data.PatTree
 import qualified Data.PatSst as PS
-import Data.PatSst (MhPatSst)
+import Data.PatSst (PatSst, MhPatSst, MhPatSstM, MsPatSst, MsPatSstM)
 import qualified Data.OrdSst as OS
 import Data.OrdSst (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
 
 randomIpRouter :: IpRouter a => Int -> a
 randomIpRouter n = mkTable $ randomEntries (32, 32) [1 .. n]
 
-memUsage :: MhPatSst -> Int
+memUsage :: PatSst a => a -> Int
 memUsage = (*) PS.maxPageSize . PS.numOfPages
 
-fillRatio :: MhPatSst -> Double
+fillRatio :: PatSst a => a -> Double
 fillRatio t = fromIntegral (PS.fillSize t) / fromIntegral (memUsage t)
 
 putPatTree :: IO ()
@@ -25,16 +25,14 @@ putPatTree = do
     where n = 1000000
           t = randomIpRouter n :: PatTree
 
-putMhPatSst :: IO ()
-putMhPatSst = do
-  putStrLn "Min-height SST for PATRICIA tree"
+putPatSst :: PatSst a => a -> IO ()
+putPatSst t = do
+  putStrLn "SST for PATRICIA tree"
   putStrLn . (++) "  Height:          " . show . PS.height $ t
   putStrLn . (++) "  Number of pages: " . show . PS.numOfPages $ t
   putStrLn . (++) "  Memory usage:    " . show . memUsage $ t
   putStrLn . (++) "  Fill size:       " . show . PS.fillSize $ t
   putStrLn . (++) "  Fill ratio:      " . show . fillRatio $ t
-    where n = 1000000
-          t = randomIpRouter n :: MhPatSst
 
 
 putMhOrdSst :: IO ()
@@ -65,4 +63,4 @@ putMhOrdSst = do
         t4 = randomIpRouter n :: MhOrdSstT4
 
 main :: IO ()
-main = putMhPatSst
+main = putPatSst (randomIpRouter 1000000 :: MhPatSst)
