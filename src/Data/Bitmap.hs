@@ -6,6 +6,9 @@ module Data.Bitmap
        , fromInt
        , toInt
        , inverse
+       , takeBits
+       , dropBits
+       , leadingZeros
        , rank1
        , rank0
        , select1
@@ -68,6 +71,23 @@ inverse bmp | offset == 0 = bmp { word = ws }
         mask   = (`shiftL` offset) . (`shiftR` offset) $ 255
         ws'    = init ws
         w'     = last ws .&. mask
+
+takeBits :: Int -> Bitmap -> Bitmap
+takeBits n bmp | n >= s    = bmp
+               | otherwise = fromIntExact (toInt bmp `shiftR` (s - n)) n
+  where s = size bmp
+
+dropBits :: Int -> Bitmap -> Bitmap
+dropBits n bmp = fromIntExact (toInt bmp) (size bmp - n)
+
+leadingZeros :: Bitmap -> Int
+leadingZeros Bitmap { word = ws, size = s }
+  | s <= 0           = 0
+  | x == 0 && s >= 8 = (8 +) . leadingZeros $ bmp'
+  | x == 0           = s
+  | otherwise        = countLeadingZeros x
+  where (x:xs) = ws
+        bmp'   = Bitmap { word = xs, size = s - 8 }
 
 rank1 :: Int -> Bitmap -> Int
 rank1 n bmp
