@@ -1,6 +1,9 @@
 module Data.Bitmap
        (
-         fromList
+         Bitmap(..)
+       , fromList
+       , fromIntExact
+       , fromInt
        , rank1
        , rank0
        , select1
@@ -44,6 +47,17 @@ fromList bs = Bitmap { word = ws, size = length bs }
           | n == 7    = 0 : x' : xs'
           | otherwise =     x' : xs'
           where x' = if b then x `setBit` n else x
+
+fromIntExact :: Int -> Int -> Bitmap
+fromIntExact x s = Bitmap { word = ws, size = s }
+  where nw = (s + 7) `div` 8
+        ws = map helper [nw - 1, nw - 2 .. 0]
+        x' = x `shiftL` (7 - (s - 1) `mod` 8)
+        helper n = fromIntegral (x' `shiftR` (8 * n)) :: Word8
+
+fromInt :: Int -> Bitmap
+fromInt x = fromIntExact x s
+  where s = succ . floor . logBase (2 :: Double) . fromIntegral $ x
 
 rank1 :: Int -> Bitmap -> Int
 rank1 n bmp
