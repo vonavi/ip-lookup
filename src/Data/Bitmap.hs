@@ -4,6 +4,7 @@ module Data.Bitmap
        , fromList
        , fromIntExact
        , fromInt
+       , inverse
        , rank1
        , rank0
        , select1
@@ -59,6 +60,15 @@ fromInt :: Int -> Bitmap
 fromInt x = fromIntExact x s
   where s = succ . floor . logBase (2 :: Double) . fromIntegral $ x
 
+inverse :: Bitmap -> Bitmap
+inverse bmp | offset == 0 = bmp { word = ws }
+            | otherwise   = bmp { word = ws' ++ [w'] }
+  where ws     = map complement . word $ bmp
+        offset = 8 * length ws - size bmp
+        mask   = (`shiftL` offset) . (`shiftR` offset) $ 255
+        ws'    = init ws
+        w'     = last ws .&. mask
+
 rank1 :: Int -> Bitmap -> Int
 rank1 n bmp
   | s <= 0 || n < 0 = 0
@@ -73,7 +83,7 @@ rank1 n bmp
         bmp'   = Bitmap { word = xs, size = s - 8 }
 
 rank0 :: Int -> Bitmap -> Int
-rank0 n bmp = rank1 n bmp { word = map complement . word $ bmp }
+rank0 n = rank1 n . inverse
 
 clearLeadingOnes :: Int -> Word8 -> Word8
 clearLeadingOnes n = (!! n) . iterate (\x -> x .&. mask x)
@@ -92,7 +102,7 @@ select1 n bmp
         bmp'   = Bitmap { word = xs, size = s - 8 }
 
 select0 :: Int -> Bitmap -> Maybe Int
-select0 n x = select1 n x { word = map complement . word $ x }
+select0 n = select1 n . inverse
 
 rankVec :: V.Vector Int
 rankVec = V.fromList [ 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
