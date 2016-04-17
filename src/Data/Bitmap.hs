@@ -3,6 +3,8 @@ module Data.Bitmap
          fromList
        , rank1
        , rank0
+       , select1
+       , select0
        ) where
 
 import           Data.Bits
@@ -59,6 +61,25 @@ rank1 n bmp
 rank0 :: Int -> Bitmap -> Int
 rank0 n bmp = rank1 n bmp { word = map complement . word $ bmp }
 
+clearLeadingOnes :: Int -> Word8 -> Word8
+clearLeadingOnes n = (!! n) . iterate (\x -> x .&. mask x)
+  where mask = (255 `shiftR`) . succ . countLeadingZeros
+
+select1 :: Int -> Bitmap -> Maybe Int
+select1 n bmp
+  | s <= 0 || n <= 0 = Nothing
+  | n <= pcount      = Just psel
+  | otherwise        = (8 +) <$> select1 (n - pcount) bmp'
+  where Bitmap { word = ws, size = s } = bmp
+        (x:xs) = ws
+        pcount = popCount x
+        psel   = (selectVec V.!) . fromInteger . toInteger .
+                 clearLeadingOnes (n - 1) $ x
+        bmp'   = Bitmap { word = xs, size = s - 8 }
+
+select0 :: Int -> Bitmap -> Maybe Int
+select0 n x = select1 n x { word = map complement . word $ x }
+
 rankVec :: V.Vector Int
 rankVec = V.fromList [ 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
                      , 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5
@@ -77,3 +98,22 @@ rankVec = V.fromList [ 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
                      , 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7
                      , 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
                      ]
+
+selectVec :: V.Vector Int
+selectVec = V.fromList [ 8, 7, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4
+                       , 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
+                       , 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+                       , 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+                       , 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                       , 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                       , 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                       , 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                       ]
