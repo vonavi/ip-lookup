@@ -1,9 +1,12 @@
 module Data.Bitmap
        (
          fromList
+       , rank1
+       , rank0
        ) where
 
 import           Data.Bits
+import qualified Data.Vector as V
 import           Data.Word
 
 data Bitmap = Bitmap { word :: [Word8]
@@ -39,3 +42,38 @@ fromList bs = Bitmap { word = ws, size = length bs }
           | n == 7    = 0 : x' : xs'
           | otherwise =     x' : xs'
           where x' = if b then x `setBit` n else x
+
+rank1 :: Int -> Bitmap -> Int
+rank1 n bmp
+  | s <= 0 || n < 0 = 0
+  | n < 7           = prank
+  | otherwise       = (xrank +) $ rank1 (n - 8) bmp'
+  where Bitmap { word = ws, size = s } = bmp
+        (x:xs) = ws
+        xrank  = (rankVec V.!) . fromInteger . toInteger $ x
+        offset = 7 - n
+        mask   = (`shiftL` offset) . (`shiftR` offset) $ 255
+        prank  = (rankVec V.!) . fromInteger . toInteger $ x .&. mask
+        bmp'   = Bitmap { word = xs, size = s - 8 }
+
+rank0 :: Int -> Bitmap -> Int
+rank0 n bmp = rank1 n bmp { word = map complement . word $ bmp }
+
+rankVec :: V.Vector Int
+rankVec = V.fromList [ 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4
+                     , 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5
+                     , 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5
+                     , 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6
+                     , 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5
+                     , 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6
+                     , 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6
+                     , 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7
+                     , 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5
+                     , 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6
+                     , 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6
+                     , 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7
+                     , 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6
+                     , 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7
+                     , 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7
+                     , 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
+                     ]
