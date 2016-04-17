@@ -4,6 +4,7 @@ module Data.Bitmap
        , fromList
        , fromIntExact
        , fromInt
+       , toInt
        , inverse
        , rank1
        , rank0
@@ -12,6 +13,7 @@ module Data.Bitmap
        ) where
 
 import           Data.Bits
+import           Data.List   (foldl')
 import qualified Data.Vector as V
 import           Data.Word
 
@@ -29,16 +31,10 @@ instance Show Bitmap where
 
 instance Monoid Bitmap where
   mempty              = Bitmap { word = [], size = 0 }
-  bmp1 `mappend` bmp2 = Bitmap { word = ws, size = s1 + s2 }
-    where Bitmap { word = ws1, size = s1 } = bmp1
-          Bitmap { word = ws2, size = s2 } = bmp2
-          offset = 8 * length ws1 - s1
-          ws     = if offset == 0
-                   then ws1 ++ ws2
-                   else ws1 `joinIt` shiftIt (0 : ws2)
-          shiftIt x = zipWith (.|.) (map (`shiftL` offset) x)
-                      (map (`shiftR` (8 - offset)) (tail x) ++ [0])
-          joinIt x y = init x ++ [last x .|. head y] ++ tail y
+  bmp1 `mappend` bmp2 = fromIntExact x (s1 + s2)
+    where s1 = size bmp1
+          s2 = size bmp2
+          x  = toInt bmp1 `shiftL` s2 + toInt bmp2
 
 fromList :: [Bool] -> Bitmap
 fromList bs = Bitmap { word = ws, size = length bs }
@@ -59,6 +55,10 @@ fromIntExact x s = Bitmap { word = ws, size = s }
 fromInt :: Int -> Bitmap
 fromInt x = fromIntExact x s
   where s = succ . floor . logBase (2 :: Double) . fromIntegral $ x
+
+toInt :: Bitmap -> Int
+toInt Bitmap { word = ws, size = s } = x `shiftR` (8 * length ws - s)
+  where x = foldl' (\b a -> b `shiftL` 8 + fromIntegral a) (0 :: Int) ws
 
 inverse :: Bitmap -> Bitmap
 inverse bmp | offset == 0 = bmp { word = ws }
