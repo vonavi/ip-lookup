@@ -41,12 +41,18 @@ data Bitmap2 = Bitmap2 { highBits :: Bitmap
                deriving Show
 
 encodeEliasFano :: [Int] -> Bitmap2
-encodeEliasFano [] = error "Empty monotone sequence"
-encodeEliasFano xs = Bitmap2 { highBits = hbmp
-                             , lowBits  = lbmp
-                             , lowSize  = s
-                             }
-  where s    = floor . logBase (2 :: Double) $
+encodeEliasFano xs
+  | null xs      = error "Empty monotone sequence"
+  | last xs == 0 = Bitmap2 { highBits = fromInt . pred .
+                                        (1 `shiftL`) . length $ xs
+                           , lowBits  = mempty
+                           , lowSize  = 0
+                           }
+  | otherwise    = Bitmap2 { highBits = hbmp
+                           , lowBits  = lbmp
+                           , lowSize  = s
+                           }
+  where s    = max 0 . floor . logBase (2 :: Double) $
                fromIntegral (last xs) / fromIntegral (length xs)
         hbs  = map (`shiftR` s) xs
         hbmp = mconcat . map (fromIntExact 1 . succ) $
@@ -54,7 +60,9 @@ encodeEliasFano xs = Bitmap2 { highBits = hbmp
         lbmp = mconcat . map (`fromIntExact` s) $ xs
 
 decodeEliasFano :: Bitmap2 -> [Int]
-decodeEliasFano bmp = zipWith (\h l -> h `shiftL` s + l) hbs lbs
+decodeEliasFano bmp
+  | s == 0    = hbs
+  | otherwise = zipWith (\h l -> h `shiftL` s + l) hbs lbs
   where s   = lowSize bmp
         hbs = scanl1 (+) . unfoldr getHigh . highBits $ bmp
         lbs = unfoldr getLow . lowBits $ bmp
