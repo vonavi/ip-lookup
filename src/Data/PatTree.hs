@@ -8,6 +8,7 @@ module Data.PatTree
        , fromEntry
        , gammaSize
        , deltaSize
+       , eliasFanoSize
        , isEmpty
        , collapse
        , delSubtree
@@ -158,6 +159,27 @@ deltaCodeSize :: Int -> Int
 deltaCodeSize x = 2 * l + k + 1
   where k = floor . logBase (2 :: Double) . fromIntegral $ x
         l = floor . logBase (2 :: Double) . fromIntegral . succ $ k
+
+eliasFanoSize :: PatTree -> Int
+eliasFanoSize t = eliasFanoCodeSize t +
+                  (getSum . foldMap nodeSize . getTree $ t)
+{- The node size is built from the following parts: parenthesis
+   expression (2 bits), internal prefix (1 bit), and node string. -}
+  where nodeSize x = Sum $ 3 + stride x
+
+eliasFanoCodeSize :: PatTree -> Int
+eliasFanoCodeSize t
+  | null ks   = 0
+  | kmax == 0 = 1 + n
+  | otherwise = l + 1 + sum ks' + n + n * l
+  where ks   = foldMap ((:[]) . stride) . getTree $ t
+        ksum = scanl1 (+) ks
+        kmax = last ksum
+        n    = length ks
+        l    = max 0 . floor . logBase (2 :: Double) $
+               fromIntegral kmax / fromIntegral n
+        ks'  = let ksum' = map (`shiftR` l) ksum
+               in zipWith (-) ksum' (0 : init ksum')
 
 isEmpty :: PatTree -> Bool
 isEmpty (PatTree Tip) = True
