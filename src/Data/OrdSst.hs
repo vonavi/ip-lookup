@@ -12,6 +12,7 @@ module Data.OrdSst
        , MsOrdSstT2
        , MsOrdSstT3
        , MsOrdSstT4
+       , putOrdSst
        ) where
 
 import Data.Bits
@@ -301,6 +302,13 @@ checkPagesS page  = case oTree page of
 
 checkPages' :: OrdTree a => Page a -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
+
+putOrdSst :: OrdSst a => a -> IO ()
+putOrdSst t = do
+  putStrLn "SST for ordinal tree"
+  putStrLn . (++) "  Height:          " . show . height $ t
+  putStrLn . (++) "  Number of pages: " . show . numOfPages $ t
+  putStrLn . (++) "  Fill size:       " . show . fillSize $ t
 
 
 mhInsertRoot :: (OrdTree a, Monoid a)

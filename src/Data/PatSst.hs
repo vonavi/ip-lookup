@@ -8,7 +8,7 @@ module Data.PatSst
        , MhPatSstM
        , MsPatSst
        , MsPatSstM
-       , maxPageSize
+       , putPatSst
        ) where
 
 import Data.Bits
@@ -346,6 +346,19 @@ checkPagesS page  = case oTree page of
 
 checkPages' :: Page PatTree -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
+
+putPatSst :: PatSst a => a -> IO ()
+putPatSst t = do
+  putStrLn "SST for PATRICIA tree"
+  putStrLn . (++) "  Height:          " . show . height $ t
+  putStrLn . (++) "  Number of pages: " . show $ npages
+  putStrLn . (++) "  Memory usage:    " . show $ memory
+  putStrLn . (++) "  Fill size:       " . show $ fsize
+  putStrLn . (++) "  Fill ratio:      " . show $ fratio
+    where npages = numOfPages t
+          memory = maxPageSize * npages
+          fsize  = fillSize t
+          fratio = (fromIntegral fsize / fromIntegral memory) :: Double
 
 
 mhMerge :: Bool -> Maybe Int -> Page PatTree -> Page PatTree

@@ -17,6 +17,7 @@ module Data.PatTree
        , bRightSubtree
        , bSingleton
        , bMerge
+       , putPatTree
        ) where
 
 import Data.Word
@@ -248,3 +249,10 @@ bMerge x l r
                                           string xr
                                }
                   in Bin lr xr' rr
+
+putPatTree :: PatTree -> IO ()
+putPatTree t = do
+  putStrLn "PATRICIA tree"
+  putStrLn . (++) "  Size with gamma code: " . show $ gammaSize t + 18 * n
+  putStrLn . (++) "  Size with delta code: " . show $ deltaSize t + 18 * n
+    where n = numOfPrefixes t
