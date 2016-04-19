@@ -31,8 +31,14 @@ data Page a = Empty
 class PatSst a where
   height     :: a -> Int
   numOfPages :: a -> Int
+  memUsage   :: a -> Int
   fillSize   :: a -> Int
+  fillRatio  :: a -> Double
   checkPages :: a -> Bool
+
+  memUsage = (*) maxPageSize . numOfPages
+
+  fillRatio t = fromIntegral (fillSize t) / fromIntegral (memUsage t)
 
 
 instance Foldable Page where
@@ -351,14 +357,10 @@ putPatSst :: PatSst a => a -> IO ()
 putPatSst t = do
   putStrLn "SST for PATRICIA tree"
   putStrLn . (++) "  Height:          " . show . height $ t
-  putStrLn . (++) "  Number of pages: " . show $ npages
-  putStrLn . (++) "  Memory usage:    " . show $ memory
-  putStrLn . (++) "  Fill size:       " . show $ fsize
-  putStrLn . (++) "  Fill ratio:      " . show $ fratio
-    where npages = numOfPages t
-          memory = maxPageSize * npages
-          fsize  = fillSize t
-          fratio = (fromIntegral fsize / fromIntegral memory) :: Double
+  putStrLn . (++) "  Number of pages: " . show . numOfPages $ t
+  putStrLn . (++) "  Memory usage:    " . show . memUsage $ t
+  putStrLn . (++) "  Fill size:       " . show . fillSize $ t
+  putStrLn . (++) "  Fill ratio:      " . show . fillRatio $ t
 
 
 mhMerge :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
