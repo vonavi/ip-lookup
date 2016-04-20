@@ -5,11 +5,11 @@ module OrdTreeSpec
        , ordDfudsSpec
        ) where
 
-import Test.Hspec
+import           Test.Hspec
 
-import Data.IpRouter
-import Data.OrdTree
-import Data.Paren
+import           Data.IpRouter
+import           Data.OrdTree
+import           Data.Paren
 
 testOrdTree :: (Monoid a, OrdTree a) => a
 testOrdTree = mkTable . map toEntry $ l

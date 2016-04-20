@@ -8,18 +8,18 @@ module IpRouterSpec
        , ordSstCheckSpec
        ) where
 
-import Test.Hspec
+import           Test.Hspec
 
-import Data.IpRouter
-import RandomPrefixes
-import Data.Table
-import Data.BinTree
-import Data.PatTree
-import Data.OrdTree
-import qualified Data.PatSst as PS
-import Data.PatSst (MhPatSst)
-import qualified Data.OrdSst as OS
-import Data.OrdSst (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
+import           Data.BinTree
+import           Data.IpRouter
+import           Data.OrdSst    (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
+import qualified Data.OrdSst    as OS
+import           Data.OrdTree
+import           Data.PatSst    (MhPatSst)
+import qualified Data.PatSst    as PS
+import           Data.PatTree
+import           Data.Table
+import           RandomPrefixes
 
 testIpRouter :: IpRouter a => a
 testIpRouter = mkTable . map toEntry $ l

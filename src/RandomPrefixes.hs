@@ -3,12 +3,12 @@ module RandomPrefixes
          randomEntries
        ) where
 
-import Data.List
-import Data.Word
-import Data.Bits
-import System.Random
+import           Data.Bits
+import           Data.List
+import           Data.Word
+import           System.Random
 
-import Data.IpRouter
+import           Data.IpRouter
 
 newtype Xorshift32 = Xorshift32 { getWord32 :: Word32 }
 

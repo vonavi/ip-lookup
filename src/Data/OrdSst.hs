@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts,
-             IncoherentInstances #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE IncoherentInstances #-}
 
 module Data.OrdSst
        (
@@ -15,12 +15,12 @@ module Data.OrdSst
        , putOrdSst
        ) where
 
-import Data.Bits
-import Control.Applicative ((<|>))
-import Control.Monad.State
+import           Control.Applicative ((<|>))
+import           Control.Monad.State
+import           Data.Bits
 
-import Data.IpRouter
-import Data.OrdTree
+import           Data.IpRouter
+import           Data.OrdTree
 
 data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 

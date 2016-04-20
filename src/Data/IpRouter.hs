@@ -9,9 +9,9 @@ module Data.IpRouter
        , strToMask
        ) where
 
-import Data.Word
-import Data.Bits
-import Data.List.Split (splitOn)
+import           Data.Bits
+import           Data.List.Split (splitOn)
+import           Data.Word
 
 newtype Address = Address Word32 deriving Eq
 

@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts,
-             IncoherentInstances #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE IncoherentInstances #-}
 
 module Data.PatSst
        (
@@ -11,13 +11,13 @@ module Data.PatSst
        , putPatSst
        ) where
 
-import Data.Bits
-import Data.Monoid
-import Control.Applicative ((<|>))
-import Control.Monad.State
+import           Control.Applicative ((<|>))
+import           Control.Monad.State
+import           Data.Bits
+import           Data.Monoid
 
-import Data.IpRouter
-import Data.PatTree hiding (Tree)
+import           Data.IpRouter
+import           Data.PatTree        hiding (Tree)
 
 data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 

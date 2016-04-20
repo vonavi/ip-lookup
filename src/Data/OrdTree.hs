@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleInstances,
-             UndecidableInstances,
-             ViewPatterns #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns         #-}
 
 module Data.OrdTree
        (
@@ -22,16 +22,17 @@ module Data.OrdTree
        , OrdTreeT4
        ) where
 
-import qualified Data.Sequence as S
-import Data.Sequence ((<|), (|>), ViewL(EmptyL, (:<)), ViewR(EmptyR, (:>)))
-import Data.Bits
-import Data.Maybe (isJust)
-import Control.Applicative ((<|>))
-import Control.Monad.State
-import Control.Arrow (second)
+import           Control.Applicative ((<|>))
+import           Control.Arrow       (second)
+import           Control.Monad.State
+import           Data.Bits
+import           Data.Maybe          (isJust)
+import           Data.Sequence       (ViewL ((:<), EmptyL),
+                                      ViewR ((:>), EmptyR), (<|), (|>))
+import qualified Data.Sequence       as S
 
-import Data.IpRouter
-import Data.Paren
+import           Data.IpRouter
+import           Data.Paren
 
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
 

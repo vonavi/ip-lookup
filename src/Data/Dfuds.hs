@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleInstances,
-             UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.Dfuds
        (
@@ -21,12 +21,12 @@ module Data.Dfuds
        , ordToDfudsT4
        ) where
 
-import Data.Maybe
-import Control.Applicative ((<*>), (<|>))
-import Control.Monad.State
+import           Control.Applicative ((<*>), (<|>))
+import           Control.Monad.State
+import           Data.Maybe
 
-import Data.Paren
-import Data.OrdTree
+import           Data.OrdTree
+import           Data.Paren
 
 class Dfuds a where
   getList :: a -> [(Maybe Int, [Paren])]

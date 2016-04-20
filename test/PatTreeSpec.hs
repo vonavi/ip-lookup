@@ -3,12 +3,12 @@ module PatTreeSpec
          patTreeSpec
        ) where
 
-import Data.Bits
-import Data.Word
-import Test.Hspec
+import           Data.Bits
+import           Data.Word
+import           Test.Hspec
 
-import Data.IpRouter
-import Data.PatTree
+import           Data.IpRouter
+import           Data.PatTree
 
 data Node = Node { list :: [Bool]
                  , pref :: Maybe Int

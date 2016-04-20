@@ -3,11 +3,11 @@ module Data.Table
          Table
        ) where
 
-import Data.List
-import Data.Bits
-import Data.Function (on)
+import           Data.Bits
+import           Data.Function (on)
+import           Data.List
 
-import Data.IpRouter
+import           Data.IpRouter
 
 newtype Table = Table [Entry] deriving Eq
 

@@ -5,13 +5,13 @@ module Data.BinTree
          BinTree
        ) where
 
-import Data.Monoid
-import Data.Bits
-import Data.Maybe (isJust)
-import Control.Applicative ((<|>))
-import Control.Monad.State
+import           Control.Applicative ((<|>))
+import           Control.Monad.State
+import           Data.Bits
+import           Data.Maybe          (isJust)
+import           Data.Monoid
 
-import Data.IpRouter
+import           Data.IpRouter
 
 data Tree a = Tip | Bin (Tree a) !a (Tree a) deriving (Eq, Show)
 

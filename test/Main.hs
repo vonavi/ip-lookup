@@ -1,10 +1,10 @@
 module Main where
 
-import Test.Hspec
+import           Test.Hspec
 
-import IpRouterSpec
-import PatTreeSpec
-import OrdTreeSpec
+import           IpRouterSpec
+import           OrdTreeSpec
+import           PatTreeSpec
 
 main :: IO ()
 main = do

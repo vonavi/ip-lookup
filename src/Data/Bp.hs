@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleInstances,
-             UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.Bp
        (
@@ -21,14 +21,14 @@ module Data.Bp
        , ordToBpT4
        ) where
 
-import Data.Maybe
-import Control.Applicative ((<|>))
-import Control.Monad (guard, when)
-import Control.Monad.Trans (lift)
-import Control.Monad.Trans.State
+import           Control.Applicative       ((<|>))
+import           Control.Monad             (guard, when)
+import           Control.Monad.Trans       (lift)
+import           Control.Monad.Trans.State
+import           Data.Maybe
 
-import Data.Paren
-import Data.OrdTree
+import           Data.OrdTree
+import           Data.Paren
 
 class Bp a where
   getList :: a -> [(Maybe Int, Paren)]

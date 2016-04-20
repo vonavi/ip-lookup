@@ -20,14 +20,14 @@ module Data.PatTree
        , putPatTree
        ) where
 
-import Data.Word
-import Data.Bits
-import Data.Monoid
-import Data.Maybe (isJust)
-import Control.Applicative ((<|>))
-import Control.Monad.State
+import           Control.Applicative ((<|>))
+import           Control.Monad.State
+import           Data.Bits
+import           Data.Maybe          (isJust)
+import           Data.Monoid
+import           Data.Word
 
-import Data.IpRouter
+import           Data.IpRouter
 
 data PatNode = PatNode { stride :: Int
                        , string :: Word32
