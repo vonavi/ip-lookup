@@ -353,14 +353,15 @@ checkPagesS page  = case oTree page of
 checkPages' :: Page PatTree -> Bool
 checkPages' p = execState (checkPagesS p) $ checkPage p
 
-putPatSst :: PatSst a => a -> IO ()
+putPatSst :: (PatSst a, IpRouter a) => a -> IO ()
 putPatSst t = do
   putStrLn "SST for PATRICIA tree"
-  putStrLn . (++) "  Height:          " . show . height $ t
-  putStrLn . (++) "  Number of pages: " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage:    " . show . memUsage $ t
-  putStrLn . (++) "  Fill size:       " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio:      " . show . fillRatio $ t
+  putStrLn . (++) "  Number of prefixes: " . show . numOfPrefixes $ t
+  putStrLn . (++) "  Height:             " . show . height $ t
+  putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
+  putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
+  putStrLn . (++) "  Fill size:          " . show . fillSize $ t
+  putStrLn . (++) "  Fill ratio:         " . show . fillRatio $ t
 
 
 mhMerge :: Bool -> Maybe Int -> Page PatTree -> Page PatTree
