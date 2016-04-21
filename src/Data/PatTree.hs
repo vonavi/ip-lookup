@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Data.PatTree
        (
@@ -9,6 +10,7 @@ module Data.PatTree
        , gammaSize
        , deltaSize
        , eliasFanoSize
+       , huffmanSize
        , isEmpty
        , collapse
        , delSubtree
@@ -20,13 +22,19 @@ module Data.PatTree
        , putPatTree
        ) where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative            ((<|>))
+import           Control.Arrow                  (second)
+import           Control.Monad.ST
+import           Control.Monad.ST.UnsafePerform
 import           Control.Monad.State
 import           Data.Bits
-import           Data.Maybe          (isJust)
+import           Data.Maybe                     (isJust)
 import           Data.Monoid
+import           Data.STRef
+import qualified Data.Vector                    as V
 import           Data.Word
 
+import           Data.Compression.Huffman
 import           Data.IpRouter
 
 data PatNode = PatNode { stride :: Int
@@ -122,7 +130,13 @@ lookupState (Address a) = helper a
                 k         = countLeadingZeros $ v `xor` string x
 
 instance IpRouter PatTree where
-  mkTable = foldr insEntry mempty
+  mkTable es = PatTree $ runST $ do
+    let tree  = getTree . foldr insEntry mempty $ es
+        kvec  = foldr accStrides (V.replicate 32 0) tree
+        hsize = map (second length) . freqToEnc . V.toList . V.indexed $ kvec
+    modifySTRef huffmanVecRef (V.// hsize)
+    return tree
+      where accStrides x v = V.accum (+) v [(stride x, 1)]
 
   insEntry = mappend . fromEntry
 
@@ -181,6 +195,20 @@ eliasFanoCodeSize t
                fromIntegral kmax / fromIntegral n
         ks'  = let ksum' = map (`shiftR` l) ksum
                in zipWith (-) ksum' (0 : init ksum')
+
+{-# NOINLINE huffmanVecRef #-}
+huffmanVecRef :: forall s . STRef s (V.Vector Int)
+huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 32 0
+
+huffmanSize :: PatTree -> Int
+huffmanSize = getSum . foldMap nodeSize . getTree
+  where nodeSize PatNode { stride = k } =
+          {- The node size is built from the following parts:
+             parenthesis expression (2 bits), internal prefix (1 bit),
+             huffman code of stride (the stride should be increased by
+             one), and node string. -}
+          Sum $ runST $ do hsize <- readSTRef huffmanVecRef
+                           return $ 3 + (hsize V.! k) + k
 
 isEmpty :: PatTree -> Bool
 isEmpty (PatTree Tip) = True
