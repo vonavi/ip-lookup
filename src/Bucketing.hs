@@ -26,7 +26,7 @@ groupEntries :: Int -> [Entry] -> [[(Word32, Entry)]]
 groupEntries i es = unfoldr mkGroups gs
   where gs = sortBy (comparing fst) . map (splitEntryAt i) $ es
         mkGroups []              = Nothing
-        mkGroups xs@((w, _) : _) = Just (takeWhile p xs, dropWhile p xs)
+        mkGroups xs@((w, _) : _) = Just (span p xs)
           where p (w', _) = w' == w
 
 data PatSstProps = PatSstProps { height    :: Int
