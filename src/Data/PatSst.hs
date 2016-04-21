@@ -36,8 +36,6 @@ class PatSst a where
   fillRatio  :: a -> Double
   checkPages :: a -> Bool
 
-  memUsage = (*) maxPageSize . numOfPages
-
   fillRatio t = fromIntegral (fillSize t) / fromIntegral (memUsage t)
 
 
@@ -47,8 +45,11 @@ instance Foldable Page where
     where helper g (Leaf x)   = foldMap g x
           helper g (Node l r) = helper g l <> helper g r
 
+minPageSize :: Int
+minPageSize = 128
+
 maxPageSize :: Int
-maxPageSize = 256
+maxPageSize = 6 * minPageSize
 
 isPageLast :: Page a -> Bool
 isPageLast Empty                       = True
@@ -321,6 +322,12 @@ numOfPrefixes' = getSum . foldMap (Sum . numOfPrefixes)
 numOfPages' :: Page PatTree -> Int
 numOfPages' = getSum . foldMap (const (Sum 1))
 
+memUsage' :: Page PatTree -> Int
+memUsage' = getSum . foldMap (Sum . fitPage . treeSize)
+  where fitPage s = let k = ceiling $ fromIntegral s /
+                            (fromIntegral minPageSize :: Double)
+                    in k * minPageSize
+
 fillSize' :: Page PatTree -> Int
 {- Withing the maximal page size, some place is already used for
    'plpm' folder (18 bits) and ordinal-tree root (its size can be
@@ -396,6 +403,7 @@ instance IpRouter MhPatSst where
 instance PatSst MhPatSst where
   height (MhPatSst t)     = pageDepth t
   numOfPages (MhPatSst t) = numOfPages' t
+  memUsage (MhPatSst t)   = memUsage' t
   fillSize (MhPatSst t)   = fillSize' t
   checkPages (MhPatSst t) = checkPages' t
 
@@ -412,6 +420,7 @@ instance IpRouter MhPatSstM where
 instance PatSst MhPatSstM where
   height (MhPatSstM t)     = pageDepth t
   numOfPages (MhPatSstM t) = numOfPages' t
+  memUsage (MhPatSstM t)   = memUsage' t
   fillSize (MhPatSstM t)   = fillSize' t
   checkPages (MhPatSstM t) = checkPages' t
 
@@ -443,6 +452,7 @@ instance IpRouter MsPatSst where
 instance PatSst MsPatSst where
   height (MsPatSst t)     = pageDepth t
   numOfPages (MsPatSst t) = numOfPages' t
+  memUsage (MsPatSst t)   = memUsage' t
   fillSize (MsPatSst t)   = fillSize' t
   checkPages (MsPatSst t) = checkPages' t
 
@@ -459,5 +469,6 @@ instance IpRouter MsPatSstM where
 instance PatSst MsPatSstM where
   height (MsPatSstM t)     = pageDepth t
   numOfPages (MsPatSstM t) = numOfPages' t
+  memUsage (MsPatSstM t)   = memUsage' t
   fillSize (MsPatSstM t)   = fillSize' t
   checkPages (MsPatSstM t) = checkPages' t
