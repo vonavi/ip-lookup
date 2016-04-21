@@ -1,16 +1,19 @@
 module Main where
 
-import           Data.IpRouter
-import           Data.OrdSst    (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
-import qualified Data.OrdSst    as OS
-import           Data.PatSst    (MhPatSst, MhPatSstM, MsPatSst, MsPatSstM,
-                                 PatSst)
-import qualified Data.PatSst    as PS
-import           Data.PatTree
-import           RandomPrefixes
+import           System.Directory
 
-randomIpRouter :: IpRouter a => Int -> a
-randomIpRouter n = mkTable $ randomEntries (32, 32) [1 .. n]
+import           Data.IpRouter
+import           Data.PatSst      (MhPatSst)
+import qualified Data.PatSst      as PS
 
 main :: IO ()
-main = PS.putPatSst (randomIpRouter 1000000 :: MhPatSst)
+main = do
+  pwd   <- getCurrentDirectory
+  input <- readFile $ pwd ++ "/1.route"
+  let (_ : _ : prefixLines) = lines input
+      es                    = map (getEntry . words) prefixLines
+  PS.putPatSst (mkTable es :: MhPatSst)
+  where getEntry (aStr : mStr : _ : _ : nStr : _) = Entry (Prefix a m) n
+          where a = strToAddr aStr
+                m = strToMask $ '/' : mStr
+                n = read nStr :: Int
