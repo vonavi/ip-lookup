@@ -50,6 +50,8 @@ test-suite tests
                      , random >= 1.1 && <1.2
                      , split >=0.2 && <0.3
                      , transformers >=0.4 && <0.5
+                     , unsafeperformst >=0.9 && <0.10
+                     , vector >=0.11 && <0.12
   hs-source-dirs:      test, src
   default-language:    Haskell2010
   ghc-options:         -O2
