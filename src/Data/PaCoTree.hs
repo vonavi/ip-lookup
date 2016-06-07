@@ -36,6 +36,7 @@ import           Data.Word
 
 import           Data.Compression.Huffman
 import           Data.IpRouter
+import           Data.PrefixTree
 
 data PaCoNode = PaCoNode { skip   :: Int
                          , string :: Word32
@@ -210,73 +211,68 @@ huffmanSize = getSum . foldMap nodeSize . getTree
           Sum $ runST $ do hsize <- readSTRef huffmanVecRef
                            return $ 3 + (hsize V.! k) + k
 
-isEmpty :: PaCoTree -> Bool
-isEmpty (PaCoTree Tip) = True
-isEmpty _              = False
+instance PrefixTree PaCoTree where
+  isEmpty (PaCoTree Tip) = True
+  isEmpty _              = False
 
-collapse :: PaCoTree -> PaCoTree
-collapse = undefined
+  collapse = undefined
 
-delSubtree :: PaCoTree -> PaCoTree -> PaCoTree
-delSubtree = undefined
+  delSubtree = undefined
 
-bRoot :: PaCoTree -> Maybe Int
-bRoot (PaCoTree Tip) = Nothing
-bRoot (PaCoTree (Bin _ x _))
-  | skip x == 0 = label x
-  | otherwise   = Nothing
+  bRoot (PaCoTree Tip) = Nothing
+  bRoot (PaCoTree (Bin _ x _))
+    | skip x == 0 = label x
+    | otherwise   = Nothing
 
-bLeftSubtree :: PaCoTree -> PaCoTree
-bLeftSubtree (PaCoTree Tip) = PaCoTree Tip
-bLeftSubtree (PaCoTree (Bin l x r))
-  | k == 0         = PaCoTree l
-  | v `testBit` 31 = PaCoTree Tip
-  | otherwise      = PaCoTree $ Bin l x' r
-  where k  = skip x
-        v  = string x
-        x' = x { skip   = pred k
-               , string = v `shiftL` 1
-               }
+  bLeftSubtree (PaCoTree Tip) = PaCoTree Tip
+  bLeftSubtree (PaCoTree (Bin l x r))
+    | k == 0         = PaCoTree l
+    | v `testBit` 31 = PaCoTree Tip
+    | otherwise      = PaCoTree $ Bin l x' r
+    where k  = skip x
+          v  = string x
+          x' = x { skip   = pred k
+                 , string = v `shiftL` 1
+                 }
 
-bRightSubtree :: PaCoTree -> PaCoTree
-bRightSubtree (PaCoTree Tip) = PaCoTree Tip
-bRightSubtree (PaCoTree (Bin l x r))
-  | k == 0         = PaCoTree r
-  | v `testBit` 31 = PaCoTree $ Bin l x' r
-  | otherwise      = PaCoTree Tip
-  where k  = skip x
-        v  = string x
-        x' = x { skip   = pred k
-               , string = v `shiftL` 1
-               }
+  bRightSubtree (PaCoTree Tip) = PaCoTree Tip
+  bRightSubtree (PaCoTree (Bin l x r))
+    | k == 0         = PaCoTree r
+    | v `testBit` 31 = PaCoTree $ Bin l x' r
+    | otherwise      = PaCoTree Tip
+    where k  = skip x
+          v  = string x
+          x' = x { skip   = pred k
+                 , string = v `shiftL` 1
+                 }
 
-bSingleton :: Maybe Int -> PaCoTree
-bSingleton x = PaCoTree $ Bin Tip node Tip
-  where node = PaCoNode { skip   = 0
-                        , string = 0
-                        , label  = x
-                        }
+  bSingleton x = PaCoTree $ Bin Tip node Tip
+    where node = PaCoNode { skip   = 0
+                          , string = 0
+                          , label  = x
+                          }
 
-bMerge :: Maybe Int -> PaCoTree -> PaCoTree -> PaCoTree
-bMerge x l r
-  | isJust x  = bSingleton x <> PaCoTree lsub <> PaCoTree rsub
-  | otherwise = PaCoTree lsub <> PaCoTree rsub
-  where lsub = case getTree l of
-                Tip          -> Tip
-                Bin ll xl rl ->
-                  let xl' = xl { skip   = succ $ skip xl
-                               , string = (`clearBit` 31) . (`shiftR` 1) $
-                                          string xl
-                               }
-                  in Bin ll xl' rl
-        rsub = case getTree r of
-                Tip          -> Tip
-                Bin lr xr rr ->
-                  let xr' = xr { skip   = succ $ skip xr
-                               , string = (`setBit` 31) . (`shiftR` 1) $
-                                          string xr
-                               }
-                  in Bin lr xr' rr
+  bMerge x l r
+    | isJust x  = bSingleton x <> PaCoTree lsub <> PaCoTree rsub
+    | otherwise = PaCoTree lsub <> PaCoTree rsub
+    where lsub = case getTree l of
+                  Tip          -> Tip
+                  Bin ll xl rl ->
+                    let xl' = xl { skip   = succ $ skip xl
+                                 , string = (`clearBit` 31) . (`shiftR` 1) $
+                                            string xl
+                                 }
+                    in Bin ll xl' rl
+          rsub = case getTree r of
+                  Tip          -> Tip
+                  Bin lr xr rr ->
+                    let xr' = xr { skip   = succ $ skip xr
+                                 , string = (`setBit` 31) . (`shiftR` 1) $
+                                            string xr
+                                 }
+                    in Bin lr xr' rr
+
+  size = gammaSize
 
 putPaCoTree :: PaCoTree -> IO ()
 putPaCoTree t = do
