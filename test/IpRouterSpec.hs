@@ -12,13 +12,14 @@ import           Test.Hspec
 
 import           Data.BinTree
 import           Data.IpRouter
-import           Data.OrdSst    (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3, MhOrdSstT4)
-import qualified Data.OrdSst    as OS
+import           Data.OrdSst        (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3,
+                                     MhOrdSstT4)
+import qualified Data.OrdSst        as OS
 import           Data.OrdTree
+import           Data.PaCoPartition (MhPatSst)
 import           Data.PaCoTree
-import           Data.PatSst    (MhPatSst)
-import qualified Data.PatSst    as PS
 import           Data.Table
+import qualified Partible           as Par
 import           RandomPrefixes
 
 testIpRouter :: IpRouter a => a
@@ -233,11 +234,11 @@ patSstCheckSpec = do
 
   describe "Check pages built by 'mkTable'" $ do
     it "Check min-height SST for path-compressed tree" $ do
-      PS.checkPages (mkTable e :: MhPatSst) `shouldBe` True
+      Par.checkPages (mkTable e :: MhPatSst) `shouldBe` True
 
   describe "Check pages built by 'insEntries'" $ do
     it "Check min-height SST for path-compressed tree" $ do
-      PS.checkPages (insEntries (mkTable [] :: MhPatSst) e) `shouldBe` True
+      Par.checkPages (insEntries (mkTable [] :: MhPatSst) e) `shouldBe` True
 
 ordSstCheckSpec :: Spec
 ordSstCheckSpec = do
