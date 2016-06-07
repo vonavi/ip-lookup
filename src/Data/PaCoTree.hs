@@ -3,9 +3,9 @@
 
 module Data.PaCoTree
        (
-         PatNode(..)
+         PaCoNode(..)
        , Tree(..)
-       , PatTree(..)
+       , PaCoTree(..)
        , fromEntry
        , gammaSize
        , deltaSize
@@ -19,7 +19,7 @@ module Data.PaCoTree
        , bRightSubtree
        , bSingleton
        , bMerge
-       , putPatTree
+       , putPaCoTree
        ) where
 
 import           Control.Applicative            ((<|>))
@@ -37,12 +37,12 @@ import           Data.Word
 import           Data.Compression.Huffman
 import           Data.IpRouter
 
-data PatNode = PatNode { stride :: Int
-                       , string :: Word32
-                       , label  :: Maybe Int
-                       } deriving Show
+data PaCoNode = PaCoNode { stride :: Int
+                         , string :: Word32
+                         , label  :: Maybe Int
+                         } deriving Show
 
-instance Eq PatNode where
+instance Eq PaCoNode where
   x == y = kx == ky && n >= kx && label x == label y
     where kx = stride x
           ky = stride y
@@ -59,7 +59,7 @@ instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
 
-instance Monoid (Tree PatNode) where
+instance Monoid (Tree PaCoNode) where
   mempty = Tip
 
   tx `mappend` ty
@@ -87,10 +87,10 @@ instance Monoid (Tree PatNode) where
                                 , ky
                                 , countLeadingZeros $ vx `xor` vy
                                 ]
-          node        = PatNode { stride = kmin
-                                , string = vx
-                                , label  = Nothing
-                                }
+          node        = PaCoNode { stride = kmin
+                                 , string = vx
+                                 , label  = Nothing
+                                 }
           xright      = vx `testBit` (31 - kmin)
           yright      = vy `testBit` (31 - kmin)
           x'          = x { stride = kx - kmin - 1
@@ -103,23 +103,23 @@ instance Monoid (Tree PatNode) where
           ty'         = Bin ly y' ry
 
 
-newtype PatTree = PatTree { getTree :: Tree PatNode } deriving (Show, Eq)
+newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode } deriving (Show, Eq)
 
-instance Monoid PatTree where
-  mempty        = PatTree mempty
-  x `mappend` y = PatTree $ getTree x `mappend` getTree y
+instance Monoid PaCoTree where
+  mempty        = PaCoTree mempty
+  x `mappend` y = PaCoTree $ getTree x `mappend` getTree y
 
-fromEntry :: Entry -> PatTree
-fromEntry (Entry p n) = PatTree $ Bin Tip node Tip
+fromEntry :: Entry -> PaCoTree
+fromEntry (Entry p n) = PaCoTree $ Bin Tip node Tip
   where Prefix (Address a) (Mask m) = p
-        node                        = PatNode { stride = m
-                                              , string = a
-                                              , label  = Just n
-                                              }
+        node                        = PaCoNode { stride = m
+                                               , string = a
+                                               , label  = Just n
+                                               }
 
-lookupState :: Address -> Tree PatNode -> State (Maybe Int) ()
+lookupState :: Address -> Tree PaCoNode -> State (Maybe Int) ()
 lookupState (Address a) = helper a
-  where helper :: Word32 -> Tree PatNode -> State (Maybe Int) ()
+  where helper :: Word32 -> Tree PaCoNode -> State (Maybe Int) ()
         helper v t | t == Tip || k < kx = return ()
                    | otherwise          = do
                        modify (label x <|>)
@@ -129,8 +129,8 @@ lookupState (Address a) = helper a
                 kx        = stride x
                 k         = countLeadingZeros $ v `xor` string x
 
-instance IpRouter PatTree where
-  mkTable es = PatTree $ runST $ do
+instance IpRouter PaCoTree where
+  mkTable es = PaCoTree $ runST $ do
     let tree  = getTree . foldr insEntry mempty $ es
         kvec  = foldr accStrides (V.replicate 32 0) tree
         hsize = map (second length) . freqToEnc . V.toList . V.indexed $ kvec
@@ -142,15 +142,15 @@ instance IpRouter PatTree where
 
   delEntry = undefined
 
-  ipLookup a (PatTree t) = execState (lookupState a t) Nothing
+  ipLookup a (PaCoTree t) = execState (lookupState a t) Nothing
 
   numOfPrefixes = getSum . foldMap isPrefix . getTree
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
-gammaSize :: PatTree -> Int
+gammaSize :: PaCoTree -> Int
 gammaSize = getSum . foldMap nodeSize . getTree
-  where nodeSize PatNode { stride = k } =
+  where nodeSize PaCoNode { stride = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
              gamma-code of stride (the stride should be increased by
@@ -161,9 +161,9 @@ gammaCodeSize :: Int -> Int
 gammaCodeSize x = 2 * k + 1
   where k = floor . logBase (2 :: Double) . fromIntegral $ x
 
-deltaSize :: PatTree -> Int
+deltaSize :: PaCoTree -> Int
 deltaSize = getSum . foldMap nodeSize . getTree
-  where nodeSize PatNode { stride = k } =
+  where nodeSize PaCoNode { stride = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
              delta-code of stride (the stride should be increased by
@@ -175,14 +175,14 @@ deltaCodeSize x = 2 * l + k + 1
   where k = floor . logBase (2 :: Double) . fromIntegral $ x
         l = floor . logBase (2 :: Double) . fromIntegral . succ $ k
 
-eliasFanoSize :: PatTree -> Int
+eliasFanoSize :: PaCoTree -> Int
 eliasFanoSize t = eliasFanoCodeSize t +
                   (getSum . foldMap nodeSize . getTree $ t)
 {- The node size is built from the following parts: parenthesis
    expression (2 bits), internal prefix (1 bit), and node string. -}
   where nodeSize x = Sum $ 3 + stride x
 
-eliasFanoCodeSize :: PatTree -> Int
+eliasFanoCodeSize :: PaCoTree -> Int
 eliasFanoCodeSize t
   | null ks   = 0
   | kmax == 0 = 1 + n
@@ -200,9 +200,9 @@ eliasFanoCodeSize t
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
 huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 32 0
 
-huffmanSize :: PatTree -> Int
+huffmanSize :: PaCoTree -> Int
 huffmanSize = getSum . foldMap nodeSize . getTree
-  where nodeSize PatNode { stride = k } =
+  where nodeSize PaCoNode { stride = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
              huffman code of stride (the stride should be increased by
@@ -210,57 +210,57 @@ huffmanSize = getSum . foldMap nodeSize . getTree
           Sum $ runST $ do hsize <- readSTRef huffmanVecRef
                            return $ 3 + (hsize V.! k) + k
 
-isEmpty :: PatTree -> Bool
-isEmpty (PatTree Tip) = True
-isEmpty _             = False
+isEmpty :: PaCoTree -> Bool
+isEmpty (PaCoTree Tip) = True
+isEmpty _              = False
 
-collapse :: PatTree -> PatTree
+collapse :: PaCoTree -> PaCoTree
 collapse = undefined
 
-delSubtree :: PatTree -> PatTree -> PatTree
+delSubtree :: PaCoTree -> PaCoTree -> PaCoTree
 delSubtree = undefined
 
-bRoot :: PatTree -> Maybe Int
-bRoot (PatTree Tip) = Nothing
-bRoot (PatTree (Bin _ x _))
+bRoot :: PaCoTree -> Maybe Int
+bRoot (PaCoTree Tip) = Nothing
+bRoot (PaCoTree (Bin _ x _))
   | stride x == 0 = label x
   | otherwise     = Nothing
 
-bLeftSubtree :: PatTree -> PatTree
-bLeftSubtree (PatTree Tip) = PatTree Tip
-bLeftSubtree (PatTree (Bin l x r))
-  | k == 0         = PatTree l
-  | v `testBit` 31 = PatTree Tip
-  | otherwise      = PatTree $ Bin l x' r
+bLeftSubtree :: PaCoTree -> PaCoTree
+bLeftSubtree (PaCoTree Tip) = PaCoTree Tip
+bLeftSubtree (PaCoTree (Bin l x r))
+  | k == 0         = PaCoTree l
+  | v `testBit` 31 = PaCoTree Tip
+  | otherwise      = PaCoTree $ Bin l x' r
   where k  = stride x
         v  = string x
         x' = x { stride = pred k
                , string = v `shiftL` 1
                }
 
-bRightSubtree :: PatTree -> PatTree
-bRightSubtree (PatTree Tip) = PatTree Tip
-bRightSubtree (PatTree (Bin l x r))
-  | k == 0         = PatTree r
-  | v `testBit` 31 = PatTree $ Bin l x' r
-  | otherwise      = PatTree Tip
+bRightSubtree :: PaCoTree -> PaCoTree
+bRightSubtree (PaCoTree Tip) = PaCoTree Tip
+bRightSubtree (PaCoTree (Bin l x r))
+  | k == 0         = PaCoTree r
+  | v `testBit` 31 = PaCoTree $ Bin l x' r
+  | otherwise      = PaCoTree Tip
   where k  = stride x
         v  = string x
         x' = x { stride = pred k
                , string = v `shiftL` 1
                }
 
-bSingleton :: Maybe Int -> PatTree
-bSingleton x = PatTree $ Bin Tip node Tip
-  where node = PatNode { stride = 0
-                       , string = 0
-                       , label  = x
-                       }
+bSingleton :: Maybe Int -> PaCoTree
+bSingleton x = PaCoTree $ Bin Tip node Tip
+  where node = PaCoNode { stride = 0
+                        , string = 0
+                        , label  = x
+                        }
 
-bMerge :: Maybe Int -> PatTree -> PatTree -> PatTree
+bMerge :: Maybe Int -> PaCoTree -> PaCoTree -> PaCoTree
 bMerge x l r
-  | isJust x  = bSingleton x <> PatTree lsub <> PatTree rsub
-  | otherwise = PatTree lsub <> PatTree rsub
+  | isJust x  = bSingleton x <> PaCoTree lsub <> PaCoTree rsub
+  | otherwise = PaCoTree lsub <> PaCoTree rsub
   where lsub = case getTree l of
                 Tip          -> Tip
                 Bin ll xl rl ->
@@ -278,9 +278,9 @@ bMerge x l r
                                }
                   in Bin lr xr' rr
 
-putPatTree :: PatTree -> IO ()
-putPatTree t = do
-  putStrLn "PATRICIA tree"
+putPaCoTree :: PaCoTree -> IO ()
+putPaCoTree t = do
+  putStrLn "Path-compressed tree"
   putStrLn . (++) "  Size with gamma code: " . show $ gammaSize t + 18 * n
   putStrLn . (++) "  Size with delta code: " . show $ deltaSize t + 18 * n
     where n = numOfPrefixes t
