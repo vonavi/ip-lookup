@@ -1,6 +1,6 @@
 module PaCoTreeSpec
        (
-         patTreeSpec
+         paCoTreeSpec
        ) where
 
 import           Data.Bits
@@ -14,16 +14,16 @@ data Node = Node { list :: [Bool]
                  , pref :: Maybe Int
                  } deriving (Show, Eq)
 
-fromPatTree :: PatTree -> Tree Node
-fromPatTree = fmap f . getTree
-  where f PatNode { stride = k, string = v, label = p } =
+fromPaCoTree :: PaCoTree -> Tree Node
+fromPaCoTree = fmap f . getTree
+  where f PaCoNode { stride = k, string = v, label = p } =
           Node { list = l, pref = p }
           where l = map (\x -> v `testBit` (31 - x)) [0 .. pred k]
 
-toPatTree :: Tree Node -> PatTree
-toPatTree = PatTree . fmap f
+toPaCoTree :: Tree Node -> PaCoTree
+toPaCoTree = PaCoTree . fmap f
   where f Node { list = l, pref = p } =
-          PatNode { stride = k, string = v, label = p }
+          PaCoNode { stride = k, string = v, label = p }
           where k = length l
                 v = foldr helper (0 :: Word32) l
                 helper b = if b
@@ -73,18 +73,18 @@ testTree = Bin (Bin Tip
                                    }
                               Tip)))
 
-testPatTree :: PatTree
-testPatTree = toPatTree testTree
+testPaCoTree :: PaCoTree
+testPaCoTree = toPaCoTree testTree
 
-patTreeSpec :: Spec
-patTreeSpec = do
-  describe "Simple PATRICIA tree" $ do
+paCoTreeSpec :: Spec
+paCoTreeSpec = do
+  describe "Simple path-compressed tree" $ do
     it "Check building" $ do
-      (testIpRouter :: PatTree) `shouldBe` testPatTree
+      (testIpRouter :: PaCoTree) `shouldBe` testPaCoTree
 
     it "Check merging" $ do
-      bMerge (bRoot t) l' r' `shouldBe` testPatTree
-        where t   = testIpRouter :: PatTree
+      bMerge (bRoot t) l' r' `shouldBe` testPaCoTree
+        where t   = testIpRouter :: PaCoTree
               l   = bLeftSubtree t
               r   = bRightSubtree t
               ll  = bLeftSubtree l

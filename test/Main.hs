@@ -15,7 +15,7 @@ main = do
   hspec patSstCheckSpec
   hspec ordSstCheckSpec
 
-  hspec patTreeSpec
+  hspec paCoTreeSpec
 
   hspec ordSizeSpec
   hspec ordBpSpec

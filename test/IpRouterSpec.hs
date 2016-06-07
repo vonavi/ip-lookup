@@ -75,8 +75,8 @@ ipLookupSpec = do
     it "Check binary tree" $ do
       testIpLookup (testIpRouter :: BinTree) `shouldBe` True
 
-    it "Check PATRICIA tree" $ do
-      testIpLookup (testIpRouter :: PatTree) `shouldBe` True
+    it "Check path-compressed tree" $ do
+      testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
 
     it "Check ordinal tree T1" $ do
       testIpLookup (testIpRouter :: OrdTreeT1) `shouldBe` True
@@ -90,7 +90,7 @@ ipLookupSpec = do
     it "Check ordinal tree T4" $ do
       testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
 
-    it "Check min-height SST for PATRICIA tree" $ do
+    it "Check min-height SST for path-compressed tree" $ do
       testIpLookup (testIpRouter :: MhPatSst) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T1" $ do
@@ -116,8 +116,8 @@ numOfPrefixesSpec = do
     it "Check binary tree" $ do
       numOfPrefixes (mkTable e :: BinTree) `shouldBe` n
 
-    it "Check PATRICIA tree" $ do
-      numOfPrefixes (mkTable e :: PatTree) `shouldBe` n
+    it "Check path-compressed tree" $ do
+      numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
 
     it "Check ordinal tree T1" $ do
       numOfPrefixes (mkTable e :: OrdTreeT1) `shouldBe` n
@@ -131,7 +131,7 @@ numOfPrefixesSpec = do
     it "Check ordinal tree T4" $ do
       numOfPrefixes (mkTable e :: OrdTreeT4) `shouldBe` n
 
-    it "Check min-height SST for PATRICIA tree" $ do
+    it "Check min-height SST for path-compressed tree" $ do
       numOfPrefixes (mkTable e :: MhPatSst) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
@@ -157,8 +157,8 @@ insEntriesSpec = do
     it "Check binary tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
 
-    it "Check PATRICIA tree" $ do
-      numOfPrefixes (insEntries (mkTable [] :: PatTree) e) `shouldBe` n
+    it "Check path-compressed tree" $ do
+      numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
 
     it "Check ordinal tree T1" $ do
       numOfPrefixes (insEntries (mkTable [] :: OrdTreeT1) e) `shouldBe` n
@@ -172,7 +172,7 @@ insEntriesSpec = do
     it "Check ordinal tree T4" $ do
       numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
 
-    it "Check min-height SST for PATRICIA tree" $ do
+    it "Check min-height SST for path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhPatSst) e) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
@@ -232,11 +232,11 @@ patSstCheckSpec = do
       e = genRandomEntries n
 
   describe "Check pages built by 'mkTable'" $ do
-    it "Check min-height SST for PATRICIA tree" $ do
+    it "Check min-height SST for path-compressed tree" $ do
       PS.checkPages (mkTable e :: MhPatSst) `shouldBe` True
 
   describe "Check pages built by 'insEntries'" $ do
-    it "Check min-height SST for PATRICIA tree" $ do
+    it "Check min-height SST for path-compressed tree" $ do
       PS.checkPages (insEntries (mkTable [] :: MhPatSst) e) `shouldBe` True
 
 ordSstCheckSpec :: Spec
