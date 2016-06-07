@@ -17,7 +17,7 @@ import           Data.Bits
 import           Data.Monoid
 
 import           Data.IpRouter
-import           Data.PatTree        hiding (Tree)
+import           Data.PaCoTree       hiding (Tree)
 
 data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 

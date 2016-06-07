@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Data.PatTree
+module Data.PaCoTree
        (
          PatNode(..)
        , Tree(..)

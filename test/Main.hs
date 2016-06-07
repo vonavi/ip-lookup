@@ -4,7 +4,7 @@ import           Test.Hspec
 
 import           IpRouterSpec
 import           OrdTreeSpec
-import           PatTreeSpec
+import           PaCoTreeSpec
 
 main :: IO ()
 main = do
