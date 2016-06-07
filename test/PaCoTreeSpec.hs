@@ -16,14 +16,14 @@ data Node = Node { list :: [Bool]
 
 fromPaCoTree :: PaCoTree -> Tree Node
 fromPaCoTree = fmap f . getTree
-  where f PaCoNode { stride = k, string = v, label = p } =
+  where f PaCoNode { skip = k, string = v, label = p } =
           Node { list = l, pref = p }
           where l = map (\x -> v `testBit` (31 - x)) [0 .. pred k]
 
 toPaCoTree :: Tree Node -> PaCoTree
 toPaCoTree = PaCoTree . fmap f
   where f Node { list = l, pref = p } =
-          PaCoNode { stride = k, string = v, label = p }
+          PaCoNode { skip = k, string = v, label = p }
           where k = length l
                 v = foldr helper (0 :: Word32) l
                 helper b = if b
