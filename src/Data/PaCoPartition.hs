@@ -14,7 +14,7 @@ import           Data.PaCoTree   hiding (Tree)
 import           Data.PrefixTree
 import           Partible
 
-putPaCoPrtn :: (IpRouter a, Partible a) => a -> IO ()
+putPaCoPrtn :: (IpRouter a, Partition a) => a -> IO ()
 putPaCoPrtn t = do
   putStrLn "Partition of path-compressed tree"
   putStrLn . (++) "  Number of prefixes: " . show . numOfPrefixes $ t
@@ -27,27 +27,27 @@ putPaCoPrtn t = do
 newtype MhPaCoTree = MhPaCoTree PaCoTree
                    deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MhPaCoPrtn = MhPaCoPrtn (Page MhPaCoTree)
-                   deriving (Eq, Show, Partible, IpRouter)
-instance Mergeable MhPaCoTree where
+                   deriving (Eq, Show, Partition, IpRouter)
+instance Partible MhPaCoTree where
   pageMerge = mhMerge False
 
 newtype MhPaCoTreeM = MhPaCoTreeM PaCoTree
                     deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MhPaCoPrtnM = MhPaCoPrtnM (Page MhPaCoTreeM)
-                    deriving (Eq, Show, Partible, IpRouter)
-instance Mergeable MhPaCoTreeM where
+                    deriving (Eq, Show, Partition, IpRouter)
+instance Partible MhPaCoTreeM where
   pageMerge = mhMerge True
 
 newtype MsPaCoTree = MsPaCoTree PaCoTree
                    deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MsPaCoPrtn = MsPaCoPrtn (Page MsPaCoTree)
-                   deriving (Eq, Show, Partible, IpRouter)
-instance Mergeable MsPaCoTree where
+                   deriving (Eq, Show, Partition, IpRouter)
+instance Partible MsPaCoTree where
   pageMerge = msMerge False
 
 newtype MsPaCoTreeM = MsPaCoTreeM PaCoTree
                     deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MsPaCoPrtnM = MsPaCoPrtnM (Page MsPaCoTreeM)
-                    deriving (Eq, Show, Partible, IpRouter)
-instance Mergeable MsPaCoTreeM where
+                    deriving (Eq, Show, Partition, IpRouter)
+instance Partible MsPaCoTreeM where
   pageMerge = msMerge True

@@ -2,7 +2,7 @@
 
 module Partible
        (
-         Mergeable(..)
+         Partition(..)
        , Partible(..)
        , Page
        , mhMerge
@@ -18,10 +18,7 @@ import           Data.IpRouter
 import           Data.PaCoTree       hiding (Tree)
 import           Data.PrefixTree
 
-class Mergeable a where
-  pageMerge :: Maybe Int -> Page a -> Page a -> Page a
-
-class Partible a where
+class Partition a where
   height     :: a -> Int
   numOfPages :: a -> Int
   memUsage   :: a -> Int
@@ -30,6 +27,9 @@ class Partible a where
 
   fillRatio :: a -> Double
   fillRatio t = fromIntegral (fillSize t) / fromIntegral (memUsage t)
+
+class Partible a where
+  pageMerge :: Maybe Int -> Page a -> Page a -> Page a
 
 data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 
@@ -100,7 +100,7 @@ checkPagesS page  = case oTree page of
                      Node l r -> do checkPagesS page { oTree = l }
                                     checkPagesS page { oTree = r }
 
-instance (Mergeable a, PrefixTree a) => Partible (Page a) where
+instance (PrefixTree a, Partible a) => Partition (Page a) where
   height = pageDepth
 
   numOfPages = getSum . foldMap (const (Sum 1))
@@ -202,16 +202,16 @@ pageInsertNew c x lp rp
         lp'   = if c then pagePress lp else lp
         rp'   = if c then pagePress rp else rp
 
-patSstBuild :: (Mergeable a, PrefixTree a) => a -> Page a
+patSstBuild :: (PrefixTree a, Partible a) => a -> Page a
 patSstBuild t = if isEmpty t
                 then Empty
                 else pageMerge (bRoot t) lpage rpage
   where lpage = patSstBuild . bLeftSubtree $ t
         rpage = patSstBuild . bRightSubtree $ t
 
-patSstInsert :: (Mergeable a, PrefixTree a) => Entry -> Page a -> Page a
+patSstInsert :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
 patSstInsert = flip helper . mkTable . (:[])
-  where helper :: (Mergeable a, PrefixTree a) => Page a -> a -> Page a
+  where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
           | isEmpty tree     = page
           | isPageEmpty page = patSstBuild tree
@@ -280,7 +280,7 @@ collapseLast page
   | otherwise                        = page
   where ntree = collapse . iTree $ page
 
-collapsePage :: (Mergeable a, PrefixTree a) => Page a -> Page a
+collapsePage :: (PrefixTree a, Partible a) => Page a -> Page a
 collapsePage page
   | isPageEmpty page                 = Empty
   | isPageLast page && isEmpty ntree = Empty
@@ -300,9 +300,9 @@ collapsePage page
                                            }
   where ntree = collapse . iTree $ page
 
-patSstDelete :: (Mergeable a, PrefixTree a) => Entry -> Page a -> Page a
+patSstDelete :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
 patSstDelete = flip helper . mkTable . (:[])
-  where helper :: (Mergeable a, PrefixTree a) => Page a -> a -> Page a
+  where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
           | isPageEmpty page = Empty
           | isEmpty tree     = page
@@ -350,7 +350,7 @@ lookupState (Address a) = helper 31
           where t        = iTree page
                 Node l r = oTree page
 
-instance (IpRouter a, Mergeable a, PrefixTree a) => IpRouter (Page a) where
+instance (IpRouter a, PrefixTree a, Partible a) => IpRouter (Page a) where
   mkTable       = patSstBuild . (mkTable :: IpRouter a => [Entry] -> a)
   insEntry      = patSstInsert
   delEntry      = patSstDelete
