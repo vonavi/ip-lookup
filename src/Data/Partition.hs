@@ -190,9 +190,9 @@ pageMergeRight c x lp rp = let lp' = if c then pagePress lp else lp
                                    , oTree = Node (Leaf lp') (oTree rp)
                                    }
 
-pageInsertNew :: PrefixTree a
-                 => Bool -> Maybe Int -> Page a -> Page a -> Page a
-pageInsertNew c x lp rp
+pagePrune :: PrefixTree a
+             => Bool -> Maybe Int -> Page a -> Page a -> Page a
+pagePrune c x lp rp
   | isPageEmpty lp || isPageEmpty rp = npage
   | otherwise                        = npage { iTree = bSingleton x }
   where npage = Page { iTree = bMerge x mempty mempty
@@ -202,19 +202,19 @@ pageInsertNew c x lp rp
         lp'   = if c then pagePress lp else lp
         rp'   = if c then pagePress rp else rp
 
-patSstBuild :: (PrefixTree a, Partible a) => a -> Page a
-patSstBuild t = if isEmpty t
-                then Empty
-                else pageMerge (bRoot t) lpage rpage
-  where lpage = patSstBuild . bLeftSubtree $ t
-        rpage = patSstBuild . bRightSubtree $ t
+prtnBuild :: (PrefixTree a, Partible a) => a -> Page a
+prtnBuild t = if isEmpty t
+              then Empty
+              else pageMerge (bRoot t) lpage rpage
+  where lpage = prtnBuild . bLeftSubtree $ t
+        rpage = prtnBuild . bRightSubtree $ t
 
-patSstInsert :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
-patSstInsert = flip helper . mkTable . (:[])
+prtnInsEntry :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
+prtnInsEntry = flip helper . mkTable . (:[])
   where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
           | isEmpty tree     = page
-          | isPageEmpty page = patSstBuild tree
+          | isPageEmpty page = prtnBuild tree
           | isEmpty itree    = let Leaf p = otree in helper p tree
           | otherwise        =
               let lpage  = case otree of
@@ -300,8 +300,8 @@ collapsePage page
                                            }
   where ntree = collapse . iTree $ page
 
-patSstDelete :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
-patSstDelete = flip helper . mkTable . (:[])
+prtnDelEntry :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
+prtnDelEntry = flip helper . mkTable . (:[])
   where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
           | isPageEmpty page = Empty
@@ -328,9 +328,6 @@ patSstDelete = flip helper . mkTable . (:[])
                        rpage' = helper rpage (bRightSubtree tree)
           where itree = iTree page
 
-patSstLookup :: PrefixTree a => Address -> Page a -> Maybe Int
-patSstLookup a t = execState (lookupState a t) Nothing
-
 lookupState :: PrefixTree a => Address -> Page a -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
   where helper n page
@@ -351,10 +348,10 @@ lookupState (Address a) = helper 31
                 Node l r = oTree page
 
 instance (IpRouter a, PrefixTree a, Partible a) => IpRouter (Page a) where
-  mkTable       = patSstBuild . (mkTable :: IpRouter a => [Entry] -> a)
-  insEntry      = patSstInsert
-  delEntry      = patSstDelete
-  ipLookup      = patSstLookup
+  mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
+  insEntry      = prtnInsEntry
+  delEntry      = prtnDelEntry
+  ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldMap (Sum . numOfPrefixes)
 
 
@@ -375,7 +372,7 @@ minHeightMerge c x lpage rpage
       else npage
   where lht   = pageDepth lpage
         rht   = pageDepth rpage
-        npage = pageInsertNew c x lpage rpage
+        npage = pagePrune c x lpage rpage
 
 minSizeMerge :: PrefixTree a
                 => Bool -> Maybe Int -> Page a -> Page a -> Page a
@@ -389,4 +386,4 @@ minSizeMerge c x lpage rpage
       if isFitted [npage, rpage]
       then pageMergeRight c x lpage rpage
       else npage
-  where npage = pageInsertNew c x lpage rpage
+  where npage = pagePrune c x lpage rpage
