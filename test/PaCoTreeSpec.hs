@@ -9,6 +9,7 @@ import           Test.Hspec
 
 import           Data.IpRouter
 import           Data.PaCoTree
+import           Data.PrefixTree
 
 data Node = Node { list :: [Bool]
                  , pref :: Maybe Int
@@ -83,34 +84,34 @@ paCoTreeSpec = do
       (testIpRouter :: PaCoTree) `shouldBe` testPaCoTree
 
     it "Check merging" $ do
-      bMerge (bRoot t) l' r' `shouldBe` testPaCoTree
+      merge (root t) l' r' `shouldBe` testPaCoTree
         where t   = testIpRouter :: PaCoTree
-              l   = bLeftSubtree t
-              r   = bRightSubtree t
-              ll  = bLeftSubtree l
-              lr  = bRightSubtree l
-              rl  = bLeftSubtree r
-              rr  = bRightSubtree r
-              lll = bLeftSubtree ll
-              llr = bRightSubtree ll
-              lrl = bLeftSubtree lr
-              lrr = bRightSubtree lr
-              rll = bLeftSubtree rl
-              rlr = bRightSubtree rl
-              rrl = bLeftSubtree rr
-              rrr = bRightSubtree rr
+              l   = leftSubtree t
+              r   = rightSubtree t
+              ll  = leftSubtree l
+              lr  = rightSubtree l
+              rl  = leftSubtree r
+              rr  = rightSubtree r
+              lll = leftSubtree ll
+              llr = rightSubtree ll
+              lrl = leftSubtree lr
+              lrr = rightSubtree lr
+              rll = leftSubtree rl
+              rlr = rightSubtree rl
+              rrl = leftSubtree rr
+              rrr = rightSubtree rr
 
-              l'   = bMerge (bRoot l) ll' lr'
-              r'   = bMerge (bRoot r) rl' rr'
-              ll'  = bMerge (bRoot ll) lll' llr'
-              lr'  = bMerge (bRoot lr) lrl' lrr'
-              rl'  = bMerge (bRoot rl) rll' rlr'
-              rr'  = bMerge (bRoot rr) rrl' rrr'
-              lll' = bMerge (bRoot lll) (bLeftSubtree lll) (bRightSubtree lll)
-              llr' = bMerge (bRoot llr) (bLeftSubtree llr) (bRightSubtree llr)
-              lrl' = bMerge (bRoot lrl) (bLeftSubtree lrl) (bRightSubtree lrl)
-              lrr' = bMerge (bRoot lrr) (bLeftSubtree lrr) (bRightSubtree lrr)
-              rll' = bMerge (bRoot rll) (bLeftSubtree rll) (bRightSubtree rll)
-              rlr' = bMerge (bRoot rlr) (bLeftSubtree rlr) (bRightSubtree rlr)
-              rrl' = bMerge (bRoot rrl) (bLeftSubtree rrl) (bRightSubtree rrl)
-              rrr' = bMerge (bRoot rrr) (bLeftSubtree rrr) (bRightSubtree rrr)
+              l'   = merge (root l) ll' lr'
+              r'   = merge (root r) rl' rr'
+              ll'  = merge (root ll) lll' llr'
+              lr'  = merge (root lr) lrl' lrr'
+              rl'  = merge (root rl) rll' rlr'
+              rr'  = merge (root rr) rrl' rrr'
+              lll' = merge (root lll) (leftSubtree lll) (rightSubtree lll)
+              llr' = merge (root llr) (leftSubtree llr) (rightSubtree llr)
+              lrl' = merge (root lrl) (leftSubtree lrl) (rightSubtree lrl)
+              lrr' = merge (root lrr) (leftSubtree lrr) (rightSubtree lrr)
+              rll' = merge (root rll) (leftSubtree rll) (rightSubtree rll)
+              rlr' = merge (root rlr) (leftSubtree rlr) (rightSubtree rlr)
+              rrl' = merge (root rrl) (leftSubtree rrl) (rightSubtree rrl)
+              rrr' = merge (root rrr) (leftSubtree rrr) (rightSubtree rrr)

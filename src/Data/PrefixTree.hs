@@ -4,12 +4,12 @@ module Data.PrefixTree
        ) where
 
 class Monoid a => PrefixTree a where
-  isEmpty       :: a -> Bool
-  collapse      :: a -> a
-  delSubtree    :: a -> a -> a
-  bRoot         :: a -> Maybe Int
-  bLeftSubtree  :: a -> a
-  bRightSubtree :: a -> a
-  bSingleton    :: Maybe Int -> a
-  bMerge        :: Maybe Int -> a -> a -> a
-  size          :: a -> Int
+  isEmpty      :: a -> Bool
+  root         :: a -> Maybe Int
+  leftSubtree  :: a -> a
+  rightSubtree :: a -> a
+  singleton    :: Maybe Int -> a
+  merge        :: Maybe Int -> a -> a -> a
+  collapse     :: a -> a
+  delSubtree   :: a -> a -> a
+  size         :: a -> Int

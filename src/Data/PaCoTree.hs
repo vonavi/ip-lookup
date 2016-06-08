@@ -11,14 +11,6 @@ module Data.PaCoTree
        , deltaSize
        , eliasFanoSize
        , huffmanSize
-       , isEmpty
-       , collapse
-       , delSubtree
-       , bRoot
-       , bLeftSubtree
-       , bRightSubtree
-       , bSingleton
-       , bMerge
        , putPaCoTree
        ) where
 
@@ -215,17 +207,13 @@ instance PrefixTree PaCoTree where
   isEmpty (PaCoTree Tip) = True
   isEmpty _              = False
 
-  collapse = undefined
-
-  delSubtree = undefined
-
-  bRoot (PaCoTree Tip) = Nothing
-  bRoot (PaCoTree (Bin _ x _))
+  root (PaCoTree Tip) = Nothing
+  root (PaCoTree (Bin _ x _))
     | skip x == 0 = label x
     | otherwise   = Nothing
 
-  bLeftSubtree (PaCoTree Tip) = PaCoTree Tip
-  bLeftSubtree (PaCoTree (Bin l x r))
+  leftSubtree (PaCoTree Tip) = PaCoTree Tip
+  leftSubtree (PaCoTree (Bin l x r))
     | k == 0         = PaCoTree l
     | v `testBit` 31 = PaCoTree Tip
     | otherwise      = PaCoTree $ Bin l x' r
@@ -235,8 +223,8 @@ instance PrefixTree PaCoTree where
                  , string = v `shiftL` 1
                  }
 
-  bRightSubtree (PaCoTree Tip) = PaCoTree Tip
-  bRightSubtree (PaCoTree (Bin l x r))
+  rightSubtree (PaCoTree Tip) = PaCoTree Tip
+  rightSubtree (PaCoTree (Bin l x r))
     | k == 0         = PaCoTree r
     | v `testBit` 31 = PaCoTree $ Bin l x' r
     | otherwise      = PaCoTree Tip
@@ -246,14 +234,14 @@ instance PrefixTree PaCoTree where
                  , string = v `shiftL` 1
                  }
 
-  bSingleton x = PaCoTree $ Bin Tip node Tip
+  singleton x = PaCoTree $ Bin Tip node Tip
     where node = PaCoNode { skip   = 0
                           , string = 0
                           , label  = x
                           }
 
-  bMerge x l r
-    | isJust x  = bSingleton x <> PaCoTree lsub <> PaCoTree rsub
+  merge x l r
+    | isJust x  = singleton x <> PaCoTree lsub <> PaCoTree rsub
     | otherwise = PaCoTree lsub <> PaCoTree rsub
     where lsub = case getTree l of
                   Tip          -> Tip
@@ -271,6 +259,9 @@ instance PrefixTree PaCoTree where
                                             string xr
                                  }
                     in Bin lr xr' rr
+
+  collapse   = undefined
+  delSubtree = undefined
 
   size = gammaSize
 
