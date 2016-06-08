@@ -16,10 +16,10 @@ import           Data.OrdSst        (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3,
                                      MhOrdSstT4)
 import qualified Data.OrdSst        as OS
 import           Data.OrdTree
-import           Data.PaCoPartition (MhPaCoPar)
+import           Data.PaCoPartition (MhPaCoPrtn)
 import           Data.PaCoTree
 import           Data.Table
-import qualified Partible           as Par
+import qualified Partible           as Prtn
 import           RandomPrefixes
 
 testIpRouter :: IpRouter a => a
@@ -92,7 +92,7 @@ ipLookupSpec = do
       testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
 
     it "Check a min-height partition of path-compressed tree" $ do
-      testIpLookup (testIpRouter :: MhPaCoPar) `shouldBe` True
+      testIpLookup (testIpRouter :: MhPaCoPrtn) `shouldBe` True
 
     it "Check min-height SST for ordinal tree T1" $ do
       testIpLookup (testIpRouter :: MhOrdSstT1) `shouldBe` True
@@ -133,7 +133,7 @@ numOfPrefixesSpec = do
       numOfPrefixes (mkTable e :: OrdTreeT4) `shouldBe` n
 
     it "Check a min-height partition of path-compressed tree" $ do
-      numOfPrefixes (mkTable e :: MhPaCoPar) `shouldBe` n
+      numOfPrefixes (mkTable e :: MhPaCoPrtn) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
       numOfPrefixes (mkTable e :: MhOrdSstT1) `shouldBe` n
@@ -174,7 +174,7 @@ insEntriesSpec = do
       numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
 
     it "Check a min-height partition of path-compressed tree" $ do
-      numOfPrefixes (insEntries (mkTable [] :: MhPaCoPar) e) `shouldBe` n
+      numOfPrefixes (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` n
 
     it "Check min-height SST for ordinal tree T1" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhOrdSstT1) e) `shouldBe` n
@@ -234,11 +234,11 @@ patSstCheckSpec = do
 
   describe "Check pages built by 'mkTable'" $ do
     it "Check a min-height partition of path-compressed tree" $ do
-      Par.checkPages (mkTable e :: MhPaCoPar) `shouldBe` True
+      Prtn.checkPages (mkTable e :: MhPaCoPrtn) `shouldBe` True
 
   describe "Check pages built by 'insEntries'" $ do
     it "Check a min-height partition of path-compressed tree" $ do
-      Par.checkPages (insEntries (mkTable [] :: MhPaCoPar) e) `shouldBe` True
+      Prtn.checkPages (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` True
 
 ordSstCheckSpec :: Spec
 ordSstCheckSpec = do
