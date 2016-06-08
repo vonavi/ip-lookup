@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Partible
+module Data.Partition
        (
          Partition(..)
        , Partible(..)

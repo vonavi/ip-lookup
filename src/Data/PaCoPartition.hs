@@ -11,8 +11,8 @@ module Data.PaCoPartition
 
 import           Data.IpRouter
 import           Data.PaCoTree   hiding (Tree)
+import           Data.Partition
 import           Data.PrefixTree
-import           Partible
 
 putPaCoPrtn :: (IpRouter a, Partition a) => a -> IO ()
 putPaCoPrtn t = do

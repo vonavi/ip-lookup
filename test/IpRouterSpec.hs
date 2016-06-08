@@ -18,8 +18,8 @@ import qualified Data.OrdSst        as OS
 import           Data.OrdTree
 import           Data.PaCoPartition (MhPaCoPrtn)
 import           Data.PaCoTree
+import qualified Data.Partition     as Prtn
 import           Data.Table
-import qualified Partible           as Prtn
 import           RandomPrefixes
 
 testIpRouter :: IpRouter a => a
