@@ -12,7 +12,7 @@ main = do
   hspec numOfPrefixesSpec
   hspec insEntriesSpec
   hspec delEntriesSpec
-  hspec patSstCheckSpec
+  hspec paCoPrtnCheckSpec
   hspec ordSstCheckSpec
 
   hspec paCoTreeSpec

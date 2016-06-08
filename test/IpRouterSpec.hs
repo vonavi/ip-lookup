@@ -4,7 +4,7 @@ module IpRouterSpec
        , numOfPrefixesSpec
        , insEntriesSpec
        , delEntriesSpec
-       , patSstCheckSpec
+       , paCoPrtnCheckSpec
        , ordSstCheckSpec
        ) where
 
@@ -227,8 +227,8 @@ delEntriesSpec = do
       delEntries (mkTable e :: MhOrdSstT4) e
         `shouldBe` (mkTable [] :: MhOrdSstT4)
 
-patSstCheckSpec :: Spec
-patSstCheckSpec = do
+paCoPrtnCheckSpec :: Spec
+paCoPrtnCheckSpec = do
   let n = 1000
       e = genRandomEntries n
 
