@@ -29,25 +29,25 @@ newtype MhPaCoTree = MhPaCoTree PaCoTree
 newtype MhPaCoPrtn = MhPaCoPrtn (Page MhPaCoTree)
                    deriving (Eq, Show, Partition, IpRouter)
 instance Partible MhPaCoTree where
-  pageMerge = mhMerge False
+  pageMerge = minHeightMerge False
 
 newtype MhPaCoTreeM = MhPaCoTreeM PaCoTree
                     deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MhPaCoPrtnM = MhPaCoPrtnM (Page MhPaCoTreeM)
                     deriving (Eq, Show, Partition, IpRouter)
 instance Partible MhPaCoTreeM where
-  pageMerge = mhMerge True
+  pageMerge = minHeightMerge True
 
 newtype MsPaCoTree = MsPaCoTree PaCoTree
                    deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MsPaCoPrtn = MsPaCoPrtn (Page MsPaCoTree)
                    deriving (Eq, Show, Partition, IpRouter)
 instance Partible MsPaCoTree where
-  pageMerge = msMerge False
+  pageMerge = minSizeMerge False
 
 newtype MsPaCoTreeM = MsPaCoTreeM PaCoTree
                     deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
 newtype MsPaCoPrtnM = MsPaCoPrtnM (Page MsPaCoTreeM)
                     deriving (Eq, Show, Partition, IpRouter)
 instance Partible MsPaCoTreeM where
-  pageMerge = msMerge True
+  pageMerge = minSizeMerge True

@@ -5,8 +5,8 @@ module Data.Partition
          Partition(..)
        , Partible(..)
        , Page
-       , mhMerge
-       , msMerge
+       , minHeightMerge
+       , minSizeMerge
        ) where
 
 import           Control.Applicative ((<|>))
@@ -358,8 +358,9 @@ instance (IpRouter a, PrefixTree a, Partible a) => IpRouter (Page a) where
   numOfPrefixes = getSum . foldMap (Sum . numOfPrefixes)
 
 
-mhMerge :: PrefixTree a => Bool -> Maybe Int -> Page a -> Page a -> Page a
-mhMerge c x lpage rpage
+minHeightMerge :: PrefixTree a
+                  => Bool -> Maybe Int -> Page a -> Page a -> Page a
+minHeightMerge c x lpage rpage
   | lht == rht =
       if isFitted [npage, lpage, rpage]
       then pageMergeBoth x lpage rpage
@@ -376,8 +377,9 @@ mhMerge c x lpage rpage
         rht   = pageDepth rpage
         npage = pageInsertNew c x lpage rpage
 
-msMerge :: PrefixTree a => Bool -> Maybe Int -> Page a -> Page a -> Page a
-msMerge c x lpage rpage
+minSizeMerge :: PrefixTree a
+                => Bool -> Maybe Int -> Page a -> Page a -> Page a
+minSizeMerge c x lpage rpage
   | isFitted [npage, lpage, rpage]  = pageMergeBoth x lpage rpage
   | pageSize lpage < pageSize rpage =
       if isFitted [npage, lpage]
