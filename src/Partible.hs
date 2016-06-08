@@ -5,11 +5,6 @@ module Partible
          Mergeable(..)
        , Partible(..)
        , Page
-       , patSstBuild
-       , patSstInsert
-       , patSstDelete
-       , patSstLookup
-       , numOfPrefixes'
        , mhMerge
        , msMerge
        ) where
@@ -35,25 +30,6 @@ class Partible a where
 
   fillRatio :: a -> Double
   fillRatio t = fromIntegral (fillSize t) / fromIntegral (memUsage t)
-
-instance (Mergeable a, PrefixTree a) => Partible (Page a) where
-  height = pageDepth
-
-  numOfPages = getSum . foldMap (const (Sum 1))
-
-  memUsage = getSum . foldMap (Sum . fitPage . treeSize)
-    where fitPage s = let k = ceiling $ fromIntegral s /
-                              (fromIntegral minPageSize :: Double)
-                      in k * minPageSize
-
-  {- Withing the maximal page size, some place is already used for
-     'plpm' folder (18 bits) and ordinal-tree root (its size can be
-     reduced from 2 to 1, because the position of its open parenthesis
-     is well-known). -}
-  fillSize = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
-
-  checkPages p = execState (checkPagesS p) $ checkPage p
-
 
 data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 
@@ -102,13 +78,53 @@ treeSize :: PrefixTree a => a -> Int
    the size of path-compressed tree. -}
 treeSize t = 18 * numOfPrefixes t + size t
 
+checkPage :: PrefixTree a => Page a -> Bool
+checkPage page
+  | isPageEmpty page              = True
+  | isPageLast page               = dpt == 1
+  | dpt /= succ (treeDepth otree) = False
+  | otherwise                     = case otree of
+                                     Leaf _   -> isEmpty itree
+                                     Node _ _ -> not . isEmpty $ itree
+  where itree = iTree page
+        dpt   = depth page
+        otree = oTree page
+
+checkPagesS :: PrefixTree a => Page a -> State Bool ()
+checkPagesS Empty = return ()
+checkPagesS page  = case oTree page of
+                     Leaf p   -> case p of
+                                  Empty -> return ()
+                                  _     -> do modify (&& checkPage p)
+                                              checkPagesS p
+                     Node l r -> do checkPagesS page { oTree = l }
+                                    checkPagesS page { oTree = r }
+
+instance (Mergeable a, PrefixTree a) => Partible (Page a) where
+  height = pageDepth
+
+  numOfPages = getSum . foldMap (const (Sum 1))
+
+  memUsage = getSum . foldMap (Sum . fitPage . treeSize)
+    where fitPage s = let k = ceiling $ fromIntegral s /
+                              (fromIntegral minPageSize :: Double)
+                      in k * minPageSize
+
+  {- Withing the maximal page size, some place is already used for
+     'plpm' folder (18 bits) and ordinal-tree root (its size can be
+     reduced from 2 to 1, because the position of its open parenthesis
+     is well-known). -}
+  fillSize = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
+
+  checkPages p = execState (checkPagesS p) $ checkPage p
+
+
 isFitted :: PrefixTree a => [Page a] -> Bool
 {- Withing the maximal page size, some place is reserved for 'plpm'
    folder (18 bits) and ordinal-tree root (its size can be reduced
    from 2 to 1, because the position of its open parenthesis is
    well-known). -}
 isFitted = (maxPageSize - 18 - 1 >=) . sum . map pageSize
-
 
 pageMergeBoth :: PrefixTree a
                  => Maybe Int -> Page a -> Page a -> Page a
@@ -334,30 +350,12 @@ lookupState (Address a) = helper 31
           where t        = iTree page
                 Node l r = oTree page
 
-numOfPrefixes' :: PrefixTree a => Page a -> Int
-numOfPrefixes' = getSum . foldMap (Sum . numOfPrefixes)
-
-checkPage :: PrefixTree a => Page a -> Bool
-checkPage page
-  | isPageEmpty page              = True
-  | isPageLast page               = dpt == 1
-  | dpt /= succ (treeDepth otree) = False
-  | otherwise                     = case otree of
-                                     Leaf _   -> isEmpty itree
-                                     Node _ _ -> not . isEmpty $ itree
-  where itree = iTree page
-        dpt   = depth page
-        otree = oTree page
-
-checkPagesS :: PrefixTree a => Page a -> State Bool ()
-checkPagesS Empty = return ()
-checkPagesS page  = case oTree page of
-                     Leaf p   -> case p of
-                                  Empty -> return ()
-                                  _     -> do modify (&& checkPage p)
-                                              checkPagesS p
-                     Node l r -> do checkPagesS page { oTree = l }
-                                    checkPagesS page { oTree = r }
+instance (IpRouter a, Mergeable a, PrefixTree a) => IpRouter (Page a) where
+  mkTable       = patSstBuild . (mkTable :: IpRouter a => [Entry] -> a)
+  insEntry      = patSstInsert
+  delEntry      = patSstDelete
+  ipLookup      = patSstLookup
+  numOfPrefixes = getSum . foldMap (Sum . numOfPrefixes)
 
 
 mhMerge :: PrefixTree a => Bool -> Maybe Int -> Page a -> Page a -> Page a
