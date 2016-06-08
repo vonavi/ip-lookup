@@ -69,11 +69,11 @@ treeDepth :: Tree (Page a) -> Int
 treeDepth (Leaf x)   = pageDepth x
 treeDepth (Node l r) = max (treeDepth l) (treeDepth r)
 
-pageSize :: PrefixTree a => Page a -> Int
+pageSize :: (PrefixTree a, IpRouter a) => Page a -> Int
 pageSize Empty = 0
 pageSize x     = treeSize $ iTree x
 
-treeSize :: PrefixTree a => a -> Int
+treeSize :: (PrefixTree a, IpRouter a) => a -> Int
 {- The page size is build from RE indexes (18 bits for each) and
    the size of path-compressed tree. -}
 treeSize t = 18 * numOfPrefixes t + size t
@@ -100,7 +100,7 @@ checkPagesS page  = case oTree page of
                      Node l r -> do checkPagesS page { oTree = l }
                                     checkPagesS page { oTree = r }
 
-instance (PrefixTree a, Partible a) => Partition (Page a) where
+instance (PrefixTree a, Partible a, IpRouter a) => Partition (Page a) where
   height = pageDepth
 
   numOfPages = getSum . foldMap (const (Sum 1))
@@ -119,7 +119,7 @@ instance (PrefixTree a, Partible a) => Partition (Page a) where
   checkPages p = execState (checkPagesS p) $ checkPage p
 
 
-isFitted :: PrefixTree a => [Page a] -> Bool
+isFitted :: (PrefixTree a, IpRouter a) => [Page a] -> Bool
 {- Withing the maximal page size, some place is reserved for 'plpm'
    folder (18 bits) and ordinal-tree root (its size can be reduced
    from 2 to 1, because the position of its open parenthesis is
@@ -146,7 +146,7 @@ pageMergeBoth x lp rp = Page { iTree = bSingleton x <>
                              , oTree = Node (oTree lp) (oTree rp)
                              }
 
-pageMergeLeft :: PrefixTree a
+pageMergeLeft :: (PrefixTree a, IpRouter a)
                  => Bool -> Maybe Int -> Page a -> Page a -> Page a
 pageMergeLeft _ x Empty Empty = Page { iTree = bMerge x mempty mempty
                                      , depth = 1
@@ -168,7 +168,7 @@ pageMergeLeft c x lp rp = let rp' = if c then pagePress rp else rp
                                   , oTree = Node (oTree lp) (Leaf rp')
                                   }
 
-pageMergeRight :: PrefixTree a
+pageMergeRight :: (PrefixTree a, IpRouter a)
                   => Bool -> Maybe Int -> Page a -> Page a -> Page a
 pageMergeRight _ x Empty Empty = Page { iTree = bMerge x mempty mempty
                                       , depth = 1
@@ -190,7 +190,7 @@ pageMergeRight c x lp rp = let lp' = if c then pagePress lp else lp
                                    , oTree = Node (Leaf lp') (oTree rp)
                                    }
 
-pagePrune :: PrefixTree a
+pagePrune :: (PrefixTree a, IpRouter a)
              => Bool -> Maybe Int -> Page a -> Page a -> Page a
 pagePrune c x lp rp
   | isPageEmpty lp || isPageEmpty rp = npage
@@ -209,7 +209,8 @@ prtnBuild t = if isEmpty t
   where lpage = prtnBuild . bLeftSubtree $ t
         rpage = prtnBuild . bRightSubtree $ t
 
-prtnInsEntry :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
+prtnInsEntry :: (PrefixTree a, Partible a, IpRouter a)
+                => Entry -> Page a -> Page a
 prtnInsEntry = flip helper . mkTable . (:[])
   where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
@@ -244,14 +245,14 @@ prtnInsEntry = flip helper . mkTable . (:[])
           where itree = iTree page
                 otree = oTree page
 
-pagePress :: PrefixTree a => Page a -> Page a
+pagePress :: (PrefixTree a, IpRouter a) => Page a -> Page a
 pagePress page
   | isPageEmpty page || isPageEmpty npage = page
   | isFitted [updPage]                    = pagePress updPage
   | otherwise                             = page
   where updPage = npage { iTree = iTree page <> iTree npage }
         npage   = helper . oTree $ page
-        helper :: PrefixTree a => Tree (Page a) -> Page a
+        helper :: (PrefixTree a, IpRouter a) => Tree (Page a) -> Page a
         helper (Leaf Empty)            = Empty
         helper (Leaf p)                = Page { iTree = iTree p
                                               , depth = succ $ depth p
@@ -300,7 +301,8 @@ collapsePage page
                                            }
   where ntree = collapse . iTree $ page
 
-prtnDelEntry :: (PrefixTree a, Partible a) => Entry -> Page a -> Page a
+prtnDelEntry :: (PrefixTree a, Partible a, IpRouter a)
+                => Entry -> Page a -> Page a
 prtnDelEntry = flip helper . mkTable . (:[])
   where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
@@ -347,7 +349,7 @@ lookupState (Address a) = helper 31
           where t        = iTree page
                 Node l r = oTree page
 
-instance (IpRouter a, PrefixTree a, Partible a) => IpRouter (Page a) where
+instance (PrefixTree a, Partible a, IpRouter a) => IpRouter (Page a) where
   mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
   insEntry      = prtnInsEntry
   delEntry      = prtnDelEntry
@@ -355,7 +357,7 @@ instance (IpRouter a, PrefixTree a, Partible a) => IpRouter (Page a) where
   numOfPrefixes = getSum . foldMap (Sum . numOfPrefixes)
 
 
-minHeightMerge :: PrefixTree a
+minHeightMerge :: (PrefixTree a, IpRouter a)
                   => Bool -> Maybe Int -> Page a -> Page a -> Page a
 minHeightMerge c x lpage rpage
   | lht == rht =
@@ -374,7 +376,7 @@ minHeightMerge c x lpage rpage
         rht   = pageDepth rpage
         npage = pagePrune c x lpage rpage
 
-minSizeMerge :: PrefixTree a
+minSizeMerge :: (PrefixTree a, IpRouter a)
                 => Bool -> Maybe Int -> Page a -> Page a -> Page a
 minSizeMerge c x lpage rpage
   | isFitted [npage, lpage, rpage]  = pageMergeBoth x lpage rpage

@@ -3,9 +3,7 @@ module Data.PrefixTree
          PrefixTree(..)
        ) where
 
-import           Data.IpRouter
-
-class (Monoid a, IpRouter a) => PrefixTree a where
+class Monoid a => PrefixTree a where
   isEmpty       :: a -> Bool
   collapse      :: a -> a
   delSubtree    :: a -> a -> a
