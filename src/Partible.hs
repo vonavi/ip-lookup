@@ -2,7 +2,8 @@
 
 module Partible
        (
-         PatSst(..)
+         Mergeable(..)
+       , Partible(..)
        , Page
        , patSstBuild
        , patSstInsert
@@ -11,11 +12,6 @@ module Partible
        , numOfPrefixes'
        , mhMerge
        , msMerge
-       , pageDepth
-       , numOfPages'
-       , memUsage'
-       , fillSize'
-       , checkPages'
        ) where
 
 import           Control.Applicative ((<|>))
@@ -27,6 +23,38 @@ import           Data.IpRouter
 import           Data.PaCoTree       hiding (Tree)
 import           Data.PrefixTree
 
+class Mergeable a where
+  pageMerge :: Maybe Int -> Page a -> Page a -> Page a
+
+class Partible a where
+  height     :: a -> Int
+  numOfPages :: a -> Int
+  memUsage   :: a -> Int
+  fillSize   :: a -> Int
+  checkPages :: a -> Bool
+
+  fillRatio :: a -> Double
+  fillRatio t = fromIntegral (fillSize t) / fromIntegral (memUsage t)
+
+instance (Mergeable a, PrefixTree a) => Partible (Page a) where
+  height = pageDepth
+
+  numOfPages = getSum . foldMap (const (Sum 1))
+
+  memUsage = getSum . foldMap (Sum . fitPage . treeSize)
+    where fitPage s = let k = ceiling $ fromIntegral s /
+                              (fromIntegral minPageSize :: Double)
+                      in k * minPageSize
+
+  {- Withing the maximal page size, some place is already used for
+     'plpm' folder (18 bits) and ordinal-tree root (its size can be
+     reduced from 2 to 1, because the position of its open parenthesis
+     is well-known). -}
+  fillSize = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
+
+  checkPages p = execState (checkPagesS p) $ checkPage p
+
+
 data Tree a = Leaf !a | Node !(Tree a) !(Tree a) deriving (Eq, Show)
 
 data Page a = Empty
@@ -35,17 +63,6 @@ data Page a = Empty
                    , oTree :: Tree (Page a)
                    }
             deriving (Eq, Show)
-
-class PatSst a where
-  height     :: a -> Int
-  numOfPages :: a -> Int
-  memUsage   :: a -> Int
-  fillSize   :: a -> Int
-  fillRatio  :: a -> Double
-  checkPages :: a -> Bool
-
-  fillRatio t = fromIntegral (fillSize t) / fromIntegral (memUsage t)
-
 
 instance Foldable Page where
   foldMap _ Empty = mempty
@@ -169,26 +186,20 @@ pageInsertNew c x lp rp
         lp'   = if c then pagePress lp else lp
         rp'   = if c then pagePress rp else rp
 
-patSstBuild :: PrefixTree a
-               => Bool -> (Bool -> Maybe Int -> Page a -> Page a -> Page a)
-               -> a -> Page a
-patSstBuild c merge t = if isEmpty t
-                        then Empty
-                        else merge c (bRoot t) lpage rpage
-  where lpage = patSstBuild c merge . bLeftSubtree $ t
-        rpage = patSstBuild c merge . bRightSubtree $ t
+patSstBuild :: (Mergeable a, PrefixTree a) => a -> Page a
+patSstBuild t = if isEmpty t
+                then Empty
+                else pageMerge (bRoot t) lpage rpage
+  where lpage = patSstBuild . bLeftSubtree $ t
+        rpage = patSstBuild . bRightSubtree $ t
 
-patSstInsert :: PrefixTree a
-                => Bool -> (Bool -> Maybe Int -> Page a -> Page a -> Page a)
-                -> Entry -> Page a -> Page a
-patSstInsert c m = flip (helper c m) . mkTable . (:[])
-  where helper :: PrefixTree a
-                  => Bool -> (Bool -> Maybe Int -> Page a -> Page a -> Page a)
-                  -> Page a -> a -> Page a
-        helper c' merge page tree
+patSstInsert :: (Mergeable a, PrefixTree a) => Entry -> Page a -> Page a
+patSstInsert = flip helper . mkTable . (:[])
+  where helper :: (Mergeable a, PrefixTree a) => Page a -> a -> Page a
+        helper page tree
           | isEmpty tree     = page
-          | isPageEmpty page = patSstBuild c' merge tree
-          | isEmpty itree    = let Leaf p = otree in helper c' merge p tree
+          | isPageEmpty page = patSstBuild tree
+          | isEmpty itree    = let Leaf p = otree in helper p tree
           | otherwise        =
               let lpage  = case otree of
                             Node l _   -> page { iTree = bLeftSubtree itree
@@ -200,7 +211,7 @@ patSstInsert c m = flip (helper c m) . mkTable . (:[])
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
-                  lpage' = helper c' merge lpage (bLeftSubtree tree)
+                  lpage' = helper lpage (bLeftSubtree tree)
 
                   rpage  = case otree of
                             Node _ r   -> page { iTree = bRightSubtree itree
@@ -212,8 +223,8 @@ patSstInsert c m = flip (helper c m) . mkTable . (:[])
                                                , oTree = Leaf Empty
                                                }
                             Leaf _     -> error "Not linked page"
-                  rpage' = helper c' merge rpage (bRightSubtree tree)
-              in merge c' (bRoot tree <|> bRoot itree) lpage' rpage'
+                  rpage' = helper rpage (bRightSubtree tree)
+              in pageMerge (bRoot tree <|> bRoot itree) lpage' rpage'
           where itree = iTree page
                 otree = oTree page
 
@@ -253,36 +264,30 @@ collapseLast page
   | otherwise                        = page
   where ntree = collapse . iTree $ page
 
-collapsePage :: PrefixTree a
-                => Bool -> (Bool -> Maybe Int -> Page a -> Page a -> Page a)
-                -> Page a -> Page a
-collapsePage c merge page
+collapsePage :: (Mergeable a, PrefixTree a) => Page a -> Page a
+collapsePage page
   | isPageEmpty page                 = Empty
   | isPageLast page && isEmpty ntree = Empty
   | isPageLast page                  = page { iTree = ntree }
   | otherwise                        =
       collapseLast $ case oTree page of
-                      Leaf p   -> page { oTree = Leaf $ collapsePage c merge p }
-                      Node l r -> merge c (bRoot itree) lpage rpage
+                      Leaf p   -> page { oTree = Leaf . collapsePage $ p }
+                      Node l r -> pageMerge (bRoot itree) lpage rpage
                         where itree = iTree page
-                              lpage = collapsePage c merge $
+                              lpage = collapsePage $
                                       page { iTree = bLeftSubtree itree
                                            , oTree = l
                                            }
-                              rpage = collapsePage c merge $
+                              rpage = collapsePage $
                                       page { iTree = bRightSubtree itree
                                            , oTree = r
                                            }
   where ntree = collapse . iTree $ page
 
-patSstDelete :: PrefixTree a
-                => Bool -> (Bool -> Maybe Int -> Page a -> Page a -> Page a)
-                -> Entry -> Page a -> Page a
-patSstDelete c m = flip (helper c m) . mkTable . (:[])
-  where helper :: PrefixTree a
-                  => Bool -> (Bool -> Maybe Int -> Page a -> Page a -> Page a)
-                  -> Page a -> a -> Page a
-        helper c' merge page tree
+patSstDelete :: (Mergeable a, PrefixTree a) => Entry -> Page a -> Page a
+patSstDelete = flip helper . mkTable . (:[])
+  where helper :: (Mergeable a, PrefixTree a) => Page a -> a -> Page a
+        helper page tree
           | isPageEmpty page = Empty
           | isEmpty tree     = page
           | isPageLast page  =
@@ -290,21 +295,21 @@ patSstDelete c m = flip (helper c m) . mkTable . (:[])
                                   , oTree = Leaf Empty
                                   }
           | otherwise        =
-              collapsePage c' merge $
+              collapsePage $
               case oTree page of
-               Leaf p   -> page { oTree = Leaf $ helper c' merge p tree }
-               Node l r -> merge c' z lpage' rpage'
+               Leaf p   -> page { oTree = Leaf $ helper p tree }
+               Node l r -> pageMerge z lpage' rpage'
                  where troot  = bRoot itree
                        z      = if bRoot tree == troot then Nothing else troot
                        lpage  = page { iTree = bLeftSubtree itree
                                      , oTree = l
                                      }
-                       lpage' = helper c' merge lpage (bLeftSubtree tree)
+                       lpage' = helper lpage (bLeftSubtree tree)
 
                        rpage  = page { iTree = bRightSubtree itree
                                      , oTree = r
                                      }
-                       rpage' = helper c' merge rpage (bRightSubtree tree)
+                       rpage' = helper rpage (bRightSubtree tree)
           where itree = iTree page
 
 patSstLookup :: PrefixTree a => Address -> Page a -> Maybe Int
@@ -332,22 +337,6 @@ lookupState (Address a) = helper 31
 numOfPrefixes' :: PrefixTree a => Page a -> Int
 numOfPrefixes' = getSum . foldMap (Sum . numOfPrefixes)
 
-numOfPages' :: PrefixTree a => Page a -> Int
-numOfPages' = getSum . foldMap (const (Sum 1))
-
-memUsage' :: PrefixTree a => Page a -> Int
-memUsage' = getSum . foldMap (Sum . fitPage . treeSize)
-  where fitPage s = let k = ceiling $ fromIntegral s /
-                            (fromIntegral minPageSize :: Double)
-                    in k * minPageSize
-
-fillSize' :: PrefixTree a => Page a -> Int
-{- Withing the maximal page size, some place is already used for
-   'plpm' folder (18 bits) and ordinal-tree root (its size can be
-   reduced from 2 to 1, because the position of its open parenthesis
-   is well-known). -}
-fillSize' = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
-
 checkPage :: PrefixTree a => Page a -> Bool
 checkPage page
   | isPageEmpty page              = True
@@ -369,9 +358,6 @@ checkPagesS page  = case oTree page of
                                               checkPagesS p
                      Node l r -> do checkPagesS page { oTree = l }
                                     checkPagesS page { oTree = r }
-
-checkPages' :: PrefixTree a => Page a -> Bool
-checkPages' p = execState (checkPagesS p) $ checkPage p
 
 
 mhMerge :: PrefixTree a => Bool -> Maybe Int -> Page a -> Page a -> Page a

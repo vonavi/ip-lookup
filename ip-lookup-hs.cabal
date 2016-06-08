@@ -20,7 +20,10 @@ executable ip-lookup-hs
   -- other-modules:       
   other-extensions:    FlexibleContexts
                      , FlexibleInstances
+                     , GeneralizedNewtypeDeriving
                      , IncoherentInstances
+                     , UndecidableInstances
+                     , RankNTypes
                      , UndecidableInstances
                      , ViewPatterns
   build-depends:       base >=4.8 && <4.9
