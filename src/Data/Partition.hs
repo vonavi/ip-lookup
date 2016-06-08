@@ -52,9 +52,9 @@ minPageSize = 128
 maxPageSize :: Int
 maxPageSize = 6 * minPageSize
 
-isPageEmpty :: Page a -> Bool
-isPageEmpty Empty = True
-isPageEmpty _     = False
+isEmpty :: Page a -> Bool
+isEmpty Empty = True
+isEmpty _     = False
 
 isPageLast :: Page a -> Bool
 isPageLast Empty                       = True
@@ -80,7 +80,7 @@ treeSize t = 18 * numOfPrefixes t + PT.size t
 
 checkPage :: PrefixTree a => Page a -> Bool
 checkPage page
-  | isPageEmpty page              = True
+  | isEmpty page                  = True
   | isPageLast page               = dpt == 1
   | dpt /= succ (treeDepth otree) = False
   | otherwise                     = case otree of
@@ -193,8 +193,8 @@ pageMergeRight c x lp rp = let lp' = if c then pagePress lp else lp
 pagePrune :: (PrefixTree a, IpRouter a)
              => Bool -> Maybe Int -> Page a -> Page a -> Page a
 pagePrune c x lp rp
-  | isPageEmpty lp || isPageEmpty rp = npage
-  | otherwise                        = npage { iTree = PT.singleton x }
+  | isEmpty lp || isEmpty rp = npage
+  | otherwise                = npage { iTree = PT.singleton x }
   where npage = Page { iTree = PT.merge x mempty mempty
                      , depth = succ $ max (pageDepth lp') (pageDepth rp')
                      , oTree = Node (Leaf lp') (Leaf rp')
@@ -215,7 +215,7 @@ prtnInsEntry = flip helper . mkTable . (:[])
   where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
           | PT.isEmpty tree  = page
-          | isPageEmpty page = prtnBuild tree
+          | isEmpty page     = prtnBuild tree
           | PT.isEmpty itree = let Leaf p = otree in helper p tree
           | otherwise        =
               let lpage  = case otree of
@@ -247,23 +247,23 @@ prtnInsEntry = flip helper . mkTable . (:[])
 
 pagePress :: (PrefixTree a, IpRouter a) => Page a -> Page a
 pagePress page
-  | isPageEmpty page || isPageEmpty npage = page
-  | isFitted [updPage]                    = pagePress updPage
-  | otherwise                             = page
+  | isEmpty page || isEmpty npage = page
+  | isFitted [updPage]            = pagePress updPage
+  | otherwise                     = page
   where updPage = npage { iTree = iTree page <> iTree npage }
         npage   = helper . oTree $ page
         helper :: (PrefixTree a, IpRouter a) => Tree (Page a) -> Page a
-        helper (Leaf Empty)            = Empty
-        helper (Leaf p)                = Page { iTree = iTree p
-                                              , depth = succ $ depth p
-                                              , oTree = Leaf Empty
-                                              }
+        helper (Leaf Empty)           = Empty
+        helper (Leaf p)               = Page { iTree = iTree p
+                                             , depth = succ $ depth p
+                                             , oTree = Leaf Empty
+                                             }
         helper (Node l r)
-          | isPageEmpty lp && isPageEmpty rp = Empty
-          | isPageEmpty rp                   = lpMerged
-          | isPageEmpty lp                   = rpMerged
-          | pageSize lp < pageSize rp        = lpMerged
-          | otherwise                        = rpMerged
+          | isEmpty lp && isEmpty rp  = Empty
+          | isEmpty rp                = lpMerged
+          | isEmpty lp                = rpMerged
+          | pageSize lp < pageSize rp = lpMerged
+          | otherwise                 = rpMerged
           where lp       = helper l
                 rp       = helper r
                 lpMerged = lp { iTree = PT.merge Nothing (iTree lp) mempty
@@ -275,7 +275,7 @@ pagePress page
 
 collapseLast :: PrefixTree a => Page a -> Page a
 collapseLast page
-  | isPageEmpty page                    = Empty
+  | isEmpty page                        = Empty
   | isPageLast page && PT.isEmpty ntree = Empty
   | isPageLast page                     = page { iTree = ntree }
   | otherwise                           = page
@@ -283,7 +283,7 @@ collapseLast page
 
 collapsePage :: (PrefixTree a, Partible a) => Page a -> Page a
 collapsePage page
-  | isPageEmpty page                    = Empty
+  | isEmpty page                        = Empty
   | isPageLast page && PT.isEmpty ntree = Empty
   | isPageLast page                     = page { iTree = ntree }
   | otherwise                           =
@@ -306,13 +306,13 @@ prtnDelEntry :: (PrefixTree a, Partible a, IpRouter a)
 prtnDelEntry = flip helper . mkTable . (:[])
   where helper :: (PrefixTree a, Partible a) => Page a -> a -> Page a
         helper page tree
-          | isPageEmpty page = Empty
-          | PT.isEmpty tree  = page
-          | isPageLast page  =
+          | isEmpty page    = Empty
+          | PT.isEmpty tree = page
+          | isPageLast page =
               collapseLast $ page { iTree = PT.delSubtree itree tree
                                   , oTree = Leaf Empty
                                   }
-          | otherwise        =
+          | otherwise       =
               collapsePage $
               case oTree page of
                Leaf p   -> page { oTree = Leaf $ helper p tree }
@@ -333,10 +333,10 @@ prtnDelEntry = flip helper . mkTable . (:[])
 lookupState :: PrefixTree a => Address -> Page a -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
   where helper n page
-          | isPageEmpty page = return ()
-          | PT.isEmpty t     = let Leaf p = oTree page
-                               in helper n p
-          | otherwise        = do
+          | isEmpty page = return ()
+          | PT.isEmpty t = let Leaf p = oTree page
+                           in helper n p
+          | otherwise    = do
               modify (PT.root t <|>)
               when (n >= 0) $
                 if a `testBit` n
