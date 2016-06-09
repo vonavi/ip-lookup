@@ -133,7 +133,7 @@ instance IpRouter PaCoTree where
 
   insEntry = mappend . fromEntry
 
-  delEntry = undefined
+  delEntry = flip delSubtree . fromEntry
 
   ipLookup a (PaCoTree t) = execState (lookupState a t) Nothing
 
@@ -207,10 +207,8 @@ instance PrefixTree PaCoTree where
   isEmpty (PaCoTree Tip) = True
   isEmpty _              = False
 
-  root (PaCoTree Tip) = Nothing
-  root (PaCoTree (Bin _ x _))
-    | skip x == 0 = label x
-    | otherwise   = Nothing
+  root (PaCoTree (Bin _ x _)) | skip x == 0 = label x
+  root _                                    = Nothing
 
   leftSubtree (PaCoTree Tip) = PaCoTree Tip
   leftSubtree (PaCoTree (Bin l x r))
@@ -260,8 +258,37 @@ instance PrefixTree PaCoTree where
                                  }
                     in Bin lr xr' rr
 
-  collapse   = undefined
-  delSubtree = undefined
+  collapse = undefined
+
+  delSubtree a b = PaCoTree $ helper (getTree a) (getTree b)
+    where helper Tip _   = Tip
+          helper t   Tip = t
+          helper t@(Bin lx x rx) (Bin ly y ry)
+            | kxy < min kx ky = t
+            | kx == ky        = Bin (helper lx ly) ndiff (helper rx ry)
+            | kx < ky         = if vy `testBit` (31 - kx)
+                                then Bin lx ndiff (helper rx $ Bin ly ylast ry)
+                                else Bin (helper lx $ Bin ly ylast ry) ndiff rx
+            | otherwise       = if vx `testBit` (31 - ky)
+                                then Bin Tip xhead (helper (Bin lx xlast rx) ry)
+                                else Bin (helper (Bin lx xlast rx) ly) xhead Tip
+            where kx    = skip x
+                  ky    = skip y
+                  vx    = string x
+                  vy    = string y
+                  kxy   = countLeadingZeros $ vx `xor` vy
+                  ndiff = let labDiff (Just px) (Just py) | px == py = Nothing
+                              labDiff l         _                    = l
+                          in x { label = labDiff (label x) (label y) }
+                  xhead = x { skip  = ky
+                            , label = Nothing
+                            }
+                  xlast = x { skip   = kx - ky - 1
+                            , string = vx `shiftL` (ky + 1)
+                            }
+                  ylast = y { skip   = ky - kx - 1
+                            , string = vy `shiftL` (kx + 1)
+                            }
 
   size = gammaSize
 

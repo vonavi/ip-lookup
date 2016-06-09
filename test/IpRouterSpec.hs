@@ -199,6 +199,9 @@ delEntriesSpec = do
     it "Check binary tree" $ do
       delEntries (mkTable e :: BinTree) e `shouldBe` (mkTable [] :: BinTree)
 
+    it "Check path-compressed tree" $ do
+      delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)
+
     it "Check ordinal tree T1" $ do
       delEntries (mkTable e :: OrdTreeT1) e `shouldBe` (mkTable [] :: OrdTreeT1)
 
