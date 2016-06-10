@@ -31,8 +31,8 @@ toPaCoTree = PaCoTree . fmap f
                            then (`setBit` 31) . (`shiftR` 1)
                            else (`shiftR` 1)
 
-testIpRouter :: IpRouter a => a
-testIpRouter = mkTable . map toEntry $ l
+testPaCoTree :: PaCoTree
+testPaCoTree = mkTable . map toEntry $ l
   where toEntry (s, m, h) = Entry p h
           where p = Prefix (strToAddr s) (strToMask m)
         l = [ ("0.0.0.0",   "/1", 0)
@@ -43,49 +43,49 @@ testIpRouter = mkTable . map toEntry $ l
             , ("223.0.0.0", "/5", 5)
             ]
 
-testTree :: Tree Node
-testTree = Bin (Bin Tip
-                    Node { list = []
-                         , pref = Just 0
-                         }
-                    (Bin Tip
-                         Node { list = []
-                              , pref = Just 1
-                              }
-                         (Bin Tip
-                              Node { list = [False]
-                                   , pref = Just 2
-                                   }
-                              Tip)))
-               Node { list = []
-                    , pref = Nothing
-                    }
-               (Bin Tip
-                    Node { list = []
-                         , pref = Just 3
-                         }
-                    (Bin Tip
-                         Node { list = [False, True]
-                              , pref = Just 4
-                              }
-                         (Bin Tip
-                              Node { list = []
-                                   , pref = Just 5
-                                   }
-                              Tip)))
+refTree :: Tree Node
+refTree = Bin (Bin Tip
+                   Node { list = []
+                        , pref = Just 0
+                        }
+                   (Bin Tip
+                        Node { list = []
+                             , pref = Just 1
+                             }
+                        (Bin Tip
+                             Node { list = [False]
+                                  , pref = Just 2
+                                  }
+                             Tip)))
+              Node { list = []
+                   , pref = Nothing
+                   }
+              (Bin Tip
+                   Node { list = []
+                        , pref = Just 3
+                        }
+                   (Bin Tip
+                        Node { list = [False, True]
+                             , pref = Just 4
+                             }
+                        (Bin Tip
+                             Node { list = []
+                                  , pref = Just 5
+                                  }
+                             Tip)))
 
-testPaCoTree :: PaCoTree
-testPaCoTree = toPaCoTree testTree
+refPaCoTree :: PaCoTree
+refPaCoTree = toPaCoTree refTree
 
 paCoTreeSpec :: Spec
 paCoTreeSpec = do
   describe "Simple path-compressed tree" $ do
     it "Check building" $ do
-      (testIpRouter :: PaCoTree) `shouldBe` testPaCoTree
+      testPaCoTree `shouldBe` refPaCoTree
 
     it "Check merging" $ do
-      merge (root t) l' r' `shouldBe` testPaCoTree
-        where t   = testIpRouter :: PaCoTree
+      merge (root t) l' r' `shouldBe` refPaCoTree
+        where t   = testPaCoTree
               l   = leftSubtree t
               r   = rightSubtree t
               ll  = leftSubtree l
