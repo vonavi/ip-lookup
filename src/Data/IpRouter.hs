@@ -7,6 +7,8 @@ module Data.IpRouter
        , IpRouter(..)
        , strToAddr
        , strToMask
+       , insEntries
+       , delEntries
        ) where
 
 import           Data.Bits
@@ -52,3 +54,9 @@ class IpRouter a where
   delEntry      :: Entry   -> a -> a
   ipLookup      :: Address -> a -> Maybe Int
   numOfPrefixes :: a       -> Int
+
+insEntries :: IpRouter a => a -> [Entry] -> a
+insEntries = foldr insEntry
+
+delEntries :: IpRouter a => a -> [Entry] -> a
+delEntries = foldr delEntry
