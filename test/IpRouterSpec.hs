@@ -15,7 +15,6 @@ import           Data.IpRouter
 import           Data.OrdSst        (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3,
                                      MhOrdSstT4)
 import qualified Data.OrdSst        as OS
-import           Data.OrdTree
 import           Data.PaCoPartition (MhPaCoPrtn)
 import           Data.PaCoTree
 import qualified Data.Partition     as Prtn
@@ -34,18 +33,6 @@ ipLookupSpec = do
 
     it "Check path-compressed tree" $ do
       testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
-
-    it "Check ordinal tree T1" $ do
-      testIpLookup (testIpRouter :: OrdTreeT1) `shouldBe` True
-
-    it "Check ordinal tree T2" $ do
-      testIpLookup (testIpRouter :: OrdTreeT2) `shouldBe` True
-
-    it "Check ordinal tree T3" $ do
-      testIpLookup (testIpRouter :: OrdTreeT3) `shouldBe` True
-
-    it "Check ordinal tree T4" $ do
-      testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
 
     it "Check a min-height partition of path-compressed tree" $ do
       testIpLookup (testIpRouter :: MhPaCoPrtn) `shouldBe` True
@@ -76,18 +63,6 @@ numOfPrefixesSpec = do
     it "Check path-compressed tree" $ do
       numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
 
-    it "Check ordinal tree T1" $ do
-      numOfPrefixes (mkTable e :: OrdTreeT1) `shouldBe` n
-
-    it "Check ordinal tree T2" $ do
-      numOfPrefixes (mkTable e :: OrdTreeT2) `shouldBe` n
-
-    it "Check ordinal tree T3" $ do
-      numOfPrefixes (mkTable e :: OrdTreeT3) `shouldBe` n
-
-    it "Check ordinal tree T4" $ do
-      numOfPrefixes (mkTable e :: OrdTreeT4) `shouldBe` n
-
     it "Check a min-height partition of path-compressed tree" $ do
       numOfPrefixes (mkTable e :: MhPaCoPrtn) `shouldBe` n
 
@@ -117,18 +92,6 @@ insEntriesSpec = do
     it "Check path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
 
-    it "Check ordinal tree T1" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT1) e) `shouldBe` n
-
-    it "Check ordinal tree T2" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT2) e) `shouldBe` n
-
-    it "Check ordinal tree T3" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT3) e) `shouldBe` n
-
-    it "Check ordinal tree T4" $ do
-      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
-
     it "Check a min-height partition of path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` n
 
@@ -157,18 +120,6 @@ delEntriesSpec = do
 
     it "Check path-compressed tree" $ do
       delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)
-
-    it "Check ordinal tree T1" $ do
-      delEntries (mkTable e :: OrdTreeT1) e `shouldBe` (mkTable [] :: OrdTreeT1)
-
-    it "Check ordinal tree T2" $ do
-      delEntries (mkTable e :: OrdTreeT2) e `shouldBe` (mkTable [] :: OrdTreeT2)
-
-    it "Check ordinal tree T3" $ do
-      delEntries (mkTable e :: OrdTreeT3) e `shouldBe` (mkTable [] :: OrdTreeT3)
-
-    it "Check ordinal tree T4" $ do
-      delEntries (mkTable e :: OrdTreeT4) e `shouldBe` (mkTable [] :: OrdTreeT4)
 
     it "Check min-height SST for ordinal tree T1" $ do
       delEntries (mkTable e :: MhOrdSstT1) e

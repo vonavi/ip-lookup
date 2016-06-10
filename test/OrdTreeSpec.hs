@@ -3,6 +3,7 @@ module OrdTreeSpec
          ordSizeSpec
        , ordBpSpec
        , ordDfudsSpec
+       , ordIpRouterSpec
        ) where
 
 import           Test.Hspec
@@ -10,6 +11,8 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.OrdTree
 import           Data.Paren
+import           RandomPrefixes
+import           TestIpRouter
 
 testOrdTree :: (Monoid a, OrdTree a) => a
 testOrdTree = mkTable . map toEntry $ l
@@ -24,7 +27,6 @@ testOrdTree = mkTable . map toEntry $ l
             , ("192.0.0.0", "/3", 7)
             , ("192.0.0.0", "/2", 8)
             ]
-
 
 ordSizeSpec :: Spec
 ordSizeSpec = do
@@ -114,3 +116,64 @@ ordDfudsSpec = do
         , (Just 5, [Close]), (Just 6, [Open, Open, Close]), (Just 7, [Close])
         , (Just 8, [Close])
         ]
+
+
+ordIpRouterSpec :: Spec
+ordIpRouterSpec = do
+  describe "Simple IP lookups" $ do
+    it "Check ordinal tree T1" $ do
+      testIpLookup (testIpRouter :: OrdTreeT1) `shouldBe` True
+
+    it "Check ordinal tree T2" $ do
+      testIpLookup (testIpRouter :: OrdTreeT2) `shouldBe` True
+
+    it "Check ordinal tree T3" $ do
+      testIpLookup (testIpRouter :: OrdTreeT3) `shouldBe` True
+
+    it "Check ordinal tree T4" $ do
+      testIpLookup (testIpRouter :: OrdTreeT4) `shouldBe` True
+
+  describe "Number of random prefixes" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check ordinal tree T1" $ do
+      numOfPrefixes (mkTable e :: OrdTreeT1) `shouldBe` n
+
+    it "Check ordinal tree T2" $ do
+      numOfPrefixes (mkTable e :: OrdTreeT2) `shouldBe` n
+
+    it "Check ordinal tree T3" $ do
+      numOfPrefixes (mkTable e :: OrdTreeT3) `shouldBe` n
+
+    it "Check ordinal tree T4" $ do
+      numOfPrefixes (mkTable e :: OrdTreeT4) `shouldBe` n
+
+  describe "Insertion of random entries" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check ordinal tree T1" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT1) e) `shouldBe` n
+
+    it "Check ordinal tree T2" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT2) e) `shouldBe` n
+
+    it "Check ordinal tree T3" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT3) e) `shouldBe` n
+
+    it "Check ordinal tree T4" $ do
+      numOfPrefixes (insEntries (mkTable [] :: OrdTreeT4) e) `shouldBe` n
+
+  describe "Deletion of random entries" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check ordinal tree T1" $ do
+      delEntries (mkTable e :: OrdTreeT1) e `shouldBe` (mkTable [] :: OrdTreeT1)
+
+    it "Check ordinal tree T2" $ do
+      delEntries (mkTable e :: OrdTreeT2) e `shouldBe` (mkTable [] :: OrdTreeT2)
+
+    it "Check ordinal tree T3" $ do
+      delEntries (mkTable e :: OrdTreeT3) e `shouldBe` (mkTable [] :: OrdTreeT3)
+
+    it "Check ordinal tree T4" $ do
+      delEntries (mkTable e :: OrdTreeT4) e `shouldBe` (mkTable [] :: OrdTreeT4)

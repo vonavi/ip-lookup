@@ -20,3 +20,4 @@ main = do
   hspec ordSizeSpec
   hspec ordBpSpec
   hspec ordDfudsSpec
+  hspec ordIpRouterSpec
