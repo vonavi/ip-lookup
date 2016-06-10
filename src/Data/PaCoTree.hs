@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes                 #-}
 
 module Data.PaCoTree
        (
@@ -120,45 +121,45 @@ collapseRoot (Bin Tip x r)   = let Bin lr xr rr = r
                                in Bin lr (appendNode x True xr) rr
 collapseRoot t               = t
 
-instance PrefixTree PaCoTree where
-  isEmpty (PaCoTree Tip) = True
-  isEmpty _              = False
+instance PrefixTree (Tree PaCoNode) where
+  isEmpty Tip = True
+  isEmpty _   = False
 
-  root (PaCoTree (Bin _ x _)) | skip x == 0 = label x
-  root _                                    = Nothing
+  root (Bin _ x _) | skip x == 0 = label x
+  root _                         = Nothing
 
-  leftSubtree (PaCoTree Tip) = PaCoTree Tip
-  leftSubtree (PaCoTree (Bin l x r))
-    | k == 0         = PaCoTree l
-    | v `testBit` 31 = PaCoTree Tip
-    | otherwise      = PaCoTree $ Bin l x' r
+  leftSubtree Tip    = Tip
+  leftSubtree (Bin l x r)
+    | k == 0         = l
+    | v `testBit` 31 = Tip
+    | otherwise      = Bin l x' r
     where k  = skip x
           v  = string x
           x' = x { skip   = pred k
                  , string = v `shiftL` 1
                  }
 
-  rightSubtree (PaCoTree Tip) = PaCoTree Tip
-  rightSubtree (PaCoTree (Bin l x r))
-    | k == 0         = PaCoTree r
-    | v `testBit` 31 = PaCoTree $ Bin l x' r
-    | otherwise      = PaCoTree Tip
+  rightSubtree Tip   = Tip
+  rightSubtree (Bin l x r)
+    | k == 0         = r
+    | v `testBit` 31 = Bin l x' r
+    | otherwise      = Tip
     where k  = skip x
           v  = string x
           x' = x { skip   = pred k
                  , string = v `shiftL` 1
                  }
 
-  singleton x = PaCoTree $ Bin Tip node Tip
+  singleton x = Bin Tip node Tip
     where node = PaCoNode { skip   = 0
                           , string = 0
                           , label  = x
                           }
 
   merge x l r
-    | isJust x  = singleton x <> PaCoTree lsub <> PaCoTree rsub
-    | otherwise = PaCoTree lsub <> PaCoTree rsub
-    where lsub = case getTree l of
+    | isJust x  = singleton x <> lsub <> rsub
+    | otherwise = lsub <> rsub
+    where lsub = case l of
                   Tip          -> Tip
                   Bin ll xl rl ->
                     let xl' = xl { skip   = succ $ skip xl
@@ -166,7 +167,7 @@ instance PrefixTree PaCoTree where
                                             string xl
                                  }
                     in Bin ll xl' rl
-          rsub = case getTree r of
+          rsub = case r of
                   Tip          -> Tip
                   Bin lr xr rr ->
                     let xr' = xr { skip   = succ $ skip xr
@@ -175,11 +176,10 @@ instance PrefixTree PaCoTree where
                                  }
                     in Bin lr xr' rr
 
-  collapse = PaCoTree . helper . getTree
-    where helper Tip         = Tip
-          helper (Bin l x r) = collapseRoot $ Bin (helper l) x (helper r)
+  collapse Tip         = Tip
+  collapse (Bin l x r) = collapseRoot $ Bin (collapse l) x (collapse r)
 
-  delSubtree a b = collapse . PaCoTree $ helper (getTree a) (getTree b)
+  delSubtree a b = collapse $ helper a b
     where helper Tip _   = Tip
           helper t   Tip = t
           helper t@(Bin lx x rx) (Bin ly y ry)
@@ -209,7 +209,7 @@ instance PrefixTree PaCoTree where
                             , string = vy `shiftL` (kx + 1)
                             }
 
-  size = gammaSize
+  size = gammaSize . PaCoTree
 
 
 fromEntry :: Entry -> PaCoTree
@@ -314,11 +314,8 @@ huffmanSize = getSum . foldMap nodeSize . getTree
                            return $ 3 + (hsize V.! k) + k
 
 
-newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode } deriving (Show, Eq)
-
-instance Monoid PaCoTree where
-  mempty        = PaCoTree mempty
-  x `mappend` y = PaCoTree $ getTree x `mappend` getTree y
+newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode }
+                 deriving (Show, Eq, Monoid, PrefixTree)
 
 putPaCoTree :: PaCoTree -> IO ()
 putPaCoTree t = do
