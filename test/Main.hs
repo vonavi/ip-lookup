@@ -3,19 +3,14 @@ module Main where
 import           Test.Hspec
 
 import           BinTreeSpec
-import           IpRouterSpec
 import           OrdSstSpec
 import           OrdTreeSpec
+import           PaCoPartitionSpec
 import           PaCoTreeSpec
 import           TableSpec
 
 main :: IO ()
 main = do
-  hspec ipLookupSpec
-  hspec numOfPrefixesSpec
-  hspec insEntriesSpec
-  hspec paCoPrtnCheckSpec
-
   hspec tableIpRouterSpec
   hspec binIpRouterSpec
 
@@ -26,6 +21,9 @@ main = do
   hspec ordBpSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec
+
+  hspec paCoPrtnIpRouterSpec
+  hspec paCoPrtnCheckSpec
 
   hspec ordSstIpRouterSpec
   hspec ordSstCheckSpec
