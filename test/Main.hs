@@ -4,6 +4,7 @@ import           Test.Hspec
 
 import           BinTreeSpec
 import           IpRouterSpec
+import           OrdSstSpec
 import           OrdTreeSpec
 import           PaCoTreeSpec
 import           TableSpec
@@ -13,9 +14,7 @@ main = do
   hspec ipLookupSpec
   hspec numOfPrefixesSpec
   hspec insEntriesSpec
-  hspec delEntriesSpec
   hspec paCoPrtnCheckSpec
-  hspec ordSstCheckSpec
 
   hspec tableIpRouterSpec
   hspec binIpRouterSpec
@@ -27,3 +26,6 @@ main = do
   hspec ordBpSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec
+
+  hspec ordSstIpRouterSpec
+  hspec ordSstCheckSpec
