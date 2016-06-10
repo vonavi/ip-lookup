@@ -52,6 +52,7 @@ instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
 
+
 instance Monoid (Tree PaCoNode) where
   mempty = Tip
 
@@ -96,20 +97,6 @@ instance Monoid (Tree PaCoNode) where
           ty'         = Bin ly y' ry
 
 
-newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode } deriving (Show, Eq)
-
-instance Monoid PaCoTree where
-  mempty        = PaCoTree mempty
-  x `mappend` y = PaCoTree $ getTree x `mappend` getTree y
-
-fromEntry :: Entry -> PaCoTree
-fromEntry (Entry p n) = PaCoTree $ Bin Tip node Tip
-  where Prefix (Address a) (Mask m) = p
-        node                        = PaCoNode { skip   = m
-                                               , string = a
-                                               , label  = Just n
-                                               }
-
 appendNode :: PaCoNode -> Bool -> PaCoNode -> PaCoNode
 appendNode xhead b xlast = PaCoNode { skip   = succ $ skip xhead + skip xlast
                                     , string = str
@@ -132,6 +119,106 @@ collapseRoot (Bin l x Tip)   = let Bin ll xl rl = l
 collapseRoot (Bin Tip x r)   = let Bin lr xr rr = r
                                in Bin lr (appendNode x True xr) rr
 collapseRoot t               = t
+
+instance PrefixTree PaCoTree where
+  isEmpty (PaCoTree Tip) = True
+  isEmpty _              = False
+
+  root (PaCoTree (Bin _ x _)) | skip x == 0 = label x
+  root _                                    = Nothing
+
+  leftSubtree (PaCoTree Tip) = PaCoTree Tip
+  leftSubtree (PaCoTree (Bin l x r))
+    | k == 0         = PaCoTree l
+    | v `testBit` 31 = PaCoTree Tip
+    | otherwise      = PaCoTree $ Bin l x' r
+    where k  = skip x
+          v  = string x
+          x' = x { skip   = pred k
+                 , string = v `shiftL` 1
+                 }
+
+  rightSubtree (PaCoTree Tip) = PaCoTree Tip
+  rightSubtree (PaCoTree (Bin l x r))
+    | k == 0         = PaCoTree r
+    | v `testBit` 31 = PaCoTree $ Bin l x' r
+    | otherwise      = PaCoTree Tip
+    where k  = skip x
+          v  = string x
+          x' = x { skip   = pred k
+                 , string = v `shiftL` 1
+                 }
+
+  singleton x = PaCoTree $ Bin Tip node Tip
+    where node = PaCoNode { skip   = 0
+                          , string = 0
+                          , label  = x
+                          }
+
+  merge x l r
+    | isJust x  = singleton x <> PaCoTree lsub <> PaCoTree rsub
+    | otherwise = PaCoTree lsub <> PaCoTree rsub
+    where lsub = case getTree l of
+                  Tip          -> Tip
+                  Bin ll xl rl ->
+                    let xl' = xl { skip   = succ $ skip xl
+                                 , string = (`clearBit` 31) . (`shiftR` 1) $
+                                            string xl
+                                 }
+                    in Bin ll xl' rl
+          rsub = case getTree r of
+                  Tip          -> Tip
+                  Bin lr xr rr ->
+                    let xr' = xr { skip   = succ $ skip xr
+                                 , string = (`setBit` 31) . (`shiftR` 1) $
+                                            string xr
+                                 }
+                    in Bin lr xr' rr
+
+  collapse = PaCoTree . helper . getTree
+    where helper Tip         = Tip
+          helper (Bin l x r) = collapseRoot $ Bin (helper l) x (helper r)
+
+  delSubtree a b = collapse . PaCoTree $ helper (getTree a) (getTree b)
+    where helper Tip _   = Tip
+          helper t   Tip = t
+          helper t@(Bin lx x rx) (Bin ly y ry)
+            | kxy < min kx ky = t
+            | kx == ky        = Bin (helper lx ly) ndiff (helper rx ry)
+            | kx < ky         = if vy `testBit` (31 - kx)
+                                then Bin lx ndiff (helper rx $ Bin ly ylast ry)
+                                else Bin (helper lx $ Bin ly ylast ry) ndiff rx
+            | otherwise       = if vx `testBit` (31 - ky)
+                                then Bin Tip xhead (helper (Bin lx xlast rx) ry)
+                                else Bin (helper (Bin lx xlast rx) ly) xhead Tip
+            where kx    = skip x
+                  ky    = skip y
+                  vx    = string x
+                  vy    = string y
+                  kxy   = countLeadingZeros $ vx `xor` vy
+                  ndiff = let labDiff (Just px) (Just py) | px == py = Nothing
+                              labDiff l         _                    = l
+                          in x { label = labDiff (label x) (label y) }
+                  xhead = x { skip  = ky
+                            , label = Nothing
+                            }
+                  xlast = x { skip   = kx - ky - 1
+                            , string = vx `shiftL` (ky + 1)
+                            }
+                  ylast = y { skip   = ky - kx - 1
+                            , string = vy `shiftL` (kx + 1)
+                            }
+
+  size = gammaSize
+
+
+fromEntry :: Entry -> PaCoTree
+fromEntry (Entry p n) = PaCoTree $ Bin Tip node Tip
+  where Prefix (Address a) (Mask m) = p
+        node                        = PaCoNode { skip   = m
+                                               , string = a
+                                               , label  = Just n
+                                               }
 
 lookupState :: Address -> Tree PaCoNode -> State (Maybe Int) ()
 lookupState (Address a) = helper a
@@ -226,96 +313,12 @@ huffmanSize = getSum . foldMap nodeSize . getTree
           Sum $ runST $ do hsize <- readSTRef huffmanVecRef
                            return $ 3 + (hsize V.! k) + k
 
-instance PrefixTree PaCoTree where
-  isEmpty (PaCoTree Tip) = True
-  isEmpty _              = False
 
-  root (PaCoTree (Bin _ x _)) | skip x == 0 = label x
-  root _                                    = Nothing
+newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode } deriving (Show, Eq)
 
-  leftSubtree (PaCoTree Tip) = PaCoTree Tip
-  leftSubtree (PaCoTree (Bin l x r))
-    | k == 0         = PaCoTree l
-    | v `testBit` 31 = PaCoTree Tip
-    | otherwise      = PaCoTree $ Bin l x' r
-    where k  = skip x
-          v  = string x
-          x' = x { skip   = pred k
-                 , string = v `shiftL` 1
-                 }
-
-  rightSubtree (PaCoTree Tip) = PaCoTree Tip
-  rightSubtree (PaCoTree (Bin l x r))
-    | k == 0         = PaCoTree r
-    | v `testBit` 31 = PaCoTree $ Bin l x' r
-    | otherwise      = PaCoTree Tip
-    where k  = skip x
-          v  = string x
-          x' = x { skip   = pred k
-                 , string = v `shiftL` 1
-                 }
-
-  singleton x = PaCoTree $ Bin Tip node Tip
-    where node = PaCoNode { skip   = 0
-                          , string = 0
-                          , label  = x
-                          }
-
-  merge x l r
-    | isJust x  = singleton x <> PaCoTree lsub <> PaCoTree rsub
-    | otherwise = PaCoTree lsub <> PaCoTree rsub
-    where lsub = case getTree l of
-                  Tip          -> Tip
-                  Bin ll xl rl ->
-                    let xl' = xl { skip   = succ $ skip xl
-                                 , string = (`clearBit` 31) . (`shiftR` 1) $
-                                            string xl
-                                 }
-                    in Bin ll xl' rl
-          rsub = case getTree r of
-                  Tip          -> Tip
-                  Bin lr xr rr ->
-                    let xr' = xr { skip   = succ $ skip xr
-                                 , string = (`setBit` 31) . (`shiftR` 1) $
-                                            string xr
-                                 }
-                    in Bin lr xr' rr
-
-  collapse = PaCoTree . helper . getTree
-    where helper Tip         = Tip
-          helper (Bin l x r) = collapseRoot $ Bin (helper l) x (helper r)
-
-  delSubtree a b = collapse . PaCoTree $ helper (getTree a) (getTree b)
-    where helper Tip _   = Tip
-          helper t   Tip = t
-          helper t@(Bin lx x rx) (Bin ly y ry)
-            | kxy < min kx ky = t
-            | kx == ky        = Bin (helper lx ly) ndiff (helper rx ry)
-            | kx < ky         = if vy `testBit` (31 - kx)
-                                then Bin lx ndiff (helper rx $ Bin ly ylast ry)
-                                else Bin (helper lx $ Bin ly ylast ry) ndiff rx
-            | otherwise       = if vx `testBit` (31 - ky)
-                                then Bin Tip xhead (helper (Bin lx xlast rx) ry)
-                                else Bin (helper (Bin lx xlast rx) ly) xhead Tip
-            where kx    = skip x
-                  ky    = skip y
-                  vx    = string x
-                  vy    = string y
-                  kxy   = countLeadingZeros $ vx `xor` vy
-                  ndiff = let labDiff (Just px) (Just py) | px == py = Nothing
-                              labDiff l         _                    = l
-                          in x { label = labDiff (label x) (label y) }
-                  xhead = x { skip  = ky
-                            , label = Nothing
-                            }
-                  xlast = x { skip   = kx - ky - 1
-                            , string = vx `shiftL` (ky + 1)
-                            }
-                  ylast = y { skip   = ky - kx - 1
-                            , string = vy `shiftL` (kx + 1)
-                            }
-
-  size = gammaSize
+instance Monoid PaCoTree where
+  mempty        = PaCoTree mempty
+  x `mappend` y = PaCoTree $ getTree x `mappend` getTree y
 
 putPaCoTree :: PaCoTree -> IO ()
 putPaCoTree t = do
