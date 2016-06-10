@@ -110,6 +110,29 @@ fromEntry (Entry p n) = PaCoTree $ Bin Tip node Tip
                                                , label  = Just n
                                                }
 
+appendNode :: PaCoNode -> Bool -> PaCoNode -> PaCoNode
+appendNode xhead b xlast = PaCoNode { skip   = succ $ skip xhead + skip xlast
+                                    , string = str
+                                    , label  = label xlast
+                                    }
+  where w      = succ $ skip xhead
+        m      = complement $ (maxBound :: Word32) `shiftR` w
+        shead  = string xhead .&. m
+        slast  = string xlast `shiftR` w
+        setter = if b then setBit else clearBit
+        str    = (shead .|. slast) `setter` (32 - w)
+
+collapseRoot :: Tree PaCoNode -> Tree PaCoNode
+collapseRoot Tip             = Tip
+collapseRoot t@(Bin _ x _)
+  | isJust (label x)         = t
+collapseRoot (Bin Tip _ Tip) = Tip
+collapseRoot (Bin l x Tip)   = let Bin ll xl rl = l
+                               in Bin ll (appendNode x False xl) rl
+collapseRoot (Bin Tip x r)   = let Bin lr xr rr = r
+                               in Bin lr (appendNode x True xr) rr
+collapseRoot t               = t
+
 lookupState :: Address -> Tree PaCoNode -> State (Maybe Int) ()
 lookupState (Address a) = helper a
   where helper :: Word32 -> Tree PaCoNode -> State (Maybe Int) ()
@@ -258,9 +281,11 @@ instance PrefixTree PaCoTree where
                                  }
                     in Bin lr xr' rr
 
-  collapse = undefined
+  collapse = PaCoTree . helper . getTree
+    where helper Tip         = Tip
+          helper (Bin l x r) = collapseRoot $ Bin (helper l) x (helper r)
 
-  delSubtree a b = PaCoTree $ helper (getTree a) (getTree b)
+  delSubtree a b = collapse . PaCoTree $ helper (getTree a) (getTree b)
     where helper Tip _   = Tip
           helper t   Tip = t
           helper t@(Bin lx x rx) (Bin ly y ry)
