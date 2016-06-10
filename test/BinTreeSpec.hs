@@ -12,24 +12,21 @@ import           TestIpRouter
 
 binIpRouterSpec :: Spec
 binIpRouterSpec = do
-  describe "Simple IP lookups" $ do
-    it "Check binary tree" $ do
+  describe "Binary tree" $ do
+    it "Simple IP lookup" $ do
       testIpLookup (testIpRouter :: BinTree) `shouldBe` True
 
-  describe "Number of random prefixes" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check binary tree" $ do
+    it "Number of random prefixes" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (mkTable e :: BinTree) `shouldBe` n
 
-  describe "Insertion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check binary tree" $ do
+    it "Insertion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
 
-  describe "Deletion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check binary tree" $ do
+    it "Deletion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       delEntries (mkTable e :: BinTree) e `shouldBe` (mkTable [] :: BinTree)

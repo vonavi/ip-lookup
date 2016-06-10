@@ -12,24 +12,21 @@ import           TestIpRouter
 
 tableIpRouterSpec :: Spec
 tableIpRouterSpec = do
-  describe "Simple IP lookups" $ do
-    it "Check table" $ do
+  describe "Table" $ do
+    it "Simple IP lookup" $ do
       testIpLookup (testIpRouter :: Table) `shouldBe` True
 
-  describe "Number of random prefixes" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check table" $ do
+    it "Number of random prefixes" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (mkTable e :: Table) `shouldBe` n
 
-  describe "Insertion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check table" $ do
+    it "Insertion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (insEntries (mkTable [] :: Table) e) `shouldBe` n
 
-  describe "Deletion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check table" $ do
+    it "Deletion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       delEntries (mkTable e :: Table) e `shouldBe` (mkTable [] :: Table)

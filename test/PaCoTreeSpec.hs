@@ -83,10 +83,10 @@ refPaCoTree = toPaCoTree refTree
 paCoTreeSpec :: Spec
 paCoTreeSpec = do
   describe "Simple path-compressed tree" $ do
-    it "Check building" $ do
+    it "Building" $ do
       testPaCoTree `shouldBe` refPaCoTree
 
-    it "Check merging" $ do
+    it "Merging" $ do
       merge (root t) l' r' `shouldBe` refPaCoTree
         where t   = testPaCoTree
               l   = leftSubtree t
@@ -121,24 +121,21 @@ paCoTreeSpec = do
 
 paCoIpRouterSpec :: Spec
 paCoIpRouterSpec = do
-  describe "Simple IP lookups" $ do
-    it "Check path-compressed tree" $ do
+  describe "Path-compressed tree" $ do
+    it "Simple IP lookup" $ do
       testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
 
-  describe "Number of random prefixes" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check path-compressed tree" $ do
+    it "Number of random prefixes" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
 
-  describe "Insertion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check path-compressed tree" $ do
+    it "Insertion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
 
-  describe "Deletion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check path-compressed tree" $ do
+    it "Deletion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)

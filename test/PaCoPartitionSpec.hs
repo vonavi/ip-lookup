@@ -14,38 +14,35 @@ import           TestIpRouter
 
 paCoPrtnIpRouterSpec :: Spec
 paCoPrtnIpRouterSpec = do
-  describe "Simple IP lookups" $ do
-    it "Check a min-height partition of path-compressed tree" $ do
+  describe "Min-height partition of path-compressed tree" $ do
+    it "Simple IP lookup" $ do
       testIpLookup (testIpRouter :: MhPaCoPrtn) `shouldBe` True
 
-  describe "Number of random prefixes" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check a min-height partition of path-compressed tree" $ do
+    it "Number of random prefixes" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (mkTable e :: MhPaCoPrtn) `shouldBe` n
 
-  describe "Insertion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check a min-height partition of path-compressed tree" $ do
+    it "Insertion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       numOfPrefixes (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` n
 
-  describe "Deletion of random entries" $ do
-    let n = 1000
-        e = genRandomEntries n
-    it "Check a min-height partition of path-compressed tree" $ do
+    it "Deletion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
       delEntries (mkTable e :: MhPaCoPrtn) e
         `shouldBe` (mkTable [] :: MhPaCoPrtn)
 
 paCoPrtnCheckSpec :: Spec
 paCoPrtnCheckSpec = do
-  let n = 1000
-      e = genRandomEntries n
-
-  describe "Check pages built by 'mkTable'" $ do
-    it "Check a min-height partition of path-compressed tree" $ do
+  describe "Min-height partition of path-compressed tree" $ do
+    it "Pages built by 'mkTable'" $ do
+      let n = 1000
+          e = genRandomEntries n
       checkPages (mkTable e :: MhPaCoPrtn) `shouldBe` True
 
-  describe "Check pages built by 'insEntries'" $ do
-    it "Check a min-height partition of path-compressed tree" $ do
+    it "Pages built by 'insEntries'" $ do
+      let n = 1000
+          e = genRandomEntries n
       checkPages (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` True
