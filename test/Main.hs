@@ -2,6 +2,7 @@ module Main where
 
 import           Test.Hspec
 
+import           BinTreeSpec
 import           IpRouterSpec
 import           OrdTreeSpec
 import           PaCoTreeSpec
@@ -16,6 +17,8 @@ main = do
   hspec ordSstCheckSpec
 
   hspec paCoTreeSpec
+
+  hspec binIpRouterSpec
 
   hspec ordSizeSpec
   hspec ordBpSpec

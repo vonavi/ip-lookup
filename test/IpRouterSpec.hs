@@ -10,7 +10,6 @@ module IpRouterSpec
 
 import           Test.Hspec
 
-import           Data.BinTree
 import           Data.IpRouter
 import           Data.OrdSst        (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3,
                                      MhOrdSstT4)
@@ -27,9 +26,6 @@ ipLookupSpec = do
   describe "Simple IP lookups" $ do
     it "Check table" $ do
       testIpLookup (testIpRouter :: Table) `shouldBe` True
-
-    it "Check binary tree" $ do
-      testIpLookup (testIpRouter :: BinTree) `shouldBe` True
 
     it "Check path-compressed tree" $ do
       testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
@@ -57,9 +53,6 @@ numOfPrefixesSpec = do
     it "Check table" $ do
       numOfPrefixes (mkTable e :: Table) `shouldBe` n
 
-    it "Check binary tree" $ do
-      numOfPrefixes (mkTable e :: BinTree) `shouldBe` n
-
     it "Check path-compressed tree" $ do
       numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
 
@@ -86,9 +79,6 @@ insEntriesSpec = do
     it "Check table" $ do
       numOfPrefixes (insEntries (mkTable [] :: Table) e) `shouldBe` n
 
-    it "Check binary tree" $ do
-      numOfPrefixes (insEntries (mkTable [] :: BinTree) e) `shouldBe` n
-
     it "Check path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
 
@@ -114,9 +104,6 @@ delEntriesSpec = do
         e = genRandomEntries n
     it "Check table" $ do
       delEntries (mkTable e :: Table) e `shouldBe` (mkTable [] :: Table)
-
-    it "Check binary tree" $ do
-      delEntries (mkTable e :: BinTree) e `shouldBe` (mkTable [] :: BinTree)
 
     it "Check path-compressed tree" $ do
       delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)
