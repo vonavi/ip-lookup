@@ -16,7 +16,7 @@ data Node = Node { list :: [Bool]
                  } deriving (Show, Eq)
 
 fromPaCoTree :: PaCoTree -> Tree Node
-fromPaCoTree = fmap f . getTree
+fromPaCoTree (PaCoTree t) = fmap f t
   where f PaCoNode { skip = k, string = v, label = p } =
           Node { list = l, pref = p }
           where l = map (\x -> v `testBit` (31 - x)) [0 .. pred k]

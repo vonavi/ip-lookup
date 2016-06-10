@@ -7,7 +7,6 @@ module Data.PaCoTree
          PaCoNode(..)
        , Tree(..)
        , PaCoTree(..)
-       , fromEntry
        , gammaSize
        , deltaSize
        , eliasFanoSize
@@ -209,7 +208,7 @@ instance PrefixTree (Tree PaCoNode) where
                             , string = vy `shiftL` (kx + 1)
                             }
 
-  size = gammaSize . PaCoTree
+  size = gammaSize
 
 
 fromEntry :: Entry -> Tree PaCoNode
@@ -251,8 +250,8 @@ instance IpRouter (Tree PaCoNode) where
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
-gammaSize :: PaCoTree -> Int
-gammaSize = getSum . foldMap nodeSize . getTree
+gammaSize :: Tree PaCoNode -> Int
+gammaSize = getSum . foldMap nodeSize
   where nodeSize PaCoNode { skip = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
@@ -264,8 +263,8 @@ gammaCodeSize :: Int -> Int
 gammaCodeSize x = 2 * k + 1
   where k = floor . logBase (2 :: Double) . fromIntegral $ x
 
-deltaSize :: PaCoTree -> Int
-deltaSize = getSum . foldMap nodeSize . getTree
+deltaSize :: Tree PaCoNode -> Int
+deltaSize = getSum . foldMap nodeSize
   where nodeSize PaCoNode { skip = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
@@ -278,19 +277,18 @@ deltaCodeSize x = 2 * l + k + 1
   where k = floor . logBase (2 :: Double) . fromIntegral $ x
         l = floor . logBase (2 :: Double) . fromIntegral . succ $ k
 
-eliasFanoSize :: PaCoTree -> Int
-eliasFanoSize t = eliasFanoCodeSize t +
-                  (getSum . foldMap nodeSize . getTree $ t)
+eliasFanoSize :: Tree PaCoNode -> Int
+eliasFanoSize t = eliasFanoCodeSize t + (getSum . foldMap nodeSize $ t)
 {- The node size is built from the following parts: parenthesis
    expression (2 bits), internal prefix (1 bit), and node string. -}
   where nodeSize x = Sum $ 3 + skip x
 
-eliasFanoCodeSize :: PaCoTree -> Int
+eliasFanoCodeSize :: Tree PaCoNode -> Int
 eliasFanoCodeSize t
   | null ks   = 0
   | kmax == 0 = 1 + n
   | otherwise = l + 1 + sum ks' + n + n * l
-  where ks   = foldMap ((:[]) . skip) . getTree $ t
+  where ks   = foldMap ((:[]) . skip) t
         ksum = scanl1 (+) ks
         kmax = last ksum
         n    = length ks
@@ -303,8 +301,8 @@ eliasFanoCodeSize t
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
 huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 32 0
 
-huffmanSize :: PaCoTree -> Int
-huffmanSize = getSum . foldMap nodeSize . getTree
+huffmanSize :: Tree PaCoNode -> Int
+huffmanSize = getSum . foldMap nodeSize
   where nodeSize PaCoNode { skip = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
@@ -314,11 +312,11 @@ huffmanSize = getSum . foldMap nodeSize . getTree
                            return $ 3 + (hsize V.! k) + k
 
 
-newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode }
+newtype PaCoTree = PaCoTree (Tree PaCoNode)
                  deriving (Show, Eq, Monoid, PrefixTree, IpRouter)
 
 putPaCoTree :: PaCoTree -> IO ()
-putPaCoTree t = do
+putPaCoTree (PaCoTree t) = do
   putStrLn "Path-compressed tree"
   putStrLn . (++) "  Size with gamma code: " . show $ gammaSize t + 18 * n
   putStrLn . (++) "  Size with delta code: " . show $ deltaSize t + 18 * n
