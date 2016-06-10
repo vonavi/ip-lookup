@@ -212,8 +212,8 @@ instance PrefixTree (Tree PaCoNode) where
   size = gammaSize . PaCoTree
 
 
-fromEntry :: Entry -> PaCoTree
-fromEntry (Entry p n) = PaCoTree $ Bin Tip node Tip
+fromEntry :: Entry -> Tree PaCoNode
+fromEntry (Entry p n) = Bin Tip node Tip
   where Prefix (Address a) (Mask m) = p
         node                        = PaCoNode { skip   = m
                                                , string = a
@@ -232,9 +232,9 @@ lookupState (Address a) = helper a
                 kx        = skip x
                 k         = countLeadingZeros $ v `xor` string x
 
-instance IpRouter PaCoTree where
-  mkTable es = PaCoTree $ runST $ do
-    let tree  = getTree . foldr insEntry mempty $ es
+instance IpRouter (Tree PaCoNode) where
+  mkTable es = runST $ do
+    let tree  = foldr insEntry mempty es
         kvec  = foldr accSkipValues (V.replicate 32 0) tree
         hsize = map (second length) . freqToEnc . V.toList . V.indexed $ kvec
     modifySTRef huffmanVecRef (V.// hsize)
@@ -245,9 +245,9 @@ instance IpRouter PaCoTree where
 
   delEntry = flip delSubtree . fromEntry
 
-  ipLookup a (PaCoTree t) = execState (lookupState a t) Nothing
+  ipLookup a t = execState (lookupState a t) Nothing
 
-  numOfPrefixes = getSum . foldMap isPrefix . getTree
+  numOfPrefixes = getSum . foldMap isPrefix
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
@@ -315,7 +315,7 @@ huffmanSize = getSum . foldMap nodeSize . getTree
 
 
 newtype PaCoTree = PaCoTree { getTree :: Tree PaCoNode }
-                 deriving (Show, Eq, Monoid, PrefixTree)
+                 deriving (Show, Eq, Monoid, PrefixTree, IpRouter)
 
 putPaCoTree :: PaCoTree -> IO ()
 putPaCoTree t = do
