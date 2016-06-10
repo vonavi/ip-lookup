@@ -17,16 +17,12 @@ import qualified Data.OrdSst        as OS
 import           Data.PaCoPartition (MhPaCoPrtn)
 import           Data.PaCoTree
 import qualified Data.Partition     as Prtn
-import           Data.Table
 import           RandomPrefixes
 import           TestIpRouter
 
 ipLookupSpec :: Spec
 ipLookupSpec = do
   describe "Simple IP lookups" $ do
-    it "Check table" $ do
-      testIpLookup (testIpRouter :: Table) `shouldBe` True
-
     it "Check path-compressed tree" $ do
       testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
 
@@ -50,9 +46,6 @@ numOfPrefixesSpec = do
   describe "Number of random prefixes" $ do
     let n = 1000
         e = genRandomEntries n
-    it "Check table" $ do
-      numOfPrefixes (mkTable e :: Table) `shouldBe` n
-
     it "Check path-compressed tree" $ do
       numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
 
@@ -76,9 +69,6 @@ insEntriesSpec = do
   describe "Insertion of random entries" $ do
     let n = 1000
         e = genRandomEntries n
-    it "Check table" $ do
-      numOfPrefixes (insEntries (mkTable [] :: Table) e) `shouldBe` n
-
     it "Check path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
 
@@ -102,9 +92,6 @@ delEntriesSpec = do
   describe "Deletion of random entries" $ do
     let n = 1000
         e = genRandomEntries n
-    it "Check table" $ do
-      delEntries (mkTable e :: Table) e `shouldBe` (mkTable [] :: Table)
-
     it "Check path-compressed tree" $ do
       delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)
 

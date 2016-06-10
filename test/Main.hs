@@ -6,6 +6,7 @@ import           BinTreeSpec
 import           IpRouterSpec
 import           OrdTreeSpec
 import           PaCoTreeSpec
+import           TableSpec
 
 main :: IO ()
 main = do
@@ -18,6 +19,7 @@ main = do
 
   hspec paCoTreeSpec
 
+  hspec tableIpRouterSpec
   hspec binIpRouterSpec
 
   hspec ordSizeSpec
