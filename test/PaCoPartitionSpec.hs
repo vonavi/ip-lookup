@@ -30,6 +30,13 @@ paCoPrtnIpRouterSpec = do
     it "Check a min-height partition of path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` n
 
+  describe "Deletion of random entries" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check a min-height partition of path-compressed tree" $ do
+      delEntries (mkTable e :: MhPaCoPrtn) e
+        `shouldBe` (mkTable [] :: MhPaCoPrtn)
+
 paCoPrtnCheckSpec :: Spec
 paCoPrtnCheckSpec = do
   let n = 1000
