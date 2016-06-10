@@ -17,10 +17,11 @@ main = do
   hspec paCoPrtnCheckSpec
   hspec ordSstCheckSpec
 
-  hspec paCoTreeSpec
-
   hspec tableIpRouterSpec
   hspec binIpRouterSpec
+
+  hspec paCoTreeSpec
+  hspec paCoIpRouterSpec
 
   hspec ordSizeSpec
   hspec ordBpSpec

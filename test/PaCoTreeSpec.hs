@@ -1,6 +1,7 @@
 module PaCoTreeSpec
        (
          paCoTreeSpec
+       , paCoIpRouterSpec
        ) where
 
 import           Data.Bits
@@ -10,6 +11,8 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.PaCoTree
 import           Data.PrefixTree
+import           RandomPrefixes
+import           TestIpRouter
 
 data Node = Node { list :: [Bool]
                  , pref :: Maybe Int
@@ -115,3 +118,27 @@ paCoTreeSpec = do
               rlr' = merge (root rlr) (leftSubtree rlr) (rightSubtree rlr)
               rrl' = merge (root rrl) (leftSubtree rrl) (rightSubtree rrl)
               rrr' = merge (root rrr) (leftSubtree rrr) (rightSubtree rrr)
+
+paCoIpRouterSpec :: Spec
+paCoIpRouterSpec = do
+  describe "Simple IP lookups" $ do
+    it "Check path-compressed tree" $ do
+      testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
+
+  describe "Number of random prefixes" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check path-compressed tree" $ do
+      numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
+
+  describe "Insertion of random entries" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check path-compressed tree" $ do
+      numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
+
+  describe "Deletion of random entries" $ do
+    let n = 1000
+        e = genRandomEntries n
+    it "Check path-compressed tree" $ do
+      delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)

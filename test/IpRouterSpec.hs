@@ -15,7 +15,6 @@ import           Data.OrdSst        (MhOrdSstT1, MhOrdSstT2, MhOrdSstT3,
                                      MhOrdSstT4)
 import qualified Data.OrdSst        as OS
 import           Data.PaCoPartition (MhPaCoPrtn)
-import           Data.PaCoTree
 import qualified Data.Partition     as Prtn
 import           RandomPrefixes
 import           TestIpRouter
@@ -23,9 +22,6 @@ import           TestIpRouter
 ipLookupSpec :: Spec
 ipLookupSpec = do
   describe "Simple IP lookups" $ do
-    it "Check path-compressed tree" $ do
-      testIpLookup (testIpRouter :: PaCoTree) `shouldBe` True
-
     it "Check a min-height partition of path-compressed tree" $ do
       testIpLookup (testIpRouter :: MhPaCoPrtn) `shouldBe` True
 
@@ -46,9 +42,6 @@ numOfPrefixesSpec = do
   describe "Number of random prefixes" $ do
     let n = 1000
         e = genRandomEntries n
-    it "Check path-compressed tree" $ do
-      numOfPrefixes (mkTable e :: PaCoTree) `shouldBe` n
-
     it "Check a min-height partition of path-compressed tree" $ do
       numOfPrefixes (mkTable e :: MhPaCoPrtn) `shouldBe` n
 
@@ -69,9 +62,6 @@ insEntriesSpec = do
   describe "Insertion of random entries" $ do
     let n = 1000
         e = genRandomEntries n
-    it "Check path-compressed tree" $ do
-      numOfPrefixes (insEntries (mkTable [] :: PaCoTree) e) `shouldBe` n
-
     it "Check a min-height partition of path-compressed tree" $ do
       numOfPrefixes (insEntries (mkTable [] :: MhPaCoPrtn) e) `shouldBe` n
 
@@ -92,9 +82,6 @@ delEntriesSpec = do
   describe "Deletion of random entries" $ do
     let n = 1000
         e = genRandomEntries n
-    it "Check path-compressed tree" $ do
-      delEntries (mkTable e :: PaCoTree) e `shouldBe` (mkTable [] :: PaCoTree)
-
     it "Check min-height SST for ordinal tree T1" $ do
       delEntries (mkTable e :: MhOrdSstT1) e
         `shouldBe` (mkTable [] :: MhOrdSstT1)
