@@ -11,10 +11,11 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.OrdTree
 import           Data.Paren
+import           Data.PrefixTree
 import           RandomPrefixes
 import           TestIpRouter
 
-testOrdTree :: (Monoid a, OrdTree a) => a
+testOrdTree :: IpRouter a => a
 testOrdTree = mkTable . map toEntry $ l
   where toEntry (s, m, h) = let p = Prefix (strToAddr s) (strToMask m)
                             in Entry p h
