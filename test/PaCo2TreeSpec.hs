@@ -47,11 +47,19 @@ testPaCo2Tree = mkTable . map toEntry $ l
             ]
 
 ref2Tree :: Tree Node
-ref2Tree = Bin (Bin Tip
+ref2Tree = Bin (Bin (Bin Tip
+                         Node { list = []
+                              , pref = Nothing
+                              }
+                         Tip)
                     Node { list = []
                          , pref = Just 0
                          }
-                    (Bin Tip
+                    (Bin (Bin Tip
+                              Node { list = []
+                                   , pref = Nothing
+                                   }
+                              Tip)
                          Node { list = []
                               , pref = Just 1
                               }
@@ -63,11 +71,19 @@ ref2Tree = Bin (Bin Tip
                Node { list = []
                     , pref = Nothing
                     }
-               (Bin Tip
+               (Bin (Bin Tip
+                         Node { list = []
+                              , pref = Nothing
+                              }
+                         Tip)
                     Node { list = []
                          , pref = Just 3
                          }
-                    (Bin Tip
+                    (Bin (Bin Tip
+                              Node { list = []
+                                   , pref = Nothing
+                                   }
+                              Tip)
                          Node { list = [False, True]
                               , pref = Just 4
                               }

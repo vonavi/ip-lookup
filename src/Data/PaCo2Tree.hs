@@ -58,45 +58,59 @@ instance Foldable Tree where
 instance Monoid (Tree PaCo2Node) where
   mempty = Tip
 
-  tx `mappend` ty
-    | tx == Tip                = ty
-    | ty == Tip                = tx
-    | kmin == kx && kmin == ky = let n = x { label = label x <|> label y }
-                                 in Bin (lx <> ly) n (rx <> ry)
-    | kmin < kx  && kmin == ky = if xright
-                                 then Bin ly y (ry <> tx')
-                                 else Bin (ly <> tx') y ry
-    | kmin == kx && kmin < ky  = if yright
-                                 then Bin lx x (rx <> ty')
-                                 else Bin (lx <> ty') x rx
-    | xright     && yright     = Bin Tip node (tx' <> ty')
-    | not xright && yright     = Bin tx' node ty'
-    | xright     && not yright = Bin ty' node tx'
-    | otherwise                = Bin (tx' <> ty') node Tip
-    where Bin lx x rx = tx
-          Bin ly y ry = ty
-          kx          = skip x
-          ky          = skip y
-          vx          = string x
-          vy          = string y
-          kmin        = minimum [ kx
-                                , ky
-                                , countLeadingZeros $ vx `xor` vy
-                                ]
-          node        = PaCo2Node { skip   = kmin
-                                  , string = vx
-                                  , label  = Nothing
+  Tip `mappend` tty = tty
+  ttx `mappend` Tip = ttx
+  ttx `mappend` tty = balanceRoot $ ttx `helper` tty
+    where balanceRoot t@(Bin l x r)
+            | l == Tip && r == Tip = t
+            | l == Tip             = Bin b x r
+            | r == Tip             = Bin l x b
+            | otherwise            = t
+            where b = Bin Tip n Tip
+                  n = PaCo2Node { skip = 0
+                                , string = 0
+                                , label = Nothing
+                                }
+
+          tx `helper` ty
+            | kmin == kx && kmin == ky = let sx = label x
+                                             sy = label y
+                                             n  = x { label = sx <|> sy }
+                                         in Bin (lx <> ly) n (rx <> ry)
+            | kmin < kx  && kmin == ky = if xright
+                                         then Bin ly y (ry <> tx')
+                                         else Bin (ly <> tx') y ry
+            | kmin == kx && kmin < ky  = if yright
+                                         then Bin lx x (rx <> ty')
+                                         else Bin (lx <> ty') x rx
+            | xright     && yright     = Bin Tip node (tx' <> ty')
+            | not xright && yright     = Bin tx' node ty'
+            | xright     && not yright = Bin ty' node tx'
+            | otherwise                = Bin (tx' <> ty') node Tip
+            where Bin lx x rx = tx
+                  Bin ly y ry = ty
+                  kx          = skip x
+                  ky          = skip y
+                  vx          = string x
+                  vy          = string y
+                  kmin        = minimum [ kx
+                                        , ky
+                                        , countLeadingZeros $ vx `xor` vy
+                                        ]
+                  node        = PaCo2Node { skip   = kmin
+                                          , string = vx
+                                          , label  = Nothing
+                                          }
+                  xright      = vx `testBit` (31 - kmin)
+                  yright      = vy `testBit` (31 - kmin)
+                  x'          = x { skip   = kx - kmin - 1
+                                  , string = vx `shiftL` (kmin + 1)
                                   }
-          xright      = vx `testBit` (31 - kmin)
-          yright      = vy `testBit` (31 - kmin)
-          x'          = x { skip   = kx - kmin - 1
-                          , string = vx `shiftL` (kmin + 1)
-                          }
-          y'          = y { skip   = ky - kmin - 1
-                          , string = vy `shiftL` (kmin + 1)
-                          }
-          tx'         = Bin lx x' rx
-          ty'         = Bin ly y' ry
+                  y'          = y { skip   = ky - kmin - 1
+                                  , string = vy `shiftL` (kmin + 1)
+                                  }
+                  tx'         = Bin lx x' rx
+                  ty'         = Bin ly y' ry
 
 
 appendNode :: PaCo2Node -> Bool -> PaCo2Node -> PaCo2Node
@@ -256,25 +270,25 @@ gammaSize :: Tree PaCo2Node -> Int
 gammaSize = getSum . foldMap nodeSize
   where nodeSize PaCo2Node { skip = k } =
           {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
+             open/close parenthesis (1 bit), internal prefix (1 bit),
              gamma-code of skip value (the skip value should be
              increased by one), and node string. -}
-          Sum $ 3 + (BMP.size . encodeEliasGamma . succ $ k) + k
+          Sum $ 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
 deltaSize :: Tree PaCo2Node -> Int
 deltaSize = getSum . foldMap nodeSize
   where nodeSize PaCo2Node { skip = k } =
           {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
+             open/close parenthesis (1 bit), internal prefix (1 bit),
              delta-code of skip value (the skip value should be
              increased by one), and node string. -}
-          Sum $ 3 + (BMP.size . encodeEliasDelta . succ $ k) + k
+          Sum $ 2 + (BMP.size . encodeEliasDelta . succ $ k) + k
 
 eliasFanoSize :: Tree PaCo2Node -> Int
 eliasFanoSize t = eliasFanoCodeSize t + (getSum . foldMap nodeSize $ t)
-{- The node size is built from the following parts: parenthesis
-   expression (2 bits), internal prefix (1 bit), and node string. -}
-  where nodeSize x = Sum $ 3 + skip x
+{- The node size is built from the following parts: open/close
+   parenthesis (1 bit), internal prefix (1 bit), and node string. -}
+  where nodeSize x = Sum $ 2 + skip x
 
 eliasFanoCodeSize :: Tree PaCo2Node -> Int
 eliasFanoCodeSize t
@@ -292,11 +306,11 @@ huffmanSize :: Tree PaCo2Node -> Int
 huffmanSize = getSum . foldMap nodeSize
   where nodeSize PaCo2Node { skip = k } =
           {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
+             open/close parenthesis (1 bit), internal prefix (1 bit),
              Huffman code of skip value (the skip value should be
              increased by one), and node string. -}
           Sum $ runST $ do hsize <- readSTRef huffmanVecRef
-                           return $ 3 + (hsize V.! k) + k
+                           return $ 2 + (hsize V.! k) + k
 
 
 newtype PaCo2Tree = PaCo2Tree (Tree PaCo2Node)
