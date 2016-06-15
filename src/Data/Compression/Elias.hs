@@ -1,6 +1,9 @@
 module Data.Compression.Elias
        (
-         encodeEliasGamma
+         Bitmap2(..)
+       , encodeUnary
+       , decodeUnary
+       , encodeEliasGamma
        , decodeEliasGamma
        , encodeEliasDelta
        , decodeEliasDelta
@@ -13,6 +16,13 @@ import           Data.List   (unfoldr)
 import           Data.Monoid ((<>))
 
 import           Data.Bitmap
+
+encodeUnary :: Int -> Bitmap
+encodeUnary x | x <= 0    = error "Not positive number"
+              | otherwise = fromIntExact 1 x
+
+decodeUnary :: Bitmap -> Int
+decodeUnary = succ . leadingZeros
 
 encodeEliasGamma :: Int -> Bitmap
 encodeEliasGamma x | x <= 0    = error "Not positive number"

@@ -26,6 +26,8 @@ import           Data.STRef
 import qualified Data.Vector                    as V
 import           Data.Word
 
+import qualified Data.Bitmap                    as BMP
+import           Data.Compression.Elias
 import           Data.Compression.Huffman
 import           Data.IpRouter
 import           Data.PrefixTree
@@ -257,11 +259,7 @@ gammaSize = getSum . foldMap nodeSize
              parenthesis expression (2 bits), internal prefix (1 bit),
              gamma-code of skip value (the skip value should be
              increased by one), and node string. -}
-          Sum $ 3 + gammaCodeSize (k + 1) + k
-
-gammaCodeSize :: Int -> Int
-gammaCodeSize x = 2 * k + 1
-  where k = floor . logBase (2 :: Double) . fromIntegral $ x
+          Sum $ 3 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
 deltaSize :: Tree PaCoNode -> Int
 deltaSize = getSum . foldMap nodeSize
@@ -270,12 +268,7 @@ deltaSize = getSum . foldMap nodeSize
              parenthesis expression (2 bits), internal prefix (1 bit),
              delta-code of skip value (the skip value should be
              increased by one), and node string. -}
-          Sum $ 3 + deltaCodeSize (k + 1) + k
-
-deltaCodeSize :: Int -> Int
-deltaCodeSize x = 2 * l + k + 1
-  where k = floor . logBase (2 :: Double) . fromIntegral $ x
-        l = floor . logBase (2 :: Double) . fromIntegral . succ $ k
+          Sum $ 3 + (BMP.size . encodeEliasDelta . succ $ k) + k
 
 eliasFanoSize :: Tree PaCoNode -> Int
 eliasFanoSize t = eliasFanoCodeSize t + (getSum . foldMap nodeSize $ t)
@@ -286,16 +279,13 @@ eliasFanoSize t = eliasFanoCodeSize t + (getSum . foldMap nodeSize $ t)
 eliasFanoCodeSize :: Tree PaCoNode -> Int
 eliasFanoCodeSize t
   | null ks   = 0
-  | kmax == 0 = 1 + n
-  | otherwise = l + 1 + sum ks' + n + n * l
+  | kmax == 0 = 1 + length ks
+  | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
+                highBits bmp2 <> lowBits bmp2
   where ks   = foldMap ((:[]) . skip) t
         ksum = scanl1 (+) ks
         kmax = last ksum
-        n    = length ks
-        l    = max 0 . floor . logBase (2 :: Double) $
-               fromIntegral kmax / fromIntegral n
-        ks'  = let ksum' = map (`shiftR` l) ksum
-               in zipWith (-) ksum' (0 : init ksum')
+        bmp2 = encodeEliasFano ksum
 
 {-# NOINLINE huffmanVecRef #-}
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
