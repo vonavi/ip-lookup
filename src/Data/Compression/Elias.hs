@@ -53,8 +53,7 @@ data Bitmap2 = Bitmap2 { highBits :: Bitmap
 encodeEliasFano :: [Int] -> Bitmap2
 encodeEliasFano xs
   | null xs      = error "Empty monotone sequence"
-  | last xs == 0 = Bitmap2 { highBits = fromInt . pred .
-                                        (1 `shiftL`) . length $ xs
+  | last xs == 0 = Bitmap2 { highBits = mconcat . map (\_ -> fromInt 1) $ xs
                            , lowBits  = mempty
                            , lowSize  = 0
                            }

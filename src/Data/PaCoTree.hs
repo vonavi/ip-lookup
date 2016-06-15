@@ -279,13 +279,10 @@ eliasFanoSize t = eliasFanoCodeSize t + (getSum . foldMap nodeSize $ t)
 eliasFanoCodeSize :: Tree PaCoNode -> Int
 eliasFanoCodeSize t
   | null ks   = 0
-  | kmax == 0 = 1 + length ks
   | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
                 highBits bmp2 <> lowBits bmp2
   where ks   = foldMap ((:[]) . skip) t
-        ksum = scanl1 (+) ks
-        kmax = last ksum
-        bmp2 = encodeEliasFano ksum
+        bmp2 = encodeEliasFano . scanl1 (+) $ ks
 
 {-# NOINLINE huffmanVecRef #-}
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
