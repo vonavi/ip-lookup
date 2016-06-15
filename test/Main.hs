@@ -5,6 +5,7 @@ import           Test.Hspec
 import           BinTreeSpec
 import           OrdPartitionSpec
 import           OrdTreeSpec
+import           PaCo2PartitionSpec
 import           PaCo2TreeSpec
 import           PaCoPartitionSpec
 import           PaCoTreeSpec
@@ -25,6 +26,9 @@ main = do
   hspec ordBpSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec
+
+  hspec paCo2PrtnIpRouterSpec
+  hspec paCo2PrtnCheckSpec
 
   hspec paCoPrtnIpRouterSpec
   hspec paCoPrtnCheckSpec
