@@ -54,25 +54,25 @@ instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
 
+balanceRoot :: Tree PaCo2Node -> Tree PaCo2Node
+balanceRoot Tip = Tip
+balanceRoot t@(Bin l x r)
+  | l == Tip && r == Tip = t
+  | l == Tip             = Bin (Bin Tip n Tip) x r
+  | r == Tip             = Bin l x (Bin Tip n Tip)
+  | otherwise            = t
+  where n = PaCo2Node { skip   = 0
+                      , string = 0
+                      , label  = Nothing
+                      }
 
 instance Monoid (Tree PaCo2Node) where
   mempty = Tip
 
-  Tip `mappend` tty = tty
-  ttx `mappend` Tip = ttx
   ttx `mappend` tty = balanceRoot $ ttx `helper` tty
-    where balanceRoot t@(Bin l x r)
-            | l == Tip && r == Tip = t
-            | l == Tip             = Bin b x r
-            | r == Tip             = Bin l x b
-            | otherwise            = t
-            where b = Bin Tip n Tip
-                  n = PaCo2Node { skip = 0
-                                , string = 0
-                                , label = Nothing
-                                }
-
-          tx `helper` ty
+    where tx `helper` ty
+            | tx == Tip                = ty
+            | ty == Tip                = tx
             | kmin == kx && kmin == ky = let sx = label x
                                              sy = label y
                                              n  = x { label = sx <|> sy }
@@ -192,7 +192,8 @@ instance PrefixTree (Tree PaCo2Node) where
                     in Bin lr xr' rr
 
   collapse Tip         = Tip
-  collapse (Bin l x r) = collapseRoot $ Bin (collapse l) x (collapse r)
+  collapse (Bin l x r) = balanceRoot . collapseRoot $
+                         Bin (collapse l) x (collapse r)
 
   delSubtree a b = collapse $ helper a b
     where helper Tip _   = Tip
