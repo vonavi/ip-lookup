@@ -35,8 +35,8 @@ toPaCo2Tree = PaCo2Tree . fmap f
                            then (`setBit` 31) . (`shiftR` 1)
                            else (`shiftR` 1)
 
-testPaCo2Trees :: [PaCo2Tree]
-testPaCo2Trees = scanr insEntry (mkTable []) . map toEntry . reverse $ l
+testEntries :: [Entry]
+testEntries = map toEntry l
   where toEntry (s, m, h) = let p = Prefix (strToAddr s) (strToMask m)
                             in Entry p h
         l = [ ("0.0.0.0",   "/1", 0)
@@ -46,6 +46,9 @@ testPaCo2Trees = scanr insEntry (mkTable []) . map toEntry . reverse $ l
             , ("223.0.0.0", "/4", 4)
             , ("223.0.0.0", "/5", 5)
             ]
+
+testPaCo2Trees :: [PaCo2Tree]
+testPaCo2Trees = scanr insEntry (mkTable []) . reverse $ testEntries
 
 testPaCo2Tree5 :: PaCo2Tree
 testPaCo2Tree5 = head testPaCo2Trees
@@ -221,37 +224,43 @@ paCo2TreeSpec = do
         , refPaCo2Tree1, refPaCo2Tree0, PaCo2Tree Tip ]
 
     it "Merging" $ do
-      merge (root t) l' r' `shouldBe` refPaCo2Tree5
-        where t   = testPaCo2Tree5
-              l   = leftSubtree t
-              r   = rightSubtree t
-              ll  = leftSubtree l
-              lr  = rightSubtree l
-              rl  = leftSubtree r
-              rr  = rightSubtree r
-              lll = leftSubtree ll
-              llr = rightSubtree ll
-              lrl = leftSubtree lr
-              lrr = rightSubtree lr
-              rll = leftSubtree rl
-              rlr = rightSubtree rl
-              rrl = leftSubtree rr
-              rrr = rightSubtree rr
+      let t   = testPaCo2Tree5
+          l   = leftSubtree t
+          r   = rightSubtree t
+          ll  = leftSubtree l
+          lr  = rightSubtree l
+          rl  = leftSubtree r
+          rr  = rightSubtree r
+          lll = leftSubtree ll
+          llr = rightSubtree ll
+          lrl = leftSubtree lr
+          lrr = rightSubtree lr
+          rll = leftSubtree rl
+          rlr = rightSubtree rl
+          rrl = leftSubtree rr
+          rrr = rightSubtree rr
 
-              l'   = merge (root l) ll' lr'
-              r'   = merge (root r) rl' rr'
-              ll'  = merge (root ll) lll' llr'
-              lr'  = merge (root lr) lrl' lrr'
-              rl'  = merge (root rl) rll' rlr'
-              rr'  = merge (root rr) rrl' rrr'
-              lll' = merge (root lll) (leftSubtree lll) (rightSubtree lll)
-              llr' = merge (root llr) (leftSubtree llr) (rightSubtree llr)
-              lrl' = merge (root lrl) (leftSubtree lrl) (rightSubtree lrl)
-              lrr' = merge (root lrr) (leftSubtree lrr) (rightSubtree lrr)
-              rll' = merge (root rll) (leftSubtree rll) (rightSubtree rll)
-              rlr' = merge (root rlr) (leftSubtree rlr) (rightSubtree rlr)
-              rrl' = merge (root rrl) (leftSubtree rrl) (rightSubtree rrl)
-              rrr' = merge (root rrr) (leftSubtree rrr) (rightSubtree rrr)
+          l'   = merge (root l) ll' lr'
+          r'   = merge (root r) rl' rr'
+          ll'  = merge (root ll) lll' llr'
+          lr'  = merge (root lr) lrl' lrr'
+          rl'  = merge (root rl) rll' rlr'
+          rr'  = merge (root rr) rrl' rrr'
+          lll' = merge (root lll) (leftSubtree lll) (rightSubtree lll)
+          llr' = merge (root llr) (leftSubtree llr) (rightSubtree llr)
+          lrl' = merge (root lrl) (leftSubtree lrl) (rightSubtree lrl)
+          lrr' = merge (root lrr) (leftSubtree lrr) (rightSubtree lrr)
+          rll' = merge (root rll) (leftSubtree rll) (rightSubtree rll)
+          rlr' = merge (root rlr) (leftSubtree rlr) (rightSubtree rlr)
+          rrl' = merge (root rrl) (leftSubtree rrl) (rightSubtree rrl)
+          rrr' = merge (root rrr) (leftSubtree rrr) (rightSubtree rrr)
+      merge (root t) l' r' `shouldBe` refPaCo2Tree5
+
+    it "Deletion" $ do
+      let ts = scanr delEntry testPaCo2Tree5 testEntries
+      zipWithM_ shouldBe ts
+        [ PaCo2Tree Tip, refPaCo2Tree0, refPaCo2Tree1, refPaCo2Tree2
+        , refPaCo2Tree3, refPaCo2Tree4, refPaCo2Tree5 ]
 
 paCo2IpRouterSpec :: Spec
 paCo2IpRouterSpec = do
