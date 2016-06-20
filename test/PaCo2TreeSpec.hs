@@ -4,6 +4,7 @@ module PaCo2TreeSpec
        , paCo2IpRouterSpec
        ) where
 
+import           Control.Monad   (zipWithM_)
 import           Data.Bits
 import           Data.Word
 import           Test.Hspec
@@ -34,10 +35,10 @@ toPaCo2Tree = PaCo2Tree . fmap f
                            then (`setBit` 31) . (`shiftR` 1)
                            else (`shiftR` 1)
 
-testPaCo2Tree :: PaCo2Tree
-testPaCo2Tree = mkTable . map toEntry $ l
-  where toEntry (s, m, h) = Entry p h
-          where p = Prefix (strToAddr s) (strToMask m)
+testPaCo2Trees :: [PaCo2Tree]
+testPaCo2Trees = scanr insEntry (mkTable []) . map toEntry . reverse $ l
+  where toEntry (s, m, h) = let p = Prefix (strToAddr s) (strToMask m)
+                            in Entry p h
         l = [ ("0.0.0.0",   "/1", 0)
             , ("127.0.0.0", "/2", 1)
             , ("111.0.0.0", "/4", 2)
@@ -46,65 +47,182 @@ testPaCo2Tree = mkTable . map toEntry $ l
             , ("223.0.0.0", "/5", 5)
             ]
 
-ref2Tree :: Tree Node
-ref2Tree = Bin (Bin (Bin Tip
-                         Node { list = []
-                              , pref = Nothing
-                              }
-                         Tip)
-                    Node { list = []
-                         , pref = Just 0
-                         }
-                    (Bin (Bin Tip
-                              Node { list = []
-                                   , pref = Nothing
-                                   }
-                              Tip)
-                         Node { list = []
-                              , pref = Just 1
-                              }
-                         (Bin Tip
-                              Node { list = [False]
-                                   , pref = Just 2
-                                   }
-                              Tip)))
-               Node { list = []
-                    , pref = Nothing
-                    }
-               (Bin (Bin Tip
-                         Node { list = []
-                              , pref = Nothing
-                              }
-                         Tip)
-                    Node { list = []
-                         , pref = Just 3
-                         }
-                    (Bin (Bin Tip
-                              Node { list = []
-                                   , pref = Nothing
-                                   }
-                              Tip)
-                         Node { list = [False, True]
-                              , pref = Just 4
-                              }
-                         (Bin Tip
-                              Node { list = []
-                                   , pref = Just 5
-                                   }
-                              Tip)))
+testPaCo2Tree5 :: PaCo2Tree
+testPaCo2Tree5 = head testPaCo2Trees
 
-refPaCo2Tree :: PaCo2Tree
-refPaCo2Tree = toPaCo2Tree ref2Tree
+refPaCo2Tree0 :: PaCo2Tree
+refPaCo2Tree0 = toPaCo2Tree $ Bin Tip
+                                  Node { list = [False]
+                                       , pref = Just 0
+                                       }
+                                  Tip
+
+refPaCo2Tree1 :: PaCo2Tree
+refPaCo2Tree1 = toPaCo2Tree $ Bin (Bin Tip
+                                       Node { list = []
+                                            , pref = Nothing
+                                            }
+                                       Tip)
+                                  Node { list = [False]
+                                       , pref = Just 0
+                                       }
+                                  (Bin Tip
+                                       Node { list = []
+                                            , pref = Just 1
+                                            }
+                                       Tip)
+
+refPaCo2Tree2 :: PaCo2Tree
+refPaCo2Tree2 = toPaCo2Tree $ Bin (Bin Tip
+                                       Node { list = []
+                                            , pref = Nothing
+                                            }
+                                       Tip)
+                                  Node { list = [False]
+                                       , pref = Just 0
+                                       }
+                                  (Bin (Bin Tip
+                                            Node { list = []
+                                                 , pref = Nothing
+                                                 }
+                                            Tip)
+                                       Node { list = []
+                                            , pref = Just 1
+                                            }
+                                       (Bin Tip
+                                            Node { list = [False]
+                                                 , pref = Just 2
+                                                 }
+                                            Tip))
+
+refPaCo2Tree3 :: PaCo2Tree
+refPaCo2Tree3 = toPaCo2Tree $ Bin (Bin (Bin Tip
+                                            Node { list = []
+                                                 , pref = Nothing
+                                                 }
+                                            Tip)
+                                       Node { list = []
+                                            , pref = Just 0
+                                            }
+                                       (Bin (Bin Tip
+                                                 Node { list = []
+                                                      , pref = Nothing
+                                                      }
+                                                 Tip)
+                                            Node { list = []
+                                                 , pref = Just 1
+                                                 }
+                                            (Bin Tip
+                                                 Node { list = [False]
+                                                      , pref = Just 2
+                                                      }
+                                                 Tip)))
+                                  Node { list = []
+                                       , pref = Nothing
+                                       }
+                                  (Bin Tip
+                                       Node { list = []
+                                            , pref = Just 3
+                                            }
+                                       Tip)
+
+refPaCo2Tree4 :: PaCo2Tree
+refPaCo2Tree4 = toPaCo2Tree $ Bin (Bin (Bin Tip
+                                            Node { list = []
+                                                 , pref = Nothing
+                                                 }
+                                            Tip)
+                                       Node { list = []
+                                            , pref = Just 0
+                                            }
+                                       (Bin (Bin Tip
+                                                 Node { list = []
+                                                      , pref = Nothing
+                                                      }
+                                                 Tip)
+                                            Node { list = []
+                                                 , pref = Just 1
+                                                 }
+                                            (Bin Tip
+                                                 Node { list = [False]
+                                                      , pref = Just 2
+                                                      }
+                                                 Tip)))
+                                  Node { list = []
+                                       , pref = Nothing
+                                       }
+                                  (Bin (Bin Tip
+                                            Node { list = []
+                                                 , pref = Nothing
+                                                 }
+                                            Tip)
+                                       Node { list = []
+                                            , pref = Just 3
+                                            }
+                                       (Bin Tip
+                                            Node { list = [False, True]
+                                                 , pref = Just 4
+                                                 }
+                                            Tip))
+
+refPaCo2Tree5 :: PaCo2Tree
+refPaCo2Tree5 = toPaCo2Tree $ Bin (Bin (Bin Tip
+                                            Node { list = []
+                                                 , pref = Nothing
+                                                 }
+                                            Tip)
+                                       Node { list = []
+                                            , pref = Just 0
+                                            }
+                                       (Bin (Bin Tip
+                                                 Node { list = []
+                                                      , pref = Nothing
+                                                      }
+                                                 Tip)
+                                            Node { list = []
+                                                 , pref = Just 1
+                                                 }
+                                            (Bin Tip
+                                                 Node { list = [False]
+                                                      , pref = Just 2
+                                                      }
+                                                 Tip)))
+                                  Node { list = []
+                                       , pref = Nothing
+                                       }
+                                  (Bin (Bin Tip
+                                            Node { list = []
+                                                 , pref = Nothing
+                                                 }
+                                            Tip)
+                                       Node { list = []
+                                            , pref = Just 3
+                                            }
+                                       (Bin (Bin Tip
+                                                 Node { list = []
+                                                      , pref = Nothing
+                                                      }
+                                                 Tip)
+                                            Node { list = [False, True]
+                                                 , pref = Just 4
+                                                 }
+                                            (Bin Tip
+                                                 Node { list = []
+                                                      , pref = Just 5
+                                                      }
+                                                 Tip)))
 
 paCo2TreeSpec :: Spec
 paCo2TreeSpec = do
   describe "Simple path-compressed 2-tree" $ do
     it "Building" $ do
-      testPaCo2Tree `shouldBe` refPaCo2Tree
+      zipWithM_ shouldBe testPaCo2Trees
+        [ refPaCo2Tree5, refPaCo2Tree4, refPaCo2Tree3, refPaCo2Tree2
+        , refPaCo2Tree1, refPaCo2Tree0, PaCo2Tree Tip ]
 
     it "Merging" $ do
-      merge (root t) l' r' `shouldBe` refPaCo2Tree
-        where t   = testPaCo2Tree
+      merge (root t) l' r' `shouldBe` refPaCo2Tree5
+        where t   = testPaCo2Tree5
               l   = leftSubtree t
               r   = rightSubtree t
               ll  = leftSubtree l
