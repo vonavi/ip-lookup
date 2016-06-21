@@ -332,22 +332,20 @@ prtnDelEntry = flip helper . mkTable . (:[])
 
 lookupState :: PrefixTree a => Address -> Page a -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
-  where helper n page
-          | isEmpty page = return ()
-          | PT.isEmpty t = let Leaf p = oTree page
-                           in helper n p
-          | otherwise    = do
-              modify (PT.root t <|>)
-              when (n >= 0) $
-                if a `testBit` n
-                then helper (pred n) page { iTree = PT.rightSubtree t
-                                          , oTree = r
-                                          }
-                else helper (pred n) page { iTree = PT.leftSubtree t
-                                          , oTree = l
-                                          }
-          where t        = iTree page
-                Node l r = oTree page
+  where helper _ Empty = return ()
+        helper n page  = do
+          modify (PT.root t <|>)
+          case oTree page of
+           Leaf p   -> helper n p
+           Node l r -> when (n >= 0) $
+                       if a `testBit` n
+                       then helper (pred n) page { iTree = PT.rightSubtree t
+                                                 , oTree = r
+                                                 }
+                       else helper (pred n) page { iTree = PT.leftSubtree t
+                                                 , oTree = l
+                                                 }
+          where t = iTree page
 
 instance (PrefixTree a, Partible a, IpRouter a) => IpRouter (Page a) where
   mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
