@@ -319,7 +319,10 @@ newtype PaCo2Tree = PaCo2Tree (Tree PaCo2Node)
 
 putPaCo2Tree :: PaCo2Tree -> IO ()
 putPaCo2Tree (PaCo2Tree t) = do
-  putStrLn "Path-compressed tree"
-  putStrLn . (++) "  Size with gamma code: " . show $ gammaSize t + 18 * n
-  putStrLn . (++) "  Size with delta code: " . show $ deltaSize t + 18 * n
+  putStrLn "Path-compressed 2-tree"
+  putStrLn "  Memory usage:"
+  putStrLn . (++) "    Elias gamma coding: " . show $ gammaSize t + 18 * n
+  putStrLn . (++) "    Elias delta coding: " . show $ deltaSize t + 18 * n
+  putStrLn . (++) "    Elias-Fano coding:  " . show $ eliasFanoSize t + 18 * n
+  putStrLn . (++) "    Huffman coding:     " . show $ huffmanSize t + 18 * n
     where n = numOfPrefixes t
