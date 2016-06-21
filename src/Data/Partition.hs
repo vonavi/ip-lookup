@@ -216,34 +216,22 @@ prtnInsEntry = flip helper . mkTable . (:[])
         helper page tree
           | PT.isEmpty tree  = page
           | isEmpty page     = prtnBuild tree
-          | PT.isEmpty itree = let Leaf p = otree in helper p tree
           | otherwise        =
-              let lpage  = case otree of
-                            Node l _   -> page { iTree = PT.leftSubtree itree
-                                               , depth = succ $ treeDepth l
-                                               , oTree = l
-                                               }
-                            Leaf Empty -> page { iTree = PT.leftSubtree itree
-                                               , depth = 1
-                                               , oTree = Leaf Empty
-                                               }
-                            Leaf _     -> error "Not linked page"
-                  lpage' = helper lpage . PT.leftSubtree $ tree
-
-                  rpage  = case otree of
-                            Node _ r   -> page { iTree = PT.rightSubtree itree
-                                               , depth = succ $ treeDepth r
-                                               , oTree = r
-                                               }
-                            Leaf Empty -> page { iTree = PT.rightSubtree itree
-                                               , depth = 1
-                                               , oTree = Leaf Empty
-                                               }
-                            Leaf _     -> error "Not linked page"
-                  rpage' = helper rpage . PT.rightSubtree $ tree
-              in pageMerge (PT.root tree <|> PT.root itree) lpage' rpage'
-          where itree = iTree page
-                otree = oTree page
+              case oTree page of
+               Leaf p   -> helper p tree
+               Node l r ->
+                 pageMerge (PT.root tree <|> PT.root itree) lpage' rpage'
+                 where itree  = iTree page
+                       lpage  = page { iTree = PT.leftSubtree itree
+                                     , depth = succ $ treeDepth l
+                                     , oTree = l
+                                     }
+                       lpage' = helper lpage . PT.leftSubtree $ tree
+                       rpage  = page { iTree = PT.rightSubtree itree
+                                     , depth = succ $ treeDepth r
+                                     , oTree = r
+                                     }
+                       rpage' = helper rpage . PT.rightSubtree $ tree
 
 pagePress :: (PrefixTree a, IpRouter a) => Page a -> Page a
 pagePress page
