@@ -17,12 +17,7 @@ import           Data.PrefixTree
 putPaCoPrtn :: (IpRouter a, Partition a) => a -> IO ()
 putPaCoPrtn t = do
   putStrLn "Partition of path-compressed tree"
-  putStrLn . (++) "  Number of prefixes: " . show . numOfPrefixes $ t
-  putStrLn . (++) "  Height:             " . show . height $ t
-  putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
-  putStrLn . (++) "  Fill size:          " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio:         " . show . fillRatio $ t
+  putPartition t
 
 newtype MhPaCoTree = MhPaCoTree PaCoTree
                    deriving (Eq, Show, Monoid, IpRouter, PrefixTree)

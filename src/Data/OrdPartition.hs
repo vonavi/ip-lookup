@@ -29,12 +29,7 @@ import           Data.PrefixTree
 putOrdPrtn :: (IpRouter a, Partition a) => a -> IO ()
 putOrdPrtn t = do
   putStrLn "Partition of ordered tree"
-  putStrLn . (++) "  Number of prefixes: " . show . numOfPrefixes $ t
-  putStrLn . (++) "  Height:             " . show . height $ t
-  putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
-  putStrLn . (++) "  Fill size:          " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio:         " . show . fillRatio $ t
+  putPartition t
 
 newtype MhOrdTreeT1 = MhOrdTreeT1 OrdTreeT1
                     deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
