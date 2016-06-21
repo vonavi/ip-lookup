@@ -251,7 +251,7 @@ lookupState (Address a) = helper a
 instance IpRouter (Tree PaCo2Node) where
   mkTable es = runST $ do
     let tree  = foldr insEntry mempty es
-        kvec  = foldr accSkipValues (V.replicate 32 0) tree
+        kvec  = foldr accSkipValues (V.replicate 33 0) tree
         hsize = map (second length) . freqToEnc . V.toList . V.indexed $ kvec
     modifySTRef huffmanVecRef (V.// hsize)
     return tree
@@ -301,7 +301,7 @@ eliasFanoCodeSize t
 
 {-# NOINLINE huffmanVecRef #-}
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
-huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 32 0
+huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 33 0
 
 huffmanSize :: Tree PaCo2Node -> Int
 huffmanSize = getSum . foldMap nodeSize
