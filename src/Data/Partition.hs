@@ -118,8 +118,7 @@ instance (PrefixTree a, Partible a, IpRouter a) => Partition (Page a) where
   numOfPages = getSum . foldMap (const (Sum 1))
 
   memUsage = getSum . foldMap (Sum . fitPage . treeSize)
-    where fitPage s = let k = ceiling $ fromIntegral s /
-                              (fromIntegral minPageSize :: Double)
+    where fitPage s = let k = (s + minPageSize - 1) `div` minPageSize
                       in k * minPageSize
 
   {- Withing the maximal page size, some place is already used for
