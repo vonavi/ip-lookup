@@ -117,14 +117,13 @@ instance (PrefixTree a, Partible a, IpRouter a) => Partition (Page a) where
 
   numOfPages = getSum . foldMap (const (Sum 1))
 
-  memUsage = getSum . foldMap (Sum . fitPage . treeSize)
-    where fitPage s = let k = (s + minPageSize - 1) `div` minPageSize
-                      in k * minPageSize
-
   {- Withing the maximal page size, some place is already used for
      'plpm' folder (18 bits) and ordinal-tree root (its size can be
      reduced from 2 to 1, because the position of its open parenthesis
      is well-known). -}
+  memUsage = getSum . foldMap (\x -> Sum $ fitToPage (18 + 1 + treeSize x))
+    where fitToPage s = let k = (s + minPageSize - 1) `div` minPageSize
+                        in k * minPageSize
   fillSize = getSum . foldMap (\x -> Sum (18 + 1 + treeSize x))
 
   checkPages p = execState (checkPagesS p) $ checkPage p
