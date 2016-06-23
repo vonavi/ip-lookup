@@ -1,6 +1,7 @@
 module PaCo2TreeSpec
        (
-         paCo2TreeSpec
+         fromPaCo2Tree
+       , paCo2TreeSpec
        , paCo2IpRouterSpec
        ) where
 
