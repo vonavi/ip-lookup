@@ -28,6 +28,7 @@ import           Data.Word
 
 import qualified Data.Bitmap                    as BMP
 import           Data.Compression.Elias
+import           Data.Compression.Fibonacci
 import           Data.Compression.Huffman
 import           Data.IpRouter
 import           Data.PrefixTree
@@ -257,7 +258,7 @@ gammaSize = getSum . foldMap nodeSize
   where nodeSize PaCoNode { skip = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
-             gamma-code of skip value (the skip value should be
+             Elias gamma code of skip value (the skip value should be
              increased by one), and node string. -}
           Sum $ 3 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
@@ -266,7 +267,7 @@ deltaSize = getSum . foldMap nodeSize
   where nodeSize PaCoNode { skip = k } =
           {- The node size is built from the following parts:
              parenthesis expression (2 bits), internal prefix (1 bit),
-             delta-code of skip value (the skip value should be
+             Elias delta code of skip value (the skip value should be
              increased by one), and node string. -}
           Sum $ 3 + (BMP.size . encodeEliasDelta . succ $ k) + k
 
@@ -283,6 +284,15 @@ eliasFanoCodeSize t
                 highBits bmp2 <> lowBits bmp2
   where ks   = foldMap ((:[]) . skip) t
         bmp2 = encodeEliasFano . scanl1 (+) $ ks
+
+fibonacciSize :: Tree PaCoNode -> Int
+fibonacciSize = getSum . foldMap nodeSize
+  where nodeSize PaCoNode { skip = k } =
+          {- The node size is built from the following parts:
+             parenthesis expression (2 bits), internal prefix (1 bit),
+             Fibonacci code of skip value (the skip value should be
+             increased by one), and node string. -}
+          Sum $ 3 + (BMP.size . encodeFibonacci . succ $ k) + k
 
 {-# NOINLINE huffmanVecRef #-}
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
@@ -309,5 +319,6 @@ putPaCoTree (PaCoTree t) = do
   putStrLn . (++) "    Elias gamma coding: " . show $ gammaSize t + 18 * n
   putStrLn . (++) "    Elias delta coding: " . show $ deltaSize t + 18 * n
   putStrLn . (++) "    Elias-Fano coding:  " . show $ eliasFanoSize t + 18 * n
+  putStrLn . (++) "    Fibonacci coding:   " . show $ fibonacciSize t + 18 * n
   putStrLn . (++) "    Huffman coding:     " . show $ huffmanSize t + 18 * n
     where n = numOfPrefixes t
