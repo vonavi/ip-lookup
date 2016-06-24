@@ -129,12 +129,12 @@ instance (PrefixTree a, Partible a, IpRouter a) => Partition (Page a) where
   checkPages p = execState (checkPagesS p) $ checkPage p
 
 
-isFitted :: (PrefixTree a, IpRouter a) => [Page a] -> Bool
+isFitted :: (PrefixTree a, IpRouter a) => Page a -> Bool
 {- Withing the maximal page size, some place is reserved for 'plpm'
    folder (18 bits) and ordinal-tree root (its size can be reduced
    from 2 to 1, because the position of its open parenthesis is
    well-known). -}
-isFitted = (maxPageSize - 18 - 1 >=) . sum . map pageSize
+isFitted = (maxPageSize - 18 - 1 >=) . pageSize
 
 pageMergeBoth :: PrefixTree a
                  => Maybe Int -> Page a -> Page a -> Page a
@@ -246,7 +246,7 @@ prtnInsEntry = flip helper . mkTable . (:[])
 pagePress :: (PrefixTree a, IpRouter a) => Page a -> Page a
 pagePress page
   | isEmpty page || isEmpty npage = page
-  | isFitted [updPage]            = pagePress updPage
+  | isFitted updPage              = pagePress updPage
   | otherwise                     = page
   where updPage = npage { iTree = iTree page <> iTree npage }
         npage   = helper . oTree $ page
@@ -355,33 +355,29 @@ instance (PrefixTree a, Partible a, IpRouter a) => IpRouter (Page a) where
 
 minHeightMerge :: (PrefixTree a, IpRouter a)
                   => Bool -> Maybe Int -> Page a -> Page a -> Page a
-minHeightMerge c x lpage rpage
-  | lht == rht =
-      if isFitted [npage, lpage, rpage]
-      then pageMergeBoth x lpage rpage
-      else npage
-  | lht > rht  =
-      if isFitted [npage, lpage]
-      then pageMergeLeft c x lpage rpage
-      else npage
-  | otherwise  =
-      if isFitted [npage, rpage]
-      then pageMergeRight c x lpage rpage
-      else npage
-  where lht   = pageDepth lpage
-        rht   = pageDepth rpage
-        npage = pagePrune c x lpage rpage
+minHeightMerge c x lpage rpage = if isFitted updPage
+                                 then updPage
+                                 else newPage
+  where lht = pageDepth lpage
+        rht = pageDepth rpage
+        updPage | lht == rht = pageMergeBoth x lpage rpage
+                | lht > rht  = pageMergeLeft c x lpage rpage
+                | otherwise  = pageMergeRight c x lpage rpage
+        newPage = pagePrune c x lpage rpage
 
 minSizeMerge :: (PrefixTree a, IpRouter a)
                 => Bool -> Maybe Int -> Page a -> Page a -> Page a
 minSizeMerge c x lpage rpage
-  | isFitted [npage, lpage, rpage]  = pageMergeBoth x lpage rpage
+  | isFitted totPage                = totPage
   | pageSize lpage < pageSize rpage =
-      if isFitted [npage, lpage]
-      then pageMergeLeft c x lpage rpage
-      else npage
+      let updPage = pageMergeLeft c x lpage rpage
+      in if isFitted updPage
+         then updPage
+         else newPage
   | otherwise                       =
-      if isFitted [npage, rpage]
-      then pageMergeRight c x lpage rpage
-      else npage
-  where npage = pagePrune c x lpage rpage
+      let updPage = pageMergeRight c x lpage rpage
+      in if isFitted updPage
+         then updPage
+         else newPage
+  where totPage = pageMergeBoth x lpage rpage
+        newPage = pagePrune c x lpage rpage
