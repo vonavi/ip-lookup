@@ -9,6 +9,7 @@ module Data.PaCo2TreeM
        ) where
 
 import           Control.Applicative ((<|>))
+import           Control.Monad.State
 import           Data.Bits
 import           Data.Maybe          (isJust)
 import           Data.Monoid
@@ -101,13 +102,26 @@ fromEntry (Entry p n) = Bin node (Leaf Nothing) (Leaf Nothing)
                                                 , label  = Just n
                                                 }
 
+lookupState :: Address -> Tree b PaCo2Node -> State (Maybe Int) ()
+lookupState (Address a) = helper a
+  where helper :: Word32 -> Tree b PaCo2Node -> State (Maybe Int) ()
+        helper _ (Leaf _)                = return ()
+        helper v (Bin x l r) | k < kx    = return ()
+                             | otherwise = do
+                                 modify (label x <|>)
+                                 helper (v `shiftL` (kx + 1)) $
+                                   if v `testBit` (31 - kx) then r else l
+          where kx = skip x
+                k  = countLeadingZeros $ v `xor` string x
+
 instance IpRouter (Tree b PaCo2Node) where
   mkTable = foldr insEntry mempty
 
   insEntry = mappend . fromEntry
 
   delEntry = undefined
-  ipLookup = undefined
+
+  ipLookup a t = execState (lookupState a t) Nothing
 
   numOfPrefixes = getSum . foldMap isPrefix
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0

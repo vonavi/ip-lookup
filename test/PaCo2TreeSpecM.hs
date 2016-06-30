@@ -12,6 +12,7 @@ import           Data.IpRouter
 import           Data.PaCo2TreeM hiding (Bin, Leaf, Tree)
 import qualified Data.PaCo2TreeM as PC
 import           RandomPrefixes
+import           TestIpRouter
 
 data Node = Node { list :: [Bool]
                  , pref :: Maybe Int
@@ -217,6 +218,9 @@ paCo2TreeSpec = do
 paCo2IpRouterSpec :: Spec
 paCo2IpRouterSpec = do
   describe "Path-compressed 2-tree" $ do
+    it "Simple IP lookup" $ do
+      testIpLookup (testIpRouter :: PaCo2Tree ()) `shouldBe` True
+
     it "Number of random prefixes" $ do
       let n = 1000
           e = genRandomEntries n
