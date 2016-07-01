@@ -252,6 +252,11 @@ paCo2TreeSpec = do
           rrr' = merge (root rrr) (leftSubtree rrr) (rightSubtree rrr)
       fromPaCo2Tree (merge (root t) l' r') `shouldBe` refTree5
 
+    it "Deletion" $ do
+      let ts = scanr delEntry testPaCo2Tree5 testEntries
+      zipWithM_ shouldBe (map fromPaCo2Tree ts)
+        [ Tip, refTree0, refTree1, refTree2, refTree3, refTree4, refTree5 ]
+
 paCo2IpRouterSpec :: Spec
 paCo2IpRouterSpec = do
   describe "Path-compressed 2-tree" $ do
@@ -267,3 +272,9 @@ paCo2IpRouterSpec = do
       let n = 1000
           e = genRandomEntries n
       numOfPrefixes (insEntries (mkTable [] :: PaCo2Tree ()) e) `shouldBe` n
+
+    it "Deletion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
+      delEntries (mkTable e :: PaCo2Tree ()) e `shouldBe`
+        (mkTable [] :: PaCo2Tree ())

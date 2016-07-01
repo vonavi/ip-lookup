@@ -98,6 +98,25 @@ instance Monoid (Tree b PaCo2Node) where
                   node         = x' { label = label x' <|> label y' }
 
 
+joinNodes :: PaCo2Node -> Bool -> PaCo2Node -> PaCo2Node
+joinNodes xhead b xlast = PaCo2Node { skip   = succ $ skip xhead + skip xlast
+                                    , string = str
+                                    , label  = label xlast
+                                    }
+  where w      = succ $ skip xhead
+        m      = complement $ (maxBound :: Word32) `shiftR` w
+        shead  = string xhead .&. m
+        slast  = string xlast `shiftR` w
+        setter = if b then setBit else clearBit
+        str    = (shead .|. slast) `setter` (32 - w)
+
+uniteRoot :: Tree b PaCo2Node -> Tree b PaCo2Node
+uniteRoot t@(Bin x _ _) | isJust (label x)      = t
+uniteRoot (Bin _ (Leaf Nothing) (Leaf Nothing)) = Leaf Nothing
+uniteRoot (Bin x (Leaf Nothing) (Bin y l r))    = Bin (joinNodes x True y) l r
+uniteRoot (Bin x (Bin y l r) (Leaf Nothing))    = Bin (joinNodes x False y) l r
+uniteRoot t                                     = t
+
 instance PrefixTree (Tree b PaCo2Node) where
   isEmpty (Leaf _) = True
   isEmpty _        = False
@@ -160,7 +179,25 @@ instance PrefixTree (Tree b PaCo2Node) where
                      in Bin xr' lr rr
 
   collapse = undefined
-  delSubtree = undefined
+
+  (Leaf Nothing) `delSubtree` _  = Leaf Nothing
+  t `delSubtree` (Leaf Nothing)  = uniteRoot t
+  (Leaf _) `delSubtree` (Leaf _) = error "Cannot delete a leaf from a leaf"
+  t1 `delSubtree` t2             = balanceRoot . uniteRoot $ t1 `helper` t2
+    where tx `helper` ty = Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
+            where Bin x _ _    = tx
+                  Bin y _ _    = ty
+                  kmin         = minimum [ skip x
+                                         , skip y
+                                         , countLeadingZeros $
+                                           string x `xor` string y
+                                         ]
+                  Bin x' lx rx = resizeRoot kmin tx
+                  Bin y' ly ry = resizeRoot kmin ty
+                  node         = x' { label = labelDiff (label x') (label y') }
+          labelDiff :: Maybe Int -> Maybe Int -> Maybe Int
+          labelDiff (Just sx) (Just sy) | sx == sy = Nothing
+          labelDiff sx        _                    = sx
 
   size = eliasGammaSize
 
@@ -190,7 +227,7 @@ instance IpRouter (Tree b PaCo2Node) where
 
   insEntry = mappend . fromEntry
 
-  delEntry = undefined
+  delEntry = flip delSubtree . fromEntry
 
   ipLookup a t = execState (lookupState a t) Nothing
 
