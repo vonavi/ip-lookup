@@ -20,3 +20,8 @@ paCo2PrtnIpRouterSpec = do
       let n = 1000
           e = genRandomEntries n
       numOfPrefixes (mkTable e :: Maybe Page) `shouldBe` n
+
+    it "Insertion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
+      numOfPrefixes (insEntries (mkTable [] :: Maybe Page) e) `shouldBe` n

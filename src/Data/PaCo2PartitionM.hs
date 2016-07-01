@@ -87,9 +87,31 @@ prtnBuild t              = minHeightMerge (PT.root t) lpage rpage
   where lpage = prtnBuild . PT.leftSubtree $ t
         rpage = prtnBuild . PT.rightSubtree $ t
 
+prtnInsEntry :: Entry -> Maybe Page -> Maybe Page
+prtnInsEntry = flip helper . mkTable . (:[])
+  where helper :: Maybe Page -> Tree Page PaCo2Node -> Maybe Page
+        helper page (Leaf Nothing) = page
+        helper page t              =
+          minHeightMerge (PT.root t <|> PT.root pt) lp' rp'
+          where pt  = pageTree page
+                lt  = PT.leftSubtree pt
+                rt  = PT.rightSubtree pt
+                lp  = case lt of
+                       Leaf p -> p
+                       _      -> Just Page { tree  = lt
+                                           , depth = pageDepth page
+                                           }
+                lp' = helper lp . PT.leftSubtree $ t
+                rp  = case rt of
+                       Leaf p -> p
+                       _      -> Just Page { tree  = rt
+                                           , depth = pageDepth page
+                                           }
+                rp' = helper rp . PT.rightSubtree $ t
+
 instance IpRouter (Maybe Page) where
   mkTable       = prtnBuild . (mkTable :: [Entry] -> Tree Page PaCo2Node)
-  insEntry      = undefined
+  insEntry      = prtnInsEntry
   delEntry      = undefined
   ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldPages (Sum . numOfPrefixes . pageTree)
