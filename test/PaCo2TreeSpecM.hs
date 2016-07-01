@@ -11,6 +11,7 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.PaCo2TreeM hiding (Bin, Leaf, Tree)
 import qualified Data.PaCo2TreeM as PC
+import           Data.PrefixTree
 import           RandomPrefixes
 import           TestIpRouter
 
@@ -44,6 +45,9 @@ testEntries = map toEntry l
 
 testPaCo2Trees :: [PaCo2Tree ()]
 testPaCo2Trees = scanr insEntry (mkTable []) . reverse $ testEntries
+
+testPaCo2Tree5 :: PaCo2Tree ()
+testPaCo2Tree5 = head testPaCo2Trees
 
 refTree0 :: Tree Node
 refTree0 = Bin Node { list = [False]
@@ -214,6 +218,39 @@ paCo2TreeSpec = do
     it "Building" $ do
       zipWithM_ shouldBe (map fromPaCo2Tree testPaCo2Trees)
         [ refTree5, refTree4, refTree3, refTree2, refTree1, refTree0, Tip ]
+
+    it "Merging" $ do
+      let t   = testPaCo2Tree5
+          l   = leftSubtree t
+          r   = rightSubtree t
+          ll  = leftSubtree l
+          lr  = rightSubtree l
+          rl  = leftSubtree r
+          rr  = rightSubtree r
+          lll = leftSubtree ll
+          llr = rightSubtree ll
+          lrl = leftSubtree lr
+          lrr = rightSubtree lr
+          rll = leftSubtree rl
+          rlr = rightSubtree rl
+          rrl = leftSubtree rr
+          rrr = rightSubtree rr
+
+          l'   = merge (root l) ll' lr'
+          r'   = merge (root r) rl' rr'
+          ll'  = merge (root ll) lll' llr'
+          lr'  = merge (root lr) lrl' lrr'
+          rl'  = merge (root rl) rll' rlr'
+          rr'  = merge (root rr) rrl' rrr'
+          lll' = merge (root lll) (leftSubtree lll) (rightSubtree lll)
+          llr' = merge (root llr) (leftSubtree llr) (rightSubtree llr)
+          lrl' = merge (root lrl) (leftSubtree lrl) (rightSubtree lrl)
+          lrr' = merge (root lrr) (leftSubtree lrr) (rightSubtree lrr)
+          rll' = merge (root rll) (leftSubtree rll) (rightSubtree rll)
+          rlr' = merge (root rlr) (leftSubtree rlr) (rightSubtree rlr)
+          rrl' = merge (root rrl) (leftSubtree rrl) (rightSubtree rrl)
+          rrr' = merge (root rrr) (leftSubtree rrr) (rightSubtree rrr)
+      fromPaCo2Tree (merge (root t) l' r') `shouldBe` refTree5
 
 paCo2IpRouterSpec :: Spec
 paCo2IpRouterSpec = do

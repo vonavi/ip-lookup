@@ -6,16 +6,20 @@ module Data.PaCo2TreeM
          PaCo2Node(..)
        , Tree(..)
        , PaCo2Tree(..)
+       , putPaCo2Tree
        ) where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative    ((<|>))
 import           Control.Monad.State
 import           Data.Bits
-import           Data.Maybe          (isJust)
+import           Data.Maybe             (isJust)
 import           Data.Monoid
 import           Data.Word
 
+import qualified Data.Bitmap            as BMP
+import           Data.Compression.Elias
 import           Data.IpRouter
+import           Data.PrefixTree
 
 data PaCo2Node = PaCo2Node { skip   :: Int
                            , string :: Word32
@@ -94,6 +98,73 @@ instance Monoid (Tree b PaCo2Node) where
                   node         = x' { label = label x' <|> label y' }
 
 
+instance PrefixTree (Tree b PaCo2Node) where
+  isEmpty (Leaf _) = True
+  isEmpty _        = False
+
+  root (Bin x _ _) | skip x == 0 = label x
+  root _                         = Nothing
+
+  leftSubtree (Leaf _) = Leaf Nothing
+  leftSubtree (Bin x l r)
+    | k == 0           = l
+    | v `testBit` 31   = Leaf Nothing
+    | otherwise        = Bin x' l r
+    where k  = skip x
+          v  = string x
+          x' = x { skip   = pred k
+                 , string = v `shiftL` 1
+                 }
+
+  rightSubtree (Leaf _) = Leaf Nothing
+  rightSubtree (Bin x l r)
+    | k == 0            = r
+    | v `testBit` 31    = Bin x' l r
+    | otherwise         = Leaf Nothing
+    where k  = skip x
+          v  = string x
+          x' = x { skip   = pred k
+                 , string = v `shiftL` 1
+                 }
+
+  singleton x = Bin node (Leaf Nothing) (Leaf Nothing)
+    where node = PaCo2Node { skip   = 0
+                           , string = 0
+                           , label  = x
+                           }
+
+  merge x l r
+    | isJust x  = singleton x <> lsub <> rsub
+    | otherwise = lsub <> rsub
+    where nroot = PaCo2Node { skip   = 0
+                            , string = 0
+                            , label  = Nothing
+                            }
+          lsub  = case l of
+                   Leaf Nothing -> l
+                   Leaf _       -> Bin nroot l (Leaf Nothing)
+                   Bin xl ll rl ->
+                     let xl' = xl { skip   = succ $ skip xl
+                                  , string = (`clearBit` 31) . (`shiftR` 1) $
+                                             string xl
+                                  }
+                     in Bin xl' ll rl
+          rsub  = case r of
+                   Leaf Nothing -> r
+                   Leaf _       -> Bin nroot (Leaf Nothing) r
+                   Bin xr lr rr ->
+                     let xr' = xr { skip   = succ $ skip xr
+                                  , string = (`setBit` 31) . (`shiftR` 1) $
+                                             string xr
+                                  }
+                     in Bin xr' lr rr
+
+  collapse = undefined
+  delSubtree = undefined
+
+  size = eliasGammaSize
+
+
 fromEntry :: Entry -> Tree b PaCo2Node
 fromEntry (Entry p n) = Bin node (Leaf Nothing) (Leaf Nothing)
   where Prefix (Address a) (Mask m) = p
@@ -127,5 +198,22 @@ instance IpRouter (Tree b PaCo2Node) where
     where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
+eliasGammaSize :: Tree b PaCo2Node -> Int
+eliasGammaSize = getSum . foldMap nodeSize
+  where nodeSize PaCo2Node { skip = k } =
+          {- The node size is built from the following parts:
+             open/close parenthesis (1 bit), internal prefix (1 bit),
+             Elias gamma code of skip value (the skip value should be
+             increased by one), and node string. -}
+          Sum $ 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
+
+
 newtype PaCo2Tree b = PaCo2Tree (Tree b PaCo2Node)
-                    deriving (Show, Eq, Monoid, IpRouter)
+                    deriving (Show, Eq, Monoid, PrefixTree, IpRouter)
+
+putPaCo2Tree :: PaCo2Tree b -> IO ()
+putPaCo2Tree (PaCo2Tree t) = do
+  putStrLn "Path-compressed 2-tree"
+  putStrLn "  Memory usage:"
+  putStrLn . (++) "    Elias gamma coding: " . show $ eliasGammaSize t + 18 * n
+    where n = numOfPrefixes t
