@@ -6,12 +6,15 @@ module Data.PaCo2PartitionM
        , putPaCo2Prtn
        ) where
 
-import           Data.Maybe      (fromJust)
+import           Control.Applicative ((<|>))
+import           Control.Monad.State
+import           Data.Bits
+import           Data.Maybe          (fromJust)
 import           Data.Monoid
 
 import           Data.IpRouter
 import           Data.PaCo2TreeM
-import qualified Data.PrefixTree as PT
+import qualified Data.PrefixTree     as PT
 
 data Page = Page { tree  :: Tree Page PaCo2Node
                  , depth :: Int
@@ -66,6 +69,18 @@ minHeightMerge x lp rp = if isFitted updPage
                 | otherwise  = pageMerge x (pagePrune Nothing lp Nothing) rp
         newPage = pagePrune x lp rp
 
+lookupState :: Address -> Maybe Page -> State (Maybe Int) ()
+lookupState (Address a) = helper 31 . pageTree
+  where helper :: Int -> Tree Page PaCo2Node -> State (Maybe Int) ()
+        helper n t = do
+          modify (PT.root t <|>)
+          case t of
+           Leaf Nothing -> return ()
+           Leaf p       -> helper n . pageTree $ p
+           _            -> if a `testBit` n
+                           then helper (pred n) . PT.rightSubtree $ t
+                           else helper (pred n) . PT.leftSubtree $ t
+
 prtnBuild :: Tree Page PaCo2Node -> Maybe Page
 prtnBuild t = if PT.isEmpty t
               then Nothing
@@ -77,7 +92,7 @@ instance IpRouter (Maybe Page) where
   mkTable       = prtnBuild . (mkTable :: [Entry] -> Tree Page PaCo2Node)
   insEntry      = undefined
   delEntry      = undefined
-  ipLookup      = undefined
+  ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldPages (Sum . numOfPrefixes . pageTree)
 
 
