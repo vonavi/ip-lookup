@@ -82,9 +82,8 @@ lookupState (Address a) = helper 31 . pageTree
                            else helper (pred n) . PT.leftSubtree $ t
 
 prtnBuild :: Tree Page PaCo2Node -> Maybe Page
-prtnBuild t = if PT.isEmpty t
-              then Nothing
-              else minHeightMerge (PT.root t) lpage rpage
+prtnBuild (Leaf Nothing) = Nothing
+prtnBuild t              = minHeightMerge (PT.root t) lpage rpage
   where lpage = prtnBuild . PT.leftSubtree $ t
         rpage = prtnBuild . PT.rightSubtree $ t
 

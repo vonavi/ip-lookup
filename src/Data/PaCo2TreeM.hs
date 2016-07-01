@@ -118,8 +118,7 @@ uniteRoot (Bin x (Bin y l r) (Leaf Nothing))    = Bin (joinNodes x False y) l r
 uniteRoot t                                     = t
 
 instance PrefixTree (Tree b PaCo2Node) where
-  isEmpty (Leaf _) = True
-  isEmpty _        = False
+  isEmpty = undefined
 
   root (Bin x _ _) | skip x == 0 = label x
   root _                         = Nothing
