@@ -75,11 +75,11 @@ lookupState (Address a) = helper 31 . pageTree
         helper n t = do
           modify (PT.root t <|>)
           case t of
-           Leaf Nothing -> return ()
-           Leaf p       -> helper n . pageTree $ p
-           _            -> if a `testBit` n
-                           then helper (pred n) . PT.rightSubtree $ t
-                           else helper (pred n) . PT.leftSubtree $ t
+            Leaf Nothing -> return ()
+            Leaf p       -> helper n . pageTree $ p
+            _            -> if a `testBit` n
+                            then helper (pred n) . PT.rightSubtree $ t
+                            else helper (pred n) . PT.leftSubtree $ t
 
 prtnBuild :: Tree Page PaCo2Node -> Maybe Page
 prtnBuild (Leaf Nothing) = Nothing
@@ -97,16 +97,16 @@ prtnInsEntry = flip helper . mkTable . (:[])
                 lt  = PT.leftSubtree pt
                 rt  = PT.rightSubtree pt
                 lp  = case lt of
-                       Leaf p -> p
-                       _      -> Just Page { tree  = lt
-                                           , depth = pageDepth page
-                                           }
+                        Leaf p -> p
+                        _      -> Just Page { tree  = lt
+                                            , depth = pageDepth page
+                                            }
                 lp' = helper lp . PT.leftSubtree $ t
                 rp  = case rt of
-                       Leaf p -> p
-                       _      -> Just Page { tree  = rt
-                                           , depth = pageDepth page
-                                           }
+                        Leaf p -> p
+                        _      -> Just Page { tree  = rt
+                                            , depth = pageDepth page
+                                            }
                 rp' = helper rp . PT.rightSubtree $ t
 
 instance IpRouter (Maybe Page) where

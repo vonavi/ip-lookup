@@ -159,23 +159,23 @@ instance PrefixTree (Tree b PaCo2Node) where
                             , label  = Nothing
                             }
           lsub  = case l of
-                   Leaf Nothing -> l
-                   Leaf _       -> Bin nroot l (Leaf Nothing)
-                   Bin xl ll rl ->
-                     let xl' = xl { skip   = succ $ skip xl
-                                  , string = (`clearBit` 31) . (`shiftR` 1) $
-                                             string xl
-                                  }
-                     in Bin xl' ll rl
+                    Leaf Nothing -> l
+                    Leaf _       -> Bin nroot l (Leaf Nothing)
+                    Bin xl ll rl ->
+                      let xl' = xl { skip   = succ $ skip xl
+                                   , string = (`clearBit` 31) . (`shiftR` 1) $
+                                              string xl
+                                   }
+                      in Bin xl' ll rl
           rsub  = case r of
-                   Leaf Nothing -> r
-                   Leaf _       -> Bin nroot (Leaf Nothing) r
-                   Bin xr lr rr ->
-                     let xr' = xr { skip   = succ $ skip xr
-                                  , string = (`setBit` 31) . (`shiftR` 1) $
-                                             string xr
-                                  }
-                     in Bin xr' lr rr
+                    Leaf Nothing -> r
+                    Leaf _       -> Bin nroot (Leaf Nothing) r
+                    Bin xr lr rr ->
+                      let xr' = xr { skip   = succ $ skip xr
+                                   , string = (`setBit` 31) . (`shiftR` 1) $
+                                              string xr
+                                   }
+                      in Bin xr' lr rr
 
   collapse = undefined
 

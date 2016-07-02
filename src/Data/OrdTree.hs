@@ -44,10 +44,10 @@ instance {-# OVERLAPPABLE #-} (OrdTree a, PrefixTree a) => IpRouter a where
 
   numOfPrefixes tree = execState (helper . getSeq . toForest $ tree) 0
     where helper t = case S.viewl t of
-                      EmptyL             -> return ()
-                      (x, Forest l) :< r -> do helper l
-                                               helper r
-                                               when (isJust x) $ modify succ
+                       EmptyL             -> return ()
+                       (x, Forest l) :< r -> do helper l
+                                                helper r
+                                                when (isJust x) $ modify succ
 
 forestToBp :: Forest a -> [(a, Paren)]
 forestToBp = concatMap f . getSeq
@@ -59,9 +59,9 @@ ordToBp x = [(Nothing, Open)] ++ forestToBp (toForest x) ++ [(Nothing, Close)]
 forestToDfuds :: Forest a -> [(a, [Paren])]
 forestToDfuds = helper . getSeq
   where helper t = case S.viewl t of
-                    EmptyL             -> []
-                    (x, Forest l) :< r -> (x, p) : helper l ++ helper r
-                      where p = replicate (S.length l) Open ++ [Close]
+                     EmptyL             -> []
+                     (x, Forest l) :< r -> (x, p) : helper l ++ helper r
+                       where p = replicate (S.length l) Open ++ [Close]
 
 ordToDfuds :: OrdTree a => a -> [(Maybe Int, [Paren])]
 ordToDfuds x = (Nothing, ps) : forestToDfuds f
@@ -119,18 +119,18 @@ instance PrefixTree OrdTreeT1 where
   isEmpty = isOrdEmpty
 
   root t = case (S.viewl . getSeq . toForest) t of
-            EmptyL      -> Nothing
-            (x, _) :< _ -> x
+             EmptyL      -> Nothing
+             (x, _) :< _ -> x
 
   leftSubtree t = OrdTreeT1 . Forest $
                   case (S.viewl . getSeq . toForest) t of
-                   EmptyL             -> S.empty
-                   (_, Forest l) :< _ -> l
+                    EmptyL             -> S.empty
+                    (_, Forest l) :< _ -> l
 
   rightSubtree t = OrdTreeT1 . Forest $
                    case (S.viewl . getSeq . toForest) t of
-                    EmptyL -> S.empty
-                    _ :< r -> r
+                     EmptyL -> S.empty
+                     _ :< r -> r
 
   singleton x = OrdTreeT1 . Forest . S.singleton $ (x, Forest S.empty)
 
@@ -192,18 +192,18 @@ instance PrefixTree OrdTreeT2 where
   isEmpty = isOrdEmpty
 
   root t = case (S.viewr . getSeq . toForest) t of
-            EmptyR      -> Nothing
-            _ :> (x, _) -> x
+             EmptyR      -> Nothing
+             _ :> (x, _) -> x
 
   leftSubtree t = OrdTreeT2 . Forest $
                   case (S.viewr . getSeq . toForest) t of
-                   EmptyR             -> S.empty
-                   _ :> (_, Forest l) -> l
+                    EmptyR             -> S.empty
+                    _ :> (_, Forest l) -> l
 
   rightSubtree t = OrdTreeT2 . Forest $
                    case (S.viewr . getSeq . toForest) t of
-                    EmptyR -> S.empty
-                    r :> _ -> r
+                     EmptyR -> S.empty
+                     r :> _ -> r
 
   singleton x = OrdTreeT2 . Forest . S.singleton $ (x, Forest S.empty)
 
@@ -265,18 +265,18 @@ instance PrefixTree OrdTreeT3 where
   isEmpty = isOrdEmpty
 
   root t = case (S.viewl . getSeq . toForest) t of
-            EmptyL      -> Nothing
-            (x, _) :< _ -> x
+             EmptyL      -> Nothing
+             (x, _) :< _ -> x
 
   leftSubtree t = OrdTreeT3 . Forest $
                   case (S.viewl . getSeq . toForest) t of
-                   EmptyL -> S.empty
-                   _ :< l -> l
+                    EmptyL -> S.empty
+                    _ :< l -> l
 
   rightSubtree t = OrdTreeT3 . Forest $
                    case (S.viewl . getSeq . toForest) t of
-                    EmptyL             -> S.empty
-                    (_, Forest r) :< _ -> r
+                     EmptyL             -> S.empty
+                     (_, Forest r) :< _ -> r
 
   singleton x = OrdTreeT3 . Forest . S.singleton $ (x, Forest S.empty)
 
@@ -338,18 +338,18 @@ instance PrefixTree OrdTreeT4 where
   isEmpty = isOrdEmpty
 
   root t = case (S.viewr . getSeq . toForest) t of
-            EmptyR      -> Nothing
-            _ :> (x, _) -> x
+             EmptyR      -> Nothing
+             _ :> (x, _) -> x
 
   leftSubtree t = OrdTreeT4 . Forest $
                   case (S.viewr . getSeq . toForest) t of
-                   EmptyR -> S.empty
-                   l :> _ -> l
+                    EmptyR -> S.empty
+                    l :> _ -> l
 
   rightSubtree t = OrdTreeT4 . Forest $
                    case (S.viewr . getSeq . toForest) t of
-                    EmptyR             -> S.empty
-                    _ :> (_, Forest r) -> r
+                     EmptyR             -> S.empty
+                     _ :> (_, Forest r) -> r
 
   singleton x = OrdTreeT4 . Forest . S.singleton $ (x, Forest S.empty)
 

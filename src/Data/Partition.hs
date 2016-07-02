@@ -96,8 +96,8 @@ checkPage page
   | isPageLast page               = dpt == 1
   | dpt /= succ (treeDepth otree) = False
   | otherwise                     = case otree of
-                                     Leaf _   -> PT.isEmpty itree
-                                     Node _ _ -> not . PT.isEmpty $ itree
+                                      Leaf _   -> PT.isEmpty itree
+                                      Node _ _ -> not . PT.isEmpty $ itree
   where itree = iTree page
         dpt   = depth page
         otree = oTree page
@@ -105,12 +105,12 @@ checkPage page
 checkPagesS :: PrefixTree a => Page a -> State Bool ()
 checkPagesS Empty = return ()
 checkPagesS page  = case oTree page of
-                     Leaf p   -> case p of
-                                  Empty -> return ()
-                                  _     -> do modify (&& checkPage p)
-                                              checkPagesS p
-                     Node l r -> do checkPagesS page { oTree = l }
-                                    checkPagesS page { oTree = r }
+                      Leaf p   -> case p of
+                                    Empty -> return ()
+                                    _     -> do modify (&& checkPage p)
+                                                checkPagesS p
+                      Node l r -> do checkPagesS page { oTree = l }
+                                     checkPagesS page { oTree = r }
 
 instance (PrefixTree a, Partible a, IpRouter a) => Partition (Page a) where
   height = pageDepth
@@ -228,20 +228,20 @@ prtnInsEntry = flip helper . mkTable . (:[])
           | isEmpty page     = prtnBuild tree
           | otherwise        =
               case oTree page of
-               Leaf p   -> helper p tree
-               Node l r ->
-                 pageMerge (PT.root tree <|> PT.root itree) lpage' rpage'
-                 where itree  = iTree page
-                       lpage  = page { iTree = PT.leftSubtree itree
-                                     , depth = succ $ treeDepth l
-                                     , oTree = l
-                                     }
-                       lpage' = helper lpage . PT.leftSubtree $ tree
-                       rpage  = page { iTree = PT.rightSubtree itree
-                                     , depth = succ $ treeDepth r
-                                     , oTree = r
-                                     }
-                       rpage' = helper rpage . PT.rightSubtree $ tree
+                Leaf p   -> helper p tree
+                Node l r ->
+                  pageMerge (PT.root tree <|> PT.root itree) lpage' rpage'
+                  where itree  = iTree page
+                        lpage  = page { iTree = PT.leftSubtree itree
+                                      , depth = succ $ treeDepth l
+                                      , oTree = l
+                                      }
+                        lpage' = helper lpage . PT.leftSubtree $ tree
+                        rpage  = page { iTree = PT.rightSubtree itree
+                                      , depth = succ $ treeDepth r
+                                      , oTree = r
+                                      }
+                        rpage' = helper rpage . PT.rightSubtree $ tree
 
 pagePress :: (PrefixTree a, IpRouter a) => Page a -> Page a
 pagePress page
@@ -286,17 +286,17 @@ collapsePage page
   | isPageLast page                     = page { iTree = ntree }
   | otherwise                           =
       collapseLast $ case oTree page of
-                      Leaf p   -> page { oTree = Leaf . collapsePage $ p }
-                      Node l r -> pageMerge (PT.root itree) lpage rpage
-                        where itree = iTree page
-                              lpage = collapsePage $
-                                      page { iTree = PT.leftSubtree itree
-                                           , oTree = l
-                                           }
-                              rpage = collapsePage $
-                                      page { iTree = PT.rightSubtree itree
-                                           , oTree = r
-                                           }
+                       Leaf p   -> page { oTree = Leaf . collapsePage $ p }
+                       Node l r -> pageMerge (PT.root itree) lpage rpage
+                         where itree = iTree page
+                               lpage = collapsePage $
+                                       page { iTree = PT.leftSubtree itree
+                                            , oTree = l
+                                            }
+                               rpage = collapsePage $
+                                       page { iTree = PT.rightSubtree itree
+                                            , oTree = r
+                                            }
   where ntree = PT.collapse . iTree $ page
 
 prtnDelEntry :: (PrefixTree a, Partible a, IpRouter a)
@@ -313,19 +313,21 @@ prtnDelEntry = flip helper . mkTable . (:[])
           | otherwise       =
               collapsePage $
               case oTree page of
-               Leaf p   -> page { oTree = Leaf $ helper p tree }
-               Node l r -> pageMerge z lpage' rpage'
-                 where troot  = PT.root itree
-                       z      = if PT.root tree == troot then Nothing else troot
-                       lpage  = page { iTree = PT.leftSubtree itree
-                                     , oTree = l
-                                     }
-                       lpage' = helper lpage . PT.leftSubtree $ tree
+                Leaf p   -> page { oTree = Leaf $ helper p tree }
+                Node l r -> pageMerge z lpage' rpage'
+                  where troot  = PT.root itree
+                        z      = if PT.root tree == troot
+                                 then Nothing
+                                 else troot
+                        lpage  = page { iTree = PT.leftSubtree itree
+                                      , oTree = l
+                                      }
+                        lpage' = helper lpage . PT.leftSubtree $ tree
 
-                       rpage  = page { iTree = PT.rightSubtree itree
-                                     , oTree = r
-                                     }
-                       rpage' = helper rpage . PT.rightSubtree $ tree
+                        rpage  = page { iTree = PT.rightSubtree itree
+                                      , oTree = r
+                                      }
+                        rpage' = helper rpage . PT.rightSubtree $ tree
           where itree = iTree page
 
 lookupState :: PrefixTree a => Address -> Page a -> State (Maybe Int) ()
@@ -334,15 +336,15 @@ lookupState (Address a) = helper 31
         helper n page  = do
           modify (PT.root t <|>)
           case oTree page of
-           Leaf p   -> helper n p
-           Node l r -> when (n >= 0) $
-                       if a `testBit` n
-                       then helper (pred n) page { iTree = PT.rightSubtree t
-                                                 , oTree = r
-                                                 }
-                       else helper (pred n) page { iTree = PT.leftSubtree t
-                                                 , oTree = l
-                                                 }
+            Leaf p   -> helper n p
+            Node l r -> when (n >= 0) $
+                        if a `testBit` n
+                        then helper (pred n) page { iTree = PT.rightSubtree t
+                                                  , oTree = r
+                                                  }
+                        else helper (pred n) page { iTree = PT.leftSubtree t
+                                                  , oTree = l
+                                                  }
           where t = iTree page
 
 instance (PrefixTree a, Partible a, IpRouter a) => IpRouter (Page a) where

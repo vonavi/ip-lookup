@@ -176,21 +176,21 @@ instance PrefixTree (Tree PaCo2Node) where
     | isJust x  = singleton x <> lsub <> rsub
     | otherwise = lsub <> rsub
     where lsub = case l of
-                  Tip          -> Tip
-                  Bin ll xl rl ->
-                    let xl' = xl { skip   = succ $ skip xl
-                                 , string = (`clearBit` 31) . (`shiftR` 1) $
-                                            string xl
-                                 }
-                    in Bin ll xl' rl
+                   Tip          -> Tip
+                   Bin ll xl rl ->
+                     let xl' = xl { skip   = succ $ skip xl
+                                  , string = (`clearBit` 31) . (`shiftR` 1) $
+                                             string xl
+                                  }
+                     in Bin ll xl' rl
           rsub = case r of
-                  Tip          -> Tip
-                  Bin lr xr rr ->
-                    let xr' = xr { skip   = succ $ skip xr
-                                 , string = (`setBit` 31) . (`shiftR` 1) $
-                                            string xr
-                                 }
-                    in Bin lr xr' rr
+                   Tip          -> Tip
+                   Bin lr xr rr ->
+                     let xr' = xr { skip   = succ $ skip xr
+                                  , string = (`setBit` 31) . (`shiftR` 1) $
+                                             string xr
+                                  }
+                     in Bin lr xr' rr
 
   collapse Tip         = Tip
   collapse (Bin l x r) = balanceRoot . collapseRoot $
