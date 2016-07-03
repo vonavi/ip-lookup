@@ -75,11 +75,8 @@ rightSubtree (Bin x l r)
                }
 
 isFitted :: Maybe Page -> Bool
-{- Withing the maximal page size, some place is reserved for 'plpm'
-   folder (18 bits) and ordinal-tree root (its size can be reduced
-   from 2 to 1, because the position of its open parenthesis is
-   well-known). -}
-isFitted = (maxPageSize - 18 - 1 >=) . pageSize
+{- Reserve 18 bits for the 'plpm' folder. -}
+isFitted = (maxPageSize - 18 >=) . pageSize
 
 isBalancedRoot :: Tree Page PaCo2Node -> Bool
 isBalancedRoot (Leaf _)                  = True
@@ -212,14 +209,11 @@ instance Partition (Maybe Page) where
 
   numOfPages = getSum . foldPages (const (Sum 1))
 
-  {- Withing the maximal page size, some place is already used for
-     'plpm' folder (18 bits) and ordinal-tree root (its size can be
-     reduced from 2 to 1, because the position of its open parenthesis
-     is well-known). -}
-  memUsage = getSum . foldPages (\x -> Sum $ fitToPage (18 + 1 + pageSize x))
+  {- 18 bits withing the page is already used for the 'plpm' folder. -}
+  memUsage = getSum . foldPages (\x -> Sum $ fitToPage (18 + pageSize x))
     where fitToPage s = let k = (s + minPageSize - 1) `div` minPageSize
                         in k * minPageSize
-  fillSize = getSum . foldPages (\x -> Sum (18 + 1 + pageSize x))
+  fillSize = getSum . foldPages (\x -> Sum (18 + pageSize x))
 
 putPaCo2Prtn :: Maybe Page -> IO ()
 putPaCo2Prtn t = do
