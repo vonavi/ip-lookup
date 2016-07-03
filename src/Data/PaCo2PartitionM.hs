@@ -81,26 +81,40 @@ isFitted :: Maybe Page -> Bool
    well-known). -}
 isFitted = (maxPageSize - 18 - 1 >=) . pageSize
 
-pageMerge :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
-pageMerge x lp rp = Just Page { tree  = PT.merge x (pageTree lp) (pageTree rp)
-                              , depth = maximum [1, pageDepth lp, pageDepth rp]
-                              }
+mergeBoth :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
+mergeBoth x lp rp =
+  Just Page { tree  = PT.merge x (pageTree lp) (pageTree rp)
+            , depth = maximum [1, pageDepth lp, pageDepth rp]
+            }
 
-pagePrune :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
-pagePrune x lp rp = Just Page { tree  = PT.merge x (Leaf lp) (Leaf rp)
-                              , depth = succ $ max (pageDepth lp) (pageDepth rp)
-                              }
+mergeLeft :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
+mergeLeft x lp rp =
+  Just Page { tree  = PT.merge x (pageTree lp) (Leaf rp)
+            , depth = max (pageDepth lp) (succ . pageDepth $ rp)
+            }
+
+mergeRight :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
+mergeRight x lp rp =
+  Just Page { tree  = PT.merge x (Leaf lp) (pageTree rp)
+            , depth = max (succ . pageDepth $ lp) (pageDepth rp)
+            }
+
+prunePage :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
+prunePage x lp rp =
+  Just Page { tree  = PT.merge x (Leaf lp) (Leaf rp)
+            , depth = succ $ max (pageDepth lp) (pageDepth rp)
+            }
 
 minHeightMerge :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
-minHeightMerge x lp rp = if isFitted updPage
-                         then updPage
-                         else newPage
-  where lht = pageDepth lp
-        rht = pageDepth rp
-        updPage | lht == rht = pageMerge x lp rp
-                | lht > rht  = pageMerge x lp (pagePrune Nothing rp Nothing)
-                | otherwise  = pageMerge x (pagePrune Nothing lp Nothing) rp
-        newPage = pagePrune x lp rp
+minHeightMerge x lp rp = if isFitted totalPage
+                         then totalPage
+                         else prunePage x lp rp
+  where totalPage = mergePage x lp rp
+        mergePage | lht == rht = mergeBoth
+                  | lht > rht  = mergeLeft
+                  | otherwise  = mergeRight
+          where lht = pageDepth lp
+                rht = pageDepth rp
 
 lookupState :: Address -> Maybe Page -> State (Maybe Int) ()
 lookupState (Address a) = helper 31 . pageTree
