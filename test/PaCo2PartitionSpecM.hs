@@ -25,3 +25,9 @@ paCo2PrtnIpRouterSpec = do
       let n = 1000
           e = genRandomEntries n
       numOfPrefixes (insEntries (mkTable [] :: Maybe Page) e) `shouldBe` n
+
+    it "Deletion of random entries" $ do
+      let n = 1000
+          e = genRandomEntries n
+      delEntries (mkTable e :: Maybe Page) e `shouldBe`
+        (mkTable [] :: Maybe Page)

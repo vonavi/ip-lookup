@@ -144,18 +144,6 @@ minHeightMerge x lp rp
           where lht = pageDepth lp
                 rht = pageDepth rp
 
-lookupState :: Address -> Maybe Page -> State (Maybe Int) ()
-lookupState (Address a) = helper 31 . pageTree
-  where helper :: Int -> Tree Page PaCo2Node -> State (Maybe Int) ()
-        helper n t = do
-          modify (getRoot t <|>)
-          case t of
-            Leaf Nothing -> return ()
-            Leaf p       -> helper n . pageTree $ p
-            _            -> if a `testBit` n
-                            then helper (pred n) . rightSubtree $ t
-                            else helper (pred n) . leftSubtree $ t
-
 prtnBuild :: Tree Page PaCo2Node -> Maybe Page
 prtnBuild (Leaf Nothing) = Nothing
 prtnBuild t              = minHeightMerge (getRoot t) lpage rpage
@@ -184,10 +172,49 @@ prtnInsEntry = flip helper . mkTable . (:[])
                                             }
                 rp' = helper rp . rightSubtree $ t
 
+delEmptyPage :: Maybe Page -> Maybe Page
+delEmptyPage (Just Page { tree = Leaf Nothing }) = Nothing
+delEmptyPage p                                   = p
+
+prtnDelEntry :: Entry -> Maybe Page -> Maybe Page
+prtnDelEntry = flip helper . mkTable . (:[])
+  where helper :: Maybe Page -> Tree Page PaCo2Node -> Maybe Page
+        helper page (Leaf Nothing) = page
+        helper page t              = delEmptyPage $ minHeightMerge z lp' rp'
+          where pt  = pageTree page
+                z   = let ptRoot = getRoot pt
+                      in if getRoot t == ptRoot then Nothing else ptRoot
+                lt  = leftSubtree pt
+                rt  = rightSubtree pt
+                lp  = case lt of
+                        Leaf p -> p
+                        _      -> Just Page { tree  = lt
+                                            , depth = pageDepth page
+                                            }
+                lp' = helper lp . leftSubtree $ t
+                rp  = case rt of
+                        Leaf p -> p
+                        _      -> Just Page { tree  = rt
+                                            , depth = pageDepth page
+                                            }
+                rp' = helper rp . rightSubtree $ t
+
+lookupState :: Address -> Maybe Page -> State (Maybe Int) ()
+lookupState (Address a) = helper 31 . pageTree
+  where helper :: Int -> Tree Page PaCo2Node -> State (Maybe Int) ()
+        helper n t = do
+          modify (getRoot t <|>)
+          case t of
+            Leaf Nothing -> return ()
+            Leaf p       -> helper n . pageTree $ p
+            _            -> if a `testBit` n
+                            then helper (pred n) . rightSubtree $ t
+                            else helper (pred n) . leftSubtree $ t
+
 instance IpRouter (Maybe Page) where
   mkTable       = prtnBuild . (mkTable :: [Entry] -> Tree Page PaCo2Node)
   insEntry      = prtnInsEntry
-  delEntry      = undefined
+  delEntry      = prtnDelEntry
   ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldPages (Sum . numOfPrefixes . pageTree)
 
