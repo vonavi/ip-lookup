@@ -53,12 +53,9 @@ emptyBranch = Bin emptyRoot (Leaf Nothing) (Leaf Nothing)
                               }
 
 balanceRoot :: Tree b PaCo2Node -> Tree b PaCo2Node
-balanceRoot t@(Leaf _)                  = t
 balanceRoot t@(Bin _ (Leaf _) (Leaf _)) = t
 balanceRoot (Bin x (Leaf Nothing) r)    = Bin x emptyBranch r
-balanceRoot (Bin _ (Leaf _) _)          = error "Cannot balance the 2-tree"
 balanceRoot (Bin x l (Leaf Nothing))    = Bin x l emptyBranch
-balanceRoot (Bin _ _ (Leaf _))          = error "Cannot balance the 2-tree"
 balanceRoot t                           = t
 
 resizeRoot :: Int -> Tree b PaCo2Node -> Tree b PaCo2Node

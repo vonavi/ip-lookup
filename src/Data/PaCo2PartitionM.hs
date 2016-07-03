@@ -81,6 +81,30 @@ isFitted :: Maybe Page -> Bool
    well-known). -}
 isFitted = (maxPageSize - 18 - 1 >=) . pageSize
 
+isBalancedRoot :: Tree Page PaCo2Node -> Bool
+isBalancedRoot (Leaf _)                  = True
+isBalancedRoot (Bin _ (Leaf _) (Leaf _)) = True
+isBalancedRoot (Bin _ Bin{} Bin{})       = True
+isBalancedRoot _                         = False
+
+separateRoot :: Maybe Page -> Tree Page PaCo2Node
+separateRoot page = Bin n (Leaf lp) (Leaf rp)
+  where t  = pageTree page
+        n  = PaCo2Node { skip   = 0
+                       , string = 0
+                       , label  = getRoot t
+                       }
+        lp = case leftSubtree t of
+               Leaf Nothing -> Nothing
+               x            -> Just Page { tree  = x
+                                         , depth = pageDepth page
+                                         }
+        rp = case rightSubtree t of
+               Leaf Nothing -> Nothing
+               x            -> Just Page { tree  = x
+                                         , depth = pageDepth page
+                                         }
+
 mergeBoth :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
 mergeBoth x lp rp =
   Just Page { tree  = PT.merge x (pageTree lp) (pageTree rp)
@@ -89,15 +113,21 @@ mergeBoth x lp rp =
 
 mergeLeft :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
 mergeLeft x lp rp =
-  Just Page { tree  = PT.merge x (pageTree lp) (Leaf rp)
+  Just Page { tree  = if isBalancedRoot t
+                      then t
+                      else PT.merge x (pageTree lp) (separateRoot rp)
             , depth = max (pageDepth lp) (succ . pageDepth $ rp)
             }
+  where t  = PT.merge x (pageTree lp) (Leaf rp)
 
 mergeRight :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
 mergeRight x lp rp =
-  Just Page { tree  = PT.merge x (Leaf lp) (pageTree rp)
+  Just Page { tree  = if isBalancedRoot t
+                      then t
+                      else PT.merge x (separateRoot lp) (pageTree rp)
             , depth = max (succ . pageDepth $ lp) (pageDepth rp)
             }
+  where t  = PT.merge x (Leaf lp) (pageTree rp)
 
 prunePage :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
 prunePage x lp rp =
@@ -106,9 +136,10 @@ prunePage x lp rp =
             }
 
 minHeightMerge :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
-minHeightMerge x lp rp = if isFitted totalPage
-                         then totalPage
-                         else prunePage x lp rp
+minHeightMerge x lp rp
+  | not . isBalancedRoot . pageTree $ totalPage = error "Unbalanced tree root"
+  | isFitted totalPage                          = totalPage
+  | otherwise                                   = prunePage x lp rp
   where totalPage = mergePage x lp rp
         mergePage | lht == rht = mergeBoth
                   | lht > rht  = mergeLeft
