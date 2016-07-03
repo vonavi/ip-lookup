@@ -41,6 +41,39 @@ pageSize :: Maybe Page -> Int
 pageSize Nothing  = 0
 pageSize (Just x) = let t = tree x in PT.size t + 18 * numOfPrefixes t
 
+getRoot :: Tree Page PaCo2Node -> Maybe Int
+getRoot (Leaf Nothing) = Nothing
+getRoot (Leaf p)       = getRoot . pageTree $ p
+getRoot (Bin x _ _)
+  | skip x == 0        = label x
+  | otherwise          = Nothing
+
+leftSubtree :: Tree Page PaCo2Node -> Tree Page PaCo2Node
+leftSubtree (Leaf Nothing) = Leaf Nothing
+leftSubtree (Leaf p)       = leftSubtree . pageTree $ p
+leftSubtree (Bin x l r)
+  | k == 0                 = l
+  | v `testBit` 31         = Leaf Nothing
+  | otherwise              = Bin x' l r
+  where k  = skip x
+        v  = string x
+        x' = x { skip   = pred k
+               , string = v `shiftL` 1
+               }
+
+rightSubtree :: Tree Page PaCo2Node -> Tree Page PaCo2Node
+rightSubtree (Leaf Nothing) = Leaf Nothing
+rightSubtree (Leaf p)       = rightSubtree . pageTree $ p
+rightSubtree (Bin x l r)
+  | k == 0                  = r
+  | v `testBit` 31          = Bin x' l r
+  | otherwise               = Leaf Nothing
+  where k  = skip x
+        v  = string x
+        x' = x { skip   = pred k
+               , string = v `shiftL` 1
+               }
+
 isFitted :: Maybe Page -> Bool
 {- Withing the maximal page size, some place is reserved for 'plpm'
    folder (18 bits) and ordinal-tree root (its size can be reduced
@@ -73,41 +106,41 @@ lookupState :: Address -> Maybe Page -> State (Maybe Int) ()
 lookupState (Address a) = helper 31 . pageTree
   where helper :: Int -> Tree Page PaCo2Node -> State (Maybe Int) ()
         helper n t = do
-          modify (PT.root t <|>)
+          modify (getRoot t <|>)
           case t of
             Leaf Nothing -> return ()
             Leaf p       -> helper n . pageTree $ p
             _            -> if a `testBit` n
-                            then helper (pred n) . PT.rightSubtree $ t
-                            else helper (pred n) . PT.leftSubtree $ t
+                            then helper (pred n) . rightSubtree $ t
+                            else helper (pred n) . leftSubtree $ t
 
 prtnBuild :: Tree Page PaCo2Node -> Maybe Page
 prtnBuild (Leaf Nothing) = Nothing
-prtnBuild t              = minHeightMerge (PT.root t) lpage rpage
-  where lpage = prtnBuild . PT.leftSubtree $ t
-        rpage = prtnBuild . PT.rightSubtree $ t
+prtnBuild t              = minHeightMerge (getRoot t) lpage rpage
+  where lpage = prtnBuild . leftSubtree $ t
+        rpage = prtnBuild . rightSubtree $ t
 
 prtnInsEntry :: Entry -> Maybe Page -> Maybe Page
 prtnInsEntry = flip helper . mkTable . (:[])
   where helper :: Maybe Page -> Tree Page PaCo2Node -> Maybe Page
         helper page (Leaf Nothing) = page
         helper page t              =
-          minHeightMerge (PT.root t <|> PT.root pt) lp' rp'
+          minHeightMerge (getRoot t <|> getRoot pt) lp' rp'
           where pt  = pageTree page
-                lt  = PT.leftSubtree pt
-                rt  = PT.rightSubtree pt
+                lt  = leftSubtree pt
+                rt  = rightSubtree pt
                 lp  = case lt of
                         Leaf p -> p
                         _      -> Just Page { tree  = lt
                                             , depth = pageDepth page
                                             }
-                lp' = helper lp . PT.leftSubtree $ t
+                lp' = helper lp . leftSubtree $ t
                 rp  = case rt of
                         Leaf p -> p
                         _      -> Just Page { tree  = rt
                                             , depth = pageDepth page
                                             }
-                rp' = helper rp . PT.rightSubtree $ t
+                rp' = helper rp . rightSubtree $ t
 
 instance IpRouter (Maybe Page) where
   mkTable       = prtnBuild . (mkTable :: [Entry] -> Tree Page PaCo2Node)
