@@ -48,26 +48,26 @@ getRoot (Bin x _ _)
   | skip x == 0        = label x
   | otherwise          = Nothing
 
-leftSubtree :: Tree Page PaCo2Node -> Tree Page PaCo2Node
-leftSubtree (Leaf Nothing) = Leaf Nothing
-leftSubtree (Leaf p)       = leftSubtree . pageTree $ p
-leftSubtree (Bin x l r)
-  | k == 0                 = l
-  | v `testBit` 31         = Leaf Nothing
-  | otherwise              = Bin x' l r
+leftChild :: Tree Page PaCo2Node -> Tree Page PaCo2Node
+leftChild (Leaf Nothing) = Leaf Nothing
+leftChild (Leaf p)       = leftChild . pageTree $ p
+leftChild (Bin x l r)
+  | k == 0               = l
+  | v `testBit` 31       = Leaf Nothing
+  | otherwise            = Bin x' l r
   where k  = skip x
         v  = string x
         x' = x { skip   = pred k
                , string = v `shiftL` 1
                }
 
-rightSubtree :: Tree Page PaCo2Node -> Tree Page PaCo2Node
-rightSubtree (Leaf Nothing) = Leaf Nothing
-rightSubtree (Leaf p)       = rightSubtree . pageTree $ p
-rightSubtree (Bin x l r)
-  | k == 0                  = r
-  | v `testBit` 31          = Bin x' l r
-  | otherwise               = Leaf Nothing
+rightChild :: Tree Page PaCo2Node -> Tree Page PaCo2Node
+rightChild (Leaf Nothing) = Leaf Nothing
+rightChild (Leaf p)       = rightChild . pageTree $ p
+rightChild (Bin x l r)
+  | k == 0                = r
+  | v `testBit` 31        = Bin x' l r
+  | otherwise             = Leaf Nothing
   where k  = skip x
         v  = string x
         x' = x { skip   = pred k
@@ -91,12 +91,12 @@ separateRoot page = Bin n (Leaf lp) (Leaf rp)
                        , string = 0
                        , label  = getRoot t
                        }
-        lp = case leftSubtree t of
+        lp = case leftChild t of
                Leaf Nothing -> Nothing
                x            -> Just Page { tree  = x
                                          , depth = pageDepth page
                                          }
-        rp = case rightSubtree t of
+        rp = case rightChild t of
                Leaf Nothing -> Nothing
                x            -> Just Page { tree  = x
                                          , depth = pageDepth page
@@ -147,8 +147,8 @@ minHeightMerge x lp rp
 prtnBuild :: Tree Page PaCo2Node -> Maybe Page
 prtnBuild (Leaf Nothing) = Nothing
 prtnBuild t              = minHeightMerge (getRoot t) lpage rpage
-  where lpage = prtnBuild . leftSubtree $ t
-        rpage = prtnBuild . rightSubtree $ t
+  where lpage = prtnBuild . leftChild $ t
+        rpage = prtnBuild . rightChild $ t
 
 prtnInsEntry :: Entry -> Maybe Page -> Maybe Page
 prtnInsEntry = flip helper . mkTable . (:[])
@@ -157,20 +157,20 @@ prtnInsEntry = flip helper . mkTable . (:[])
         helper page t              =
           minHeightMerge (getRoot t <|> getRoot pt) lp' rp'
           where pt  = pageTree page
-                lt  = leftSubtree pt
-                rt  = rightSubtree pt
+                lt  = leftChild pt
+                rt  = rightChild pt
                 lp  = case lt of
                         Leaf p -> p
                         _      -> Just Page { tree  = lt
                                             , depth = pageDepth page
                                             }
-                lp' = helper lp . leftSubtree $ t
+                lp' = helper lp . leftChild $ t
                 rp  = case rt of
                         Leaf p -> p
                         _      -> Just Page { tree  = rt
                                             , depth = pageDepth page
                                             }
-                rp' = helper rp . rightSubtree $ t
+                rp' = helper rp . rightChild $ t
 
 delEmptyPage :: Maybe Page -> Maybe Page
 delEmptyPage (Just Page { tree = Leaf Nothing }) = Nothing
@@ -184,20 +184,20 @@ prtnDelEntry = flip helper . mkTable . (:[])
           where pt  = pageTree page
                 z   = let ptRoot = getRoot pt
                       in if getRoot t == ptRoot then Nothing else ptRoot
-                lt  = leftSubtree pt
-                rt  = rightSubtree pt
+                lt  = leftChild pt
+                rt  = rightChild pt
                 lp  = case lt of
                         Leaf p -> p
                         _      -> Just Page { tree  = lt
                                             , depth = pageDepth page
                                             }
-                lp' = helper lp . leftSubtree $ t
+                lp' = helper lp . leftChild $ t
                 rp  = case rt of
                         Leaf p -> p
                         _      -> Just Page { tree  = rt
                                             , depth = pageDepth page
                                             }
-                rp' = helper rp . rightSubtree $ t
+                rp' = helper rp . rightChild $ t
 
 lookupState :: Address -> Maybe Page -> State (Maybe Int) ()
 lookupState (Address a) = helper 31 . pageTree
@@ -208,8 +208,8 @@ lookupState (Address a) = helper 31 . pageTree
             Leaf Nothing -> return ()
             Leaf p       -> helper n . pageTree $ p
             _            -> if a `testBit` n
-                            then helper (pred n) . rightSubtree $ t
-                            else helper (pred n) . leftSubtree $ t
+                            then helper (pred n) . rightChild $ t
+                            else helper (pred n) . leftChild $ t
 
 instance IpRouter (Maybe Page) where
   mkTable       = prtnBuild . (mkTable :: [Entry] -> Tree Page PaCo2Node)
