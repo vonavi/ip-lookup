@@ -115,43 +115,20 @@ uniteRoot (Bin x (Bin y l r) (Leaf Nothing))    = Bin (joinNodes x False y) l r
 uniteRoot t                                     = t
 
 instance PrefixTree (Tree b PaCo2Node) where
-  isEmpty = undefined
-
-  root (Bin x _ _) | skip x == 0 = label x
-  root _                         = Nothing
-
-  leftSubtree (Leaf _) = Leaf Nothing
-  leftSubtree (Bin x l r)
-    | k == 0           = l
-    | v `testBit` 31   = Leaf Nothing
-    | otherwise        = Bin x' l r
-    where k  = skip x
-          v  = string x
-          x' = x { skip   = pred k
-                 , string = v `shiftL` 1
-                 }
-
-  rightSubtree (Leaf _) = Leaf Nothing
-  rightSubtree (Bin x l r)
-    | k == 0            = r
-    | v `testBit` 31    = Bin x' l r
-    | otherwise         = Leaf Nothing
-    where k  = skip x
-          v  = string x
-          x' = x { skip   = pred k
-                 , string = v `shiftL` 1
-                 }
-
-  singleton x = Bin node (Leaf Nothing) (Leaf Nothing)
-    where node = PaCo2Node { skip   = 0
-                           , string = 0
-                           , label  = x
-                           }
+  isEmpty      = undefined
+  root         = undefined
+  leftSubtree  = undefined
+  rightSubtree = undefined
+  singleton    = undefined
 
   merge x l r
-    | isJust x  = singleton x <> lsub <> rsub
+    | isJust x  = Bin xroot (Leaf Nothing) (Leaf Nothing) <> lsub <> rsub
     | otherwise = lsub <> rsub
-    where nroot = PaCo2Node { skip   = 0
+    where xroot = PaCo2Node { skip   = 0
+                            , string = 0
+                            , label  = x
+                            }
+          nroot = PaCo2Node { skip   = 0
                             , string = 0
                             , label  = Nothing
                             }
