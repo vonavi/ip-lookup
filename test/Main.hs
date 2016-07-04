@@ -5,8 +5,8 @@ import           Test.Hspec
 import           BinTreeSpec
 import           OrdPartitionSpec
 import           OrdTreeSpec
-import           PaCo2PartitionSpecM
-import           PaCo2TreeSpecM
+import           PaCo2PartitionSpec
+import           PaCo2TreeSpec
 import           PaCoPartitionSpec
 import           PaCoTreeSpec
 import           TableSpec

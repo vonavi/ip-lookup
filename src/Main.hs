@@ -3,7 +3,7 @@ module Main where
 import           System.Directory
 
 import           Data.IpRouter
-import           Data.PaCo2PartitionM
+import           Data.PaCo2Partition
 
 main :: IO ()
 main = do
