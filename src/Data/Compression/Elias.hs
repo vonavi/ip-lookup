@@ -12,10 +12,10 @@ module Data.Compression.Elias
        ) where
 
 import           Data.Bits
-import           Data.List   (unfoldr)
-import           Data.Monoid ((<>))
+import           Data.List               (unfoldr)
+import           Data.Monoid             ((<>))
 
-import           Data.Bitmap
+import           Data.Compression.Bitmap
 
 encodeUnary :: Int -> Bitmap
 encodeUnary x | x <= 0    = error "Not positive number"

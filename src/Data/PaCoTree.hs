@@ -26,7 +26,7 @@ import           Data.STRef
 import qualified Data.Vector                    as V
 import           Data.Word
 
-import qualified Data.Bitmap                    as BMP
+import qualified Data.Compression.Bitmap        as BMP
 import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
 import           Data.Compression.Huffman

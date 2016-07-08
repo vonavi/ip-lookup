@@ -1,4 +1,4 @@
-module Data.Bitmap
+module Data.Compression.Bitmap
        (
          Bitmap(..)
        , fromList

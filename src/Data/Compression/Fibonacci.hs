@@ -4,11 +4,11 @@ module Data.Compression.Fibonacci
        , decodeFibonacci
        ) where
 
-import           Control.Arrow (second)
-import           Data.List     (unfoldr)
-import           Data.Monoid   ((<>))
+import           Control.Arrow           (second)
+import           Data.List               (unfoldr)
+import           Data.Monoid             ((<>))
 
-import           Data.Bitmap
+import           Data.Compression.Bitmap
 
 fibSeq :: [Int]
 fibSeq = 1 : 2 : zipWith (+) fibSeq (tail fibSeq)

@@ -9,14 +9,14 @@ module Data.PaCo2Tree
        , putPaCo2Tree
        ) where
 
-import           Control.Applicative    ((<|>))
+import           Control.Applicative     ((<|>))
 import           Control.Monad.State
 import           Data.Bits
-import           Data.Maybe             (isJust)
+import           Data.Maybe              (isJust)
 import           Data.Monoid
 import           Data.Word
 
-import qualified Data.Bitmap            as BMP
+import qualified Data.Compression.Bitmap as BMP
 import           Data.Compression.Elias
 import           Data.IpRouter
 import           Data.PrefixTree
