@@ -7,4 +7,5 @@ class Zipper a where
   goLeft   :: a -> Maybe a
   goRight  :: a -> Maybe a
   goUp     :: a -> Maybe a
+  isPrefix :: a -> Bool
   nodeSize :: a -> Int

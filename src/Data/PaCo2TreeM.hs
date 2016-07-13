@@ -79,12 +79,12 @@ instance Monoid PCTree where
                   node         = x' { label = label x' <|> label y' }
 
 
+-- | The node size of path-compressed 2-tree is built from the
+--   following parts: open/close parenthesis (1 bit), Elias gamma code
+--   of skip value (the skip value should be increased by one), and
+--   node string.
 nodeSizeFromSkip :: Int -> Int
-{- The node size is built from the following parts: open/close
-   parenthesis (1 bit), internal prefix (1 bit), Elias gamma code of
-   skip value (the skip value should be increased by one), and node
-   string. -}
-nodeSizeFromSkip k = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
+nodeSizeFromSkip k = 1 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
 type NodeZipper = (PCTree, [Either (Node, PCTree) (Node, PCTree)])
 
@@ -98,6 +98,11 @@ instance Zipper NodeZipper where
   goUp (l, Right (x, r) : es) = Just (Bin x l r, es)
   goUp (r, Left (x, l) : es)  = Just (Bin x l r, es)
   goUp (_, [])                = Nothing
+
+  isPrefix (Bin x _ _, _) = case label x of
+                              Nothing -> False
+                              _       -> True
+  isPrefix (Tip, _)       = False
 
   nodeSize (Bin Node { skip = k } _ _, _) = nodeSizeFromSkip k
   nodeSize (Tip, _)                       = 0
@@ -173,6 +178,12 @@ instance Zipper BitZipper where
   goUp (l, Right (x, r) : es) = Just (merge x l r, es)
   goUp (r, Left (x, l) : es)  = Just (merge x l r, es)
   goUp (_, [])                = Nothing
+
+  isPrefix (Bin x _ _, _)
+    | skip x == 0 = case label x of
+                      Nothing -> False
+                      _       -> True
+  isPrefix (_, _) = False
 
   nodeSize (Bin Node { skip = k } _ _, _)
     | k == 0        = nodeSizeFromSkip k
