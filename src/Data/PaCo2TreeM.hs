@@ -5,6 +5,7 @@ module Data.PaCo2TreeM
   ) where
 
 import           Control.Applicative     ((<|>))
+import           Control.Monad.State
 import           Data.Bits
 import           Data.Maybe              (isJust)
 import           Data.Monoid
@@ -12,6 +13,7 @@ import           Data.Word
 
 import qualified Data.Compression.Bitmap as BMP
 import           Data.Compression.Elias
+import           Data.IpRouter
 import           Data.Zipper
 
 data Node = Node { skip   :: Int
@@ -29,6 +31,11 @@ instance Eq Node where
 
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
 type PCTree = Tree Node
+
+instance Foldable Tree where
+  foldMap _ Tip         = mempty
+  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
+
 
 emptyBranch :: PCTree
 emptyBranch = Bin emptyRoot Tip Tip
@@ -77,6 +84,77 @@ instance Monoid PCTree where
                   Bin x' lx rx = resizeRoot kmin tx
                   Bin y' ly ry = resizeRoot kmin ty
                   node         = x' { label = label x' <|> label y' }
+
+
+fromEntry :: Entry -> PCTree
+fromEntry (Entry p n) = Bin node Tip Tip
+  where Prefix (Address a) (Mask m) = p
+        node                        = Node { skip   = m
+                                           , string = a
+                                           , label  = Just n
+                                           }
+
+lookupState :: Address -> PCTree -> State (Maybe Int) ()
+lookupState (Address a) = helper a
+  where helper :: Word32 -> PCTree -> State (Maybe Int) ()
+        helper v (Bin x l r) | k < kx    = return ()
+                             | otherwise = do
+                                 modify (label x <|>)
+                                 helper (v `shiftL` (kx + 1)) $
+                                   if v `testBit` (31 - kx) then r else l
+          where kx = skip x
+                k  = countLeadingZeros $ v `xor` string x
+        helper _ Tip                     = return ()
+
+joinNodes :: Node -> Bool -> Node -> Node
+joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
+                               , string = str
+                               , label  = label xlast
+                               }
+  where w      = succ $ skip xhead
+        m      = complement $ (maxBound :: Word32) `shiftR` w
+        shead  = string xhead .&. m
+        slast  = string xlast `shiftR` w
+        setter = if b then setBit else clearBit
+        str    = (shead .|. slast) `setter` (32 - w)
+
+uniteRoot :: PCTree -> PCTree
+uniteRoot t@(Bin x _ _) | isJust (label x) = t
+uniteRoot (Bin _ Tip Tip)                  = Tip
+uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
+uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
+uniteRoot t                                = t
+
+delSubtree :: PCTree -> PCTree -> PCTree
+Tip `delSubtree` _ = Tip
+t `delSubtree` Tip = uniteRoot t
+tx `delSubtree` ty = balanceRoot . uniteRoot $
+                     Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
+  where Bin x _ _    = tx
+        Bin y _ _    = ty
+        kmin         = minimum [ skip x
+                               , skip y
+                               , countLeadingZeros $
+                                 string x `xor` string y
+                               ]
+        Bin x' lx rx = resizeRoot kmin tx
+        Bin y' ly ry = resizeRoot kmin ty
+        node         = x' { label = labelDiff (label x') (label y') }
+        labelDiff :: Maybe Int -> Maybe Int -> Maybe Int
+        labelDiff (Just sx) (Just sy) | sx == sy = Nothing
+        labelDiff sx        _                    = sx
+
+instance IpRouter PCTree where
+  mkTable = foldr insEntry mempty
+
+  insEntry = mappend . fromEntry
+
+  delEntry = flip delSubtree . fromEntry
+
+  ipLookup a t = execState (lookupState a t) Nothing
+
+  numOfPrefixes = getSum . foldMap addPrefix
+    where addPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
 -- | The node size of path-compressed 2-tree is built from the
