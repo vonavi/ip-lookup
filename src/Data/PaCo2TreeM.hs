@@ -30,27 +30,27 @@ instance Eq Node where
 
 
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
-type PCTree = Tree Node
+type PaCo2Tree = Tree Node
 
 instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
-emptyBranch :: PCTree
+emptyBranch :: PaCo2Tree
 emptyBranch = Bin emptyRoot Tip Tip
   where emptyRoot = Node { skip   = 0
                          , string = 0
                          , label  = Nothing
                          }
 
-balanceRoot :: PCTree -> PCTree
+balanceRoot :: PaCo2Tree -> PaCo2Tree
 balanceRoot t@(Bin _ Tip Tip) = t
 balanceRoot (Bin x Tip r)     = Bin x emptyBranch r
 balanceRoot (Bin x l Tip)     = Bin x l emptyBranch
 balanceRoot t                 = t
 
-resizeRoot :: Int -> PCTree -> PCTree
+resizeRoot :: Int -> PaCo2Tree -> PaCo2Tree
 resizeRoot k (Bin x l r) | k < kx = tree
   where kx    = skip x
         vx    = string x
@@ -67,7 +67,7 @@ resizeRoot k (Bin x l r) | k < kx = tree
                 else Bin xhead (Bin xtail l r) Tip
 resizeRoot _ tree = tree
 
-instance Monoid PCTree where
+instance Monoid PaCo2Tree where
   mempty = Tip
 
   Tip `mappend` t  = t
@@ -86,7 +86,7 @@ instance Monoid PCTree where
                   node         = x' { label = label x' <|> label y' }
 
 
-fromEntry :: Entry -> PCTree
+fromEntry :: Entry -> PaCo2Tree
 fromEntry (Entry p n) = Bin node Tip Tip
   where Prefix (Address a) (Mask m) = p
         node                        = Node { skip   = m
@@ -94,9 +94,9 @@ fromEntry (Entry p n) = Bin node Tip Tip
                                            , label  = Just n
                                            }
 
-lookupState :: Address -> PCTree -> State (Maybe Int) ()
+lookupState :: Address -> PaCo2Tree -> State (Maybe Int) ()
 lookupState (Address a) = helper a
-  where helper :: Word32 -> PCTree -> State (Maybe Int) ()
+  where helper :: Word32 -> PaCo2Tree -> State (Maybe Int) ()
         helper v (Bin x l r) | k < kx    = return ()
                              | otherwise = do
                                  modify (label x <|>)
@@ -118,14 +118,14 @@ joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
         setter = if b then setBit else clearBit
         str    = (shead .|. slast) `setter` (32 - w)
 
-uniteRoot :: PCTree -> PCTree
+uniteRoot :: PaCo2Tree -> PaCo2Tree
 uniteRoot t@(Bin x _ _) | isJust (label x) = t
 uniteRoot (Bin _ Tip Tip)                  = Tip
 uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
 uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
 uniteRoot t                                = t
 
-delSubtree :: PCTree -> PCTree -> PCTree
+delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 Tip `delSubtree` _ = Tip
 t `delSubtree` Tip = uniteRoot t
 tx `delSubtree` ty = balanceRoot . uniteRoot $
@@ -144,7 +144,7 @@ tx `delSubtree` ty = balanceRoot . uniteRoot $
         labelDiff (Just sx) (Just sy) | sx == sy = Nothing
         labelDiff sx        _                    = sx
 
-instance IpRouter PCTree where
+instance IpRouter PaCo2Tree where
   mkTable = foldr insEntry mempty
 
   insEntry = mappend . fromEntry
@@ -164,7 +164,7 @@ instance IpRouter PCTree where
 nodeSizeFromSkip :: Int -> Int
 nodeSizeFromSkip k = 1 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
-type NodeZipper = (PCTree, [Either (Node, PCTree) (Node, PCTree)])
+type NodeZipper = (PaCo2Tree, [Either (Node, PaCo2Tree) (Node, PaCo2Tree)])
 
 instance Zipper NodeZipper where
   goLeft (Bin x l r, es) = Just (l, Right (x, r) : es)
@@ -186,11 +186,11 @@ instance Zipper NodeZipper where
   nodeSize (Tip, _)                       = 0
 
 
-root :: PCTree -> Maybe Int
+root :: PaCo2Tree -> Maybe Int
 root (Bin x _ _) | skip x == 0 = label x
 root _                         = Nothing
 
-leftChild :: PCTree -> PCTree
+leftChild :: PaCo2Tree -> PaCo2Tree
 leftChild Tip            = Tip
 leftChild (Bin x l r)
   | k == 0               = l
@@ -202,7 +202,7 @@ leftChild (Bin x l r)
                , string = v `shiftL` 1
                }
 
-rightChild :: PCTree -> PCTree
+rightChild :: PaCo2Tree -> PaCo2Tree
 rightChild Tip            = Tip
 rightChild (Bin x l r)
   | k == 0                = r
@@ -214,7 +214,7 @@ rightChild (Bin x l r)
                , string = v `shiftL` 1
                }
 
-merge :: Maybe Int -> PCTree -> PCTree -> PCTree
+merge :: Maybe Int -> PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 merge x l r | isJust x  = Bin xroot Tip Tip <> lsub <> rsub
             | otherwise = lsub <> rsub
   where xroot = Node { skip   = 0
@@ -238,7 +238,8 @@ merge x l r | isJust x  = Bin xroot Tip Tip <> lsub <> rsub
                                  }
                     in Bin xr' lr rr
 
-type BitZipper = (PCTree, [Either (Maybe Int, PCTree) (Maybe Int, PCTree)])
+type BitZipper =
+  (PaCo2Tree, [Either (Maybe Int, PaCo2Tree) (Maybe Int, PaCo2Tree)])
 
 instance Zipper BitZipper where
   goLeft (t, es) = case l of
