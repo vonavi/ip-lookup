@@ -2,6 +2,9 @@
 
 module Data.PaCo2TreeM
   (
+    Node(..)
+  , Tree(..)
+  , PaCo2Tree
   ) where
 
 import           Control.Applicative     ((<|>))
