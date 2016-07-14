@@ -161,20 +161,20 @@ instance IpRouter PaCo2Tree where
 
 
 -- | The node size of path-compressed 2-tree is built from the
---   following parts: open/close parenthesis (1 bit), Elias gamma code
---   of skip value (the skip value should be increased by one), and
---   node string.
+--   following parts: open/close parenthesis (1 bit), internal prefix
+--   (1 bit), Elias gamma code of skip value (the skip value should be
+--   increased by one), and node string.
 nodeSizeFromSkip :: Int -> Int
-nodeSizeFromSkip k = 1 + (BMP.size . encodeEliasGamma . succ $ k) + k
+nodeSizeFromSkip k = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
 type NodeZipper = (PaCo2Tree, [Either (Node, PaCo2Tree) (Node, PaCo2Tree)])
 
 instance Zipper NodeZipper where
-  goLeft (Bin x l r, es) = Just (l, Right (x, r) : es)
-  goLeft (Tip, _)        = Nothing
+  goLeft (Bin x l r, es) | l /= Tip = Just (l, Right (x, r) : es)
+  goLeft _                          = Nothing
 
-  goRight (Bin x l r, es) = Just (r, Left (x, l) : es)
-  goRight (Tip, _)        = Nothing
+  goRight (Bin x l r, es) | r /= Tip = Just (r, Left (x, l) : es)
+  goRight _                          = Nothing
 
   goUp (l, Right (x, r) : es) = Just (Bin x l r, es)
   goUp (r, Left (x, l) : es)  = Just (Bin x l r, es)

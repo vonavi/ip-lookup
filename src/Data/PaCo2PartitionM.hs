@@ -42,11 +42,10 @@ pageSize Tip         = 0
 isFitted :: MemTree -> Bool
 isFitted = (maxPageSize - 18 >=) . pageSize
 
--- | The presence of routing prefix is indicated by a prefix bit; if
---   the bit is set then, additionally, an RE index (18 bits) is added
---   to the node size.
+-- | For each routing prefix, an RE index (18 bits) is added to the
+--   node size.
 totalNodeSize :: Zipper a => a -> Int
-totalNodeSize z = nodeSize z + 1 + if isPrefix z then 18 else 0
+totalNodeSize z = nodeSize z + if isPrefix z then 18 else 0
 
 
 separateRoot :: MemTree -> MemTree
