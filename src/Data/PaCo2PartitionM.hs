@@ -1,7 +1,10 @@
 module Data.PaCo2PartitionM
   (
     prtnBuild
+  , putPrtn
   ) where
+
+import           Data.Monoid
 
 import           Data.Zipper
 
@@ -11,6 +14,11 @@ data Node = Node { size   :: Int
           deriving (Show, Eq)
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
 type MemTree = Tree Node
+
+instance Foldable Tree where
+  foldMap _ Tip         = mempty
+  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
+
 
 getRootHeight :: MemTree -> Int
 getRootHeight (Bin x _ _) = height x
@@ -105,3 +113,39 @@ prtnBuild Nothing  = Tip
 prtnBuild (Just z) = minHeightMerge (totalNodeSize z) l r
   where l = prtnBuild . goLeft $ z
         r = prtnBuild . goRight $ z
+
+
+numOfPages :: MemTree -> Int
+numOfPages = getSum . foldMap (Sum . addPage)
+  where addPage x = if height x /= 0 then 1 else 0
+
+-- | 18 bits of memory bandwidth are already utilized by the 'plpm'
+--   folder.
+memUsage :: MemTree -> Int
+memUsage = getSum . foldMap (Sum . addMemSize)
+  where addMemSize x = if height x /= 0
+                       then fitToMem $ 18 + size x
+                       else 0
+        fitToMem s   = let k = (s + minPageSize - 1) `div` minPageSize
+                       in k * minPageSize
+
+-- | 18 bits of memory bandwidth are already utilized by the 'plpm'
+--   folder.
+fillSize :: MemTree -> Int
+fillSize = getSum . foldMap (Sum . addFillSize)
+  where addFillSize x = if height x /= 0
+                        then 18 + size x
+                        else 0
+
+putPrtn :: MemTree -> IO ()
+putPrtn t = do
+  putStrLn "Partition of path-compressed 2-tree"
+  putStrLn . (++) "  Height:             " . show . getRootHeight $ t
+  putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
+  putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
+  putStrLn . (++) "  Memory utilization: " . show $ memUtil
+  putStrLn . (++) "  Fill size:          " . show . fillSize $ t
+  putStrLn . (++) "  Fill ratio:         " . show $ fillRatio
+    where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
+          fillRatio :: Double
+          fillRatio = fromIntegral (fillSize t) / fromIntegral (memUsage t)
