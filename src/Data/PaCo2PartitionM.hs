@@ -4,6 +4,7 @@ module Data.PaCo2PartitionM
   , putPrtn
   ) where
 
+import           Data.Maybe  (isJust)
 import           Data.Monoid
 
 import           Data.Zipper
@@ -45,7 +46,7 @@ isFitted = (maxPageSize - 18 >=) . pageSize
 -- | For each routing prefix, an RE index (18 bits) is added to the
 --   node size.
 totalNodeSize :: Zipper a => a -> Int
-totalNodeSize z = nodeSize z + if isPrefix z then 18 else 0
+totalNodeSize z = nodeSize z + if isJust . getLabel $ z then 18 else 0
 
 
 separateRoot :: Zipper a => a -> MemTree -> (a, MemTree)

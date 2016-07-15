@@ -183,10 +183,8 @@ instance Zipper NodeZipper where
   isLeaf (Tip, _) = True
   isLeaf _        = False
 
-  isPrefix (Bin x _ _, _) = case label x of
-                              Nothing -> False
-                              _       -> True
-  isPrefix (Tip, _)       = False
+  getLabel (Bin x _ _, _) = label x
+  getLabel (Tip, _)       = Nothing
 
   nodeSize (Bin Node { skip = k } _ _, _) = nodeSizeFromSkip k
   nodeSize (Tip, _)                       = 0
@@ -263,11 +261,8 @@ instance Zipper BitZipper where
   isLeaf (Tip, _) = True
   isLeaf _        = False
 
-  isPrefix (Bin x _ _, _)
-    | skip x == 0 = case label x of
-                      Nothing -> False
-                      _       -> True
-  isPrefix (_, _) = False
+  getLabel (Bin x _ _, _) | skip x == 0 = label x
+  getLabel _                            = Nothing
 
   nodeSize (Bin Node { skip = k } _ _, _)
     | k == 0        = nodeSizeFromSkip k

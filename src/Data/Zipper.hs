@@ -9,6 +9,6 @@ class Zipper a where
   goUp     :: a -> a
   isRoot   :: a -> Bool
   isLeaf   :: a -> Bool
-  isPrefix :: a -> Bool
+  getLabel :: a -> Maybe Int
   nodeSize :: a -> Int
   delete   :: a -> a
