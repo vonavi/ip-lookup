@@ -11,3 +11,4 @@ class Zipper a where
   isLeaf   :: a -> Bool
   isPrefix :: a -> Bool
   nodeSize :: a -> Int
+  delete   :: a -> a

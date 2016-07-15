@@ -48,13 +48,16 @@ totalNodeSize :: Zipper a => a -> Int
 totalNodeSize z = nodeSize z + if isPrefix z then 18 else 0
 
 
-separateRoot :: MemTree -> MemTree
-separateRoot (Bin x l r) = Bin x' (setRootHeight ht l) (setRootHeight ht r)
-  where ht = height x
-        x' = Node { size   = size x - pageSize l - pageSize r
-                  , height = succ ht
-                  }
-separateRoot Tip         = Tip
+separateRoot :: Zipper a => a -> MemTree -> (a, MemTree)
+separateRoot z (Bin x l r) = (z'', t)
+  where z'  = goUp . delete . goLeft $ z
+        z'' = goUp . delete . goRight $ z'
+        ht  = height x
+        t   = Bin x' (setRootHeight ht l) (setRootHeight ht r)
+        x'  = Node { size   = totalNodeSize z''
+                   , height = succ ht
+                   }
+separateRoot z Tip         = (z, Tip)
 
 isBalancedRoot :: MemTree -> Bool
 isBalancedRoot (Bin Node { height = ht } l r)
@@ -65,53 +68,62 @@ isBalancedRoot (Bin Node { height = ht } l r)
         rht = getRootHeight r
 isBalancedRoot Tip         = True
 
-mergeBoth :: Int -> MemTree -> MemTree -> MemTree
-mergeBoth s l r = Bin x (setRootHeight 0 l) (setRootHeight 0 r)
-  where x = Node { size   = s + pageSize l + pageSize r
+mergeBoth :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+mergeBoth z l r = (z, t)
+  where t = Bin x (setRootHeight 0 l) (setRootHeight 0 r)
+        x = Node { size   = totalNodeSize z + pageSize l + pageSize r
                  , height = maximum [1, getRootHeight l, getRootHeight r]
                  }
 
-mergeLeft :: Int -> MemTree -> MemTree -> MemTree
-mergeLeft s l r = if isBalancedRoot t
-                  then t
-                  else mergeBoth s l (separateRoot r)
-  where t = Bin x (setRootHeight 0 l) r
-        x = Node { size   = s + pageSize l
-                 , height = max (getRootHeight l) (succ . getRootHeight $ r)
-                 }
+mergeLeft :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+mergeLeft z l r = if isBalancedRoot t
+                  then (z', t)
+                  else mergeBoth (goUp zr) l r'
+  where z'       = goUp . delete . goRight $ z
+        (zr, r') = separateRoot (goRight z) r
+        t        = Bin x (setRootHeight 0 l) r
+        x        = Node { size   = totalNodeSize z' + pageSize l
+                        , height = max (getRootHeight l) (succ . getRootHeight $ r)
+                        }
 
-mergeRight :: Int -> MemTree -> MemTree -> MemTree
-mergeRight s l r = if isBalancedRoot t
-                   then t
-                   else mergeBoth s (separateRoot l) r
-  where t = Bin x l (setRootHeight 0 r)
-        x = Node { size   = s + pageSize r
-                 , height = max (succ . getRootHeight $ l) (getRootHeight r)
-                 }
+mergeRight :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+mergeRight z l r = if isBalancedRoot t
+                   then (z', t)
+                   else mergeBoth (goUp zl) l' r
+  where z'       = goUp . delete . goLeft $ z
+        (zl, l') = separateRoot (goLeft z) l
+        t        = Bin x l (setRootHeight 0 r)
+        x        = Node { size   = totalNodeSize z' + pageSize r
+                        , height = max (succ . getRootHeight $ l) (getRootHeight r)
+                        }
 
-pruneTree :: Int -> MemTree -> MemTree -> MemTree
-pruneTree s l r = Bin x l r
-  where x = Node { size   = s
-                 , height = succ $ max (getRootHeight l) (getRootHeight r)
-                 }
+pruneTree :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+pruneTree z l r = (z'', Bin x l r)
+  where z'  = goUp . delete . goLeft $ z
+        z'' = goUp . delete . goRight $ z'
+        x   = Node { size   = totalNodeSize z''
+                   , height = succ $ max (getRootHeight l) (getRootHeight r)
+                   }
 
-minHeightMerge :: Int -> MemTree -> MemTree -> MemTree
-minHeightMerge s l r
+minHeightMerge :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+minHeightMerge z l r
   | not . isBalancedRoot $ t = error "Unbalanced tree root"
-  | isFitted t               = t
-  | otherwise                = pruneTree s l r
-  where t   = mergeTree s l r
-        lht = getRootHeight l
-        rht = getRootHeight r
+  | isFitted t               = (z', t)
+  | otherwise                = pruneTree z l r
+  where (z', t) = mergeTree z l r
+        lht     = getRootHeight l
+        rht     = getRootHeight r
         mergeTree | lht == rht = mergeBoth
                   | lht > rht  = mergeLeft
                   | otherwise  = mergeRight
 
-prtnBuild :: Zipper a => a -> MemTree
-prtnBuild z | isLeaf z  = Tip
-            | otherwise = minHeightMerge (totalNodeSize z) l r
-  where l = prtnBuild . goLeft $ z
-        r = prtnBuild . goRight $ z
+prtnBuild :: Zipper a => a -> (a, MemTree)
+prtnBuild z | isLeaf z  = (z, Tip)
+            | otherwise = minHeightMerge z'' l r
+  where (zl, l) = prtnBuild . goLeft $ z
+        z'      = goUp zl
+        (zr, r) = prtnBuild . goRight $ z'
+        z''     = goUp zr
 
 
 numOfPages :: MemTree -> Int

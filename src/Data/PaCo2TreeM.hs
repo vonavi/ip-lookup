@@ -191,6 +191,8 @@ instance Zipper NodeZipper where
   nodeSize (Bin Node { skip = k } _ _, _) = nodeSizeFromSkip k
   nodeSize (Tip, _)                       = 0
 
+  delete (_, es) = (Tip, es)
+
 
 root :: PaCo2Tree -> Maybe Int
 root (Bin x _ _) | skip x == 0 = label x
@@ -271,3 +273,5 @@ instance Zipper BitZipper where
     | k == 0        = nodeSizeFromSkip k
     | otherwise     = nodeSizeFromSkip k - nodeSizeFromSkip (pred k)
   nodeSize (Tip, _) = 0
+
+  delete (_, es) = (Tip, es)
