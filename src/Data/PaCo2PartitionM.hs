@@ -20,9 +20,9 @@ instance Foldable Tree where
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
-getRootHeight :: MemTree -> Int
-getRootHeight (Bin x _ _) = height x
-getRootHeight Tip         = 0
+rootHeight :: MemTree -> Int
+rootHeight (Bin x _ _) = height x
+rootHeight Tip         = 0
 
 setRootHeight :: Int -> MemTree -> MemTree
 setRootHeight h (Bin x l r) = Bin x { height = h } l r
@@ -64,15 +64,15 @@ isBalancedRoot (Bin Node { height = ht } l r)
   | ht == lht && ht == rht = True
   | ht > lht && ht > rht   = True
   | otherwise              = False
-  where lht = getRootHeight l
-        rht = getRootHeight r
+  where lht = rootHeight l
+        rht = rootHeight r
 isBalancedRoot Tip         = True
 
 mergeBoth :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
 mergeBoth z l r = (z, t)
   where t = Bin x (setRootHeight 0 l) (setRootHeight 0 r)
         x = Node { size   = totalNodeSize z + pageSize l + pageSize r
-                 , height = maximum [1, getRootHeight l, getRootHeight r]
+                 , height = maximum [1, rootHeight l, rootHeight r]
                  }
 
 mergeLeft :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
@@ -83,7 +83,7 @@ mergeLeft z l r = if isBalancedRoot t
         (zr, r') = separateRoot (goRight z) r
         t        = Bin x (setRootHeight 0 l) r
         x        = Node { size   = totalNodeSize z' + pageSize l
-                        , height = max (getRootHeight l) (succ . getRootHeight $ r)
+                        , height = max (rootHeight l) (succ . rootHeight $ r)
                         }
 
 mergeRight :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
@@ -94,7 +94,7 @@ mergeRight z l r = if isBalancedRoot t
         (zl, l') = separateRoot (goLeft z) l
         t        = Bin x l (setRootHeight 0 r)
         x        = Node { size   = totalNodeSize z' + pageSize r
-                        , height = max (succ . getRootHeight $ l) (getRootHeight r)
+                        , height = max (succ . rootHeight $ l) (rootHeight r)
                         }
 
 pruneTree :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
@@ -102,7 +102,7 @@ pruneTree z l r = (z'', Bin x l r)
   where z'  = goUp . delete . goLeft $ z
         z'' = goUp . delete . goRight $ z'
         x   = Node { size   = totalNodeSize z''
-                   , height = succ $ max (getRootHeight l) (getRootHeight r)
+                   , height = succ $ max (rootHeight l) (rootHeight r)
                    }
 
 minHeightMerge :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
@@ -111,8 +111,8 @@ minHeightMerge z l r
   | isFitted t               = (z', t)
   | otherwise                = pruneTree z l r
   where (z', t) = mergeTree z l r
-        lht     = getRootHeight l
-        rht     = getRootHeight r
+        lht     = rootHeight l
+        rht     = rootHeight r
         mergeTree | lht == rht = mergeBoth
                   | lht > rht  = mergeLeft
                   | otherwise  = mergeRight
@@ -151,7 +151,7 @@ fillSize = getSum . foldMap (Sum . addFillSize)
 putPrtn :: MemTree -> IO ()
 putPrtn t = do
   putStrLn "Partition of path-compressed 2-tree"
-  putStrLn . (++) "  Height:             " . show . getRootHeight $ t
+  putStrLn . (++) "  Height:             " . show . rootHeight $ t
   putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
   putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
   putStrLn . (++) "  Memory utilization: " . show $ memUtil
