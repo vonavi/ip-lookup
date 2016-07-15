@@ -107,9 +107,9 @@ minHeightMerge s l r
                   | lht > rht  = mergeLeft
                   | otherwise  = mergeRight
 
-prtnBuild :: Zipper a => Maybe a -> MemTree
-prtnBuild Nothing  = Tip
-prtnBuild (Just z) = minHeightMerge (totalNodeSize z) l r
+prtnBuild :: Zipper a => a -> MemTree
+prtnBuild z | isLeaf z  = Tip
+            | otherwise = minHeightMerge (totalNodeSize z) l r
   where l = prtnBuild . goLeft $ z
         r = prtnBuild . goRight $ z
 

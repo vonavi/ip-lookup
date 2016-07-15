@@ -170,15 +170,18 @@ nodeSizeFromSkip k = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
 type NodeZipper = (PaCo2Tree, [Either (Node, PaCo2Tree) (Node, PaCo2Tree)])
 
 instance Zipper NodeZipper where
-  goLeft (Bin x l r, es) | l /= Tip = Just (l, Right (x, r) : es)
-  goLeft _                          = Nothing
+  goLeft (Bin x l r, es) = (l, Right (x, r) : es)
 
-  goRight (Bin x l r, es) | r /= Tip = Just (r, Left (x, l) : es)
-  goRight _                          = Nothing
+  goRight (Bin x l r, es) = (r, Left (x, l) : es)
 
-  goUp (l, Right (x, r) : es) = Just (Bin x l r, es)
-  goUp (r, Left (x, l) : es)  = Just (Bin x l r, es)
-  goUp (_, [])                = Nothing
+  goUp (l, Right (x, r) : es) = (Bin x l r, es)
+  goUp (r, Left (x, l) : es)  = (Bin x l r, es)
+
+  isRoot (_, []) = True
+  isRoot _       = False
+
+  isLeaf (Tip, _) = True
+  isLeaf _        = False
 
   isPrefix (Bin x _ _, _) = case label x of
                               Nothing -> False
@@ -245,21 +248,18 @@ type BitZipper =
   (PaCo2Tree, [Either (Maybe Int, PaCo2Tree) (Maybe Int, PaCo2Tree)])
 
 instance Zipper BitZipper where
-  goLeft (t, es) = case l of
-                     Tip -> Nothing
-                     _   -> Just (l, Right (root t, r) : es)
-    where l = leftChild t
-          r = rightChild t
+  goLeft (t, es) = (leftChild t, Right (root t, rightChild t) : es)
 
-  goRight (t, es) = case r of
-                      Tip -> Nothing
-                      _   -> Just (r, Left (root t, l) : es)
-    where l = leftChild t
-          r = rightChild t
+  goRight (t, es) = (rightChild t, Left (root t, leftChild t) : es)
 
-  goUp (l, Right (x, r) : es) = Just (merge x l r, es)
-  goUp (r, Left (x, l) : es)  = Just (merge x l r, es)
-  goUp (_, [])                = Nothing
+  goUp (l, Right (x, r) : es) = (merge x l r, es)
+  goUp (r, Left (x, l) : es)  = (merge x l r, es)
+
+  isRoot (_, []) = True
+  isRoot _       = False
+
+  isLeaf (Tip, _) = True
+  isLeaf _        = False
 
   isPrefix (Bin x _ _, _)
     | skip x == 0 = case label x of
