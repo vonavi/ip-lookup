@@ -60,15 +60,6 @@ separateRoot z (Bin x l r) = (z'', t)
                    }
 separateRoot z Tip         = (z, Tip)
 
-isBalancedRoot :: MemTree -> Bool
-isBalancedRoot (Bin Node { height = ht } l r)
-  | ht == lht && ht == rht = True
-  | ht > lht && ht > rht   = True
-  | otherwise              = False
-  where lht = rootHeight l
-        rht = rootHeight r
-isBalancedRoot Tip         = True
-
 mergeBoth :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
 mergeBoth z l r = (z, t)
   where t = Bin x (setRootHeight 0 l) (setRootHeight 0 r)
@@ -77,7 +68,7 @@ mergeBoth z l r = (z, t)
                  }
 
 mergeLeft :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
-mergeLeft z l r = if isBalancedRoot t
+mergeLeft z l r = if isNodeFull z'
                   then (z', t)
                   else mergeBoth (goUp zr) l r'
   where z'       = goUp . delete . goRight $ z
@@ -88,7 +79,7 @@ mergeLeft z l r = if isBalancedRoot t
                         }
 
 mergeRight :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
-mergeRight z l r = if isBalancedRoot t
+mergeRight z l r = if isNodeFull z'
                    then (z', t)
                    else mergeBoth (goUp zl) l' r
   where z'       = goUp . delete . goLeft $ z
@@ -108,9 +99,9 @@ pruneTree z l r = (z'', Bin x l r)
 
 minHeightMerge :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
 minHeightMerge z l r
-  | not . isBalancedRoot $ t = error "Unbalanced tree root"
-  | isFitted t               = (z', t)
-  | otherwise                = pruneTree z l r
+  | not . isNodeFull $ z' = error "Unbalanced tree root"
+  | isFitted t            = (z', t)
+  | otherwise             = pruneTree z l r
   where (z', t) = mergeTree z l r
         lht     = rootHeight l
         rht     = rootHeight r

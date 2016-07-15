@@ -40,6 +40,12 @@ instance Foldable Tree where
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
+isRootFull :: PaCo2Tree -> Bool
+isRootFull (Bin _ Tip Tip) = True
+isRootFull (Bin _ Tip _)   = False
+isRootFull (Bin _ _ Tip)   = False
+isRootFull _               = True
+
 emptyBranch :: PaCo2Tree
 emptyBranch = Bin emptyRoot Tip Tip
   where emptyRoot = Node { skip   = 0
@@ -47,11 +53,11 @@ emptyBranch = Bin emptyRoot Tip Tip
                          , label  = Nothing
                          }
 
-balanceRoot :: PaCo2Tree -> PaCo2Tree
-balanceRoot t@(Bin _ Tip Tip) = t
-balanceRoot (Bin x Tip r)     = Bin x emptyBranch r
-balanceRoot (Bin x l Tip)     = Bin x l emptyBranch
-balanceRoot t                 = t
+mkRootFull :: PaCo2Tree -> PaCo2Tree
+mkRootFull t@(Bin _ Tip Tip) = t
+mkRootFull (Bin x Tip r)     = Bin x emptyBranch r
+mkRootFull (Bin x l Tip)     = Bin x l emptyBranch
+mkRootFull t                 = t
 
 joinNodes :: Node -> Bool -> Node -> Node
 joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
@@ -94,7 +100,7 @@ instance Monoid PaCo2Tree where
 
   Tip `mappend` t  = t
   t  `mappend` Tip = t
-  t1 `mappend` t2  = balanceRoot . uniteRoot $ t1 `helper` t2
+  t1 `mappend` t2  = mkRootFull . uniteRoot $ t1 `helper` t2
     where tx `helper` ty = Bin node (lx <> ly) (rx <> ry)
             where Bin x _ _    = tx
                   Bin y _ _    = ty
@@ -131,7 +137,7 @@ lookupState (Address a) = helper a
 delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 Tip `delSubtree` _ = Tip
 t `delSubtree` Tip = uniteRoot t
-tx `delSubtree` ty = balanceRoot . uniteRoot $
+tx `delSubtree` ty = mkRootFull . uniteRoot $
                      Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
   where Bin x _ _    = tx
         Bin y _ _    = ty
@@ -182,6 +188,8 @@ instance Zipper NodeZipper where
 
   isLeaf (Tip, _) = True
   isLeaf _        = False
+
+  isNodeFull = isRootFull . fst
 
   getLabel (Bin x _ _, _) = label x
   getLabel (Tip, _)       = Nothing
@@ -259,6 +267,8 @@ instance Zipper BitZipper where
 
   isLeaf (Tip, _) = True
   isLeaf _        = False
+
+  isNodeFull = isRootFull . fst
 
   getLabel (Bin x _ _, _) | skip x == 0 = label x
   getLabel _                            = Nothing
