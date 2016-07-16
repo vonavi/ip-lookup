@@ -173,7 +173,8 @@ instance IpRouter PaCo2Tree where
 nodeSizeFromSkip :: Int -> Int
 nodeSizeFromSkip k = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
-type NodeZipper = (PaCo2Tree, [Either (Node, PaCo2Tree) (Node, PaCo2Tree)])
+type NodeZipper = (,) PaCo2Tree
+                  [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
 
 instance Zipper NodeZipper where
   goLeft (Bin x l r, es) = (l, Right (x, r) : es)
@@ -228,54 +229,40 @@ rightChild (Bin x l r)
                , string = v `shiftL` 1
                }
 
-merge :: Maybe Int -> PaCo2Tree -> PaCo2Tree -> PaCo2Tree
-merge x l r = Bin xroot Tip Tip <> lsub <> rsub
-  where xroot = Node { skip   = 0
-                     , string = 0
-                     , label  = x
-                     }
-        lsub  = case l of
-                  Tip          -> Tip
-                  Bin xl ll rl ->
-                    let xl' = xl { skip   = succ $ skip xl
-                                 , string = (`clearBit` 31) . (`shiftR` 1) $
-                                            string xl
-                                 }
-                    in Bin xl' ll rl
-        rsub  = case r of
-                  Tip          -> Tip
-                  Bin xr lr rr ->
-                    let xr' = xr { skip   = succ $ skip xr
-                                 , string = (`setBit` 31) . (`shiftR` 1) $
-                                            string xr
-                                 }
-                    in Bin xr' lr rr
-
-type BitZipper =
-  (PaCo2Tree, [Either (Maybe Int, PaCo2Tree) (Maybe Int, PaCo2Tree)])
+type BitZipper = (,,) PaCo2Tree
+                 [Either (Maybe Int, PaCo2Tree) (Maybe Int, PaCo2Tree)]
+                 [Bool]
 
 instance Zipper BitZipper where
-  goLeft (t, es) = (leftChild t, Right (root t, rightChild t) : es)
+  goLeft (t, es, bs) = (leftChild t, Right (root t, rightChild t):es, True:bs)
 
-  goRight (t, es) = (rightChild t, Left (root t, leftChild t) : es)
+  goRight (t, es, bs) = (rightChild t, Left (root t, leftChild t):es, True:bs)
 
-  goUp (l, Right (x, r) : es) = (merge x l r, es)
-  goUp (r, Left (x, l) : es)  = (merge x l r, es)
+  goUp z =
+    case z of
+      (l, Right (x, r):es, b:bs) -> (mbUnite b $ Bin (toNode x) l r, es, bs)
+      (r, Left (x, l):es, b:bs)  -> (mbUnite b $ Bin (toNode x) l r, es, bs)
+    where toNode x = Node { skip   = 0
+                          , string = 0
+                          , label  = x
+                          }
+          mbUnite b = if b then uniteRoot else id
 
-  isRoot (_, []) = True
-  isRoot _       = False
+  isRoot (_, [], _) = True
+  isRoot _          = False
 
-  isLeaf (Tip, _) = True
-  isLeaf _        = False
+  isLeaf (Tip, _, _) = True
+  isLeaf _           = False
 
-  isNodeFull = isRootFull . fst
+  isNodeFull (t, _, _) = isRootFull t
 
-  getLabel (Bin x _ _, _) | skip x == 0 = label x
-  getLabel _                            = Nothing
+  getLabel (Bin x _ _, _, _) | skip x == 0 = label x
+  getLabel _                               = Nothing
 
-  nodeSize (Bin Node { skip = k } _ _, _)
-    | k == 0        = nodeSizeFromSkip k
-    | otherwise     = nodeSizeFromSkip k - nodeSizeFromSkip (pred k)
-  nodeSize (Tip, _) = 0
+  nodeSize (Bin Node { skip = k } _ _, _, _)
+    | k == 0           = nodeSizeFromSkip k
+    | otherwise        = nodeSizeFromSkip k - nodeSizeFromSkip (pred k)
+  nodeSize (Tip, _, _) = 0
 
-  delete (_, es) = (Tip, es)
+  delete (_, es, _:bs) = (Tip, es, False:bs)
+  delete (_, es, [])   = (Tip, es, [])
