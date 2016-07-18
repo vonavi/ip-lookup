@@ -5,6 +5,7 @@ module Data.PaCo2TreeM
     Node(..)
   , Tree(..)
   , PaCo2Tree
+  , zipper
   ) where
 
 import           Control.Applicative     ((<|>))
@@ -173,39 +174,14 @@ instance IpRouter PaCo2Tree where
 nodeSizeFromSkip :: Int -> Int
 nodeSizeFromSkip k = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
-type NodeZipper = (,) PaCo2Tree
-                  [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
+type PaCo2Zipper = (,,) PaCo2Tree
+                   [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
+                   [Bool]
 
-instance Zipper NodeZipper where
-  goLeft (Bin x l r, es) = (l, Right (x, r) : es)
+zipper :: PaCo2Tree -> PaCo2Zipper
+zipper t = (t, [], [])
 
-  goRight (Bin x l r, es) = (r, Left (x, l) : es)
-
-  goUp (l, Right (x, r) : es) = (Bin x l r, es)
-  goUp (r, Left (x, l) : es)  = (Bin x l r, es)
-
-  isRoot (_, []) = True
-  isRoot _       = False
-
-  isLeaf (Tip, _) = True
-  isLeaf _        = False
-
-  isNodeFull = isRootFull . fst
-
-  getLabel (Bin x _ _, _) = label x
-  getLabel (Tip, _)       = Nothing
-
-  nodeSize (Bin Node { skip = k } _ _, _) = nodeSizeFromSkip k
-  nodeSize (Tip, _)                       = 0
-
-  delete (_, es) = (Tip, es)
-
-
-type BitZipper = (,,) PaCo2Tree
-                 [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
-                 [Bool]
-
-instance Zipper BitZipper where
+instance Zipper PaCo2Zipper where
   goLeft (t, es, bs) = case resizeRoot 0 t of
                          Bin x l r -> (l, Right (x, r) : es, True : bs)
                          Tip       -> error "Tried to go left from a leaf"
