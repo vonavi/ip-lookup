@@ -201,52 +201,25 @@ instance Zipper NodeZipper where
   delete (_, es) = (Tip, es)
 
 
-root :: PaCo2Tree -> Maybe Int
-root (Bin x _ _) | skip x == 0 = label x
-root _                         = Nothing
-
-leftChild :: PaCo2Tree -> PaCo2Tree
-leftChild Tip            = Tip
-leftChild (Bin x l r)
-  | k == 0               = l
-  | v `testBit` 31       = Tip
-  | otherwise            = Bin x' l r
-  where k  = skip x
-        v  = string x
-        x' = x { skip   = pred k
-               , string = v `shiftL` 1
-               }
-
-rightChild :: PaCo2Tree -> PaCo2Tree
-rightChild Tip            = Tip
-rightChild (Bin x l r)
-  | k == 0                = r
-  | v `testBit` 31        = Bin x' l r
-  | otherwise             = Tip
-  where k  = skip x
-        v  = string x
-        x' = x { skip   = pred k
-               , string = v `shiftL` 1
-               }
-
 type BitZipper = (,,) PaCo2Tree
-                 [Either (Maybe Int, PaCo2Tree) (Maybe Int, PaCo2Tree)]
+                 [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
                  [Bool]
 
 instance Zipper BitZipper where
-  goLeft (t, es, bs) = (leftChild t, Right (root t, rightChild t):es, True:bs)
+  goLeft (t, es, bs) = case resizeRoot 0 t of
+                         Bin x l r -> (l, Right (x, r) : es, True : bs)
+                         Tip       -> error "Tried to go left from a leaf"
 
-  goRight (t, es, bs) = (rightChild t, Left (root t, leftChild t):es, True:bs)
+  goRight (t, es, bs) = case resizeRoot 0 t of
+                          Bin x l r -> (r, Left (x, l) : es, True : bs)
+                          Tip       -> error "Tried to go right from a leaf"
 
   goUp z =
     case z of
-      (l, Right (x, r):es, b:bs) -> (mbUnite b $ Bin (toNode x) l r, es, bs)
-      (r, Left (x, l):es, b:bs)  -> (mbUnite b $ Bin (toNode x) l r, es, bs)
-    where toNode x = Node { skip   = 0
-                          , string = 0
-                          , label  = x
-                          }
-          mbUnite b = if b then uniteRoot else id
+      (l, Right (x, r) : es, b : bs) -> (mbUnite b $ Bin x l r, es, bs)
+      (r, Left (x, l) : es, b : bs)  -> (mbUnite b $ Bin x l r, es, bs)
+      (_, [], _)                     -> error "Tried to go up from the top"
+    where mbUnite b = if b then uniteRoot else id
 
   isRoot (_, [], _) = True
   isRoot _          = False
@@ -264,5 +237,5 @@ instance Zipper BitZipper where
     | otherwise        = nodeSizeFromSkip k - nodeSizeFromSkip (pred k)
   nodeSize (Tip, _, _) = 0
 
-  delete (_, es, _:bs) = (Tip, es, False:bs)
-  delete (_, es, [])   = (Tip, es, [])
+  delete (_, es, _ : bs) = (Tip, es, False : bs)
+  delete (_, es, [])     = (Tip, es, [])
