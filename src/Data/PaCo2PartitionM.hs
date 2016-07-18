@@ -50,13 +50,14 @@ totalNodeSize z = nodeSize z + if isJust . getLabel $ z then 18 else 0
 
 
 separateRoot :: Zipper a => a -> MemTree -> (a, MemTree)
-separateRoot z (Bin x l r) = (z'', t)
+separateRoot z (Bin x l r) = (z'', Bin x' l' r')
   where z'  = goUp . delete . goLeft $ z
         z'' = goUp . delete . goRight $ z'
         ht  = height x
-        t   = Bin x' (setRootHeight ht l) (setRootHeight ht r)
+        l'  = if rootHeight l /= 0 then l else setRootHeight ht l
+        r'  = if rootHeight r /= 0 then r else setRootHeight ht r
         x'  = Node { size   = totalNodeSize z''
-                   , height = succ ht
+                   , height = succ $ max (rootHeight l') (rootHeight r')
                    }
 separateRoot z Tip         = (z, Tip)
 
