@@ -1,31 +1,31 @@
+{-# LANGUAGE GADTs      #-}
+{-# LANGUAGE Rank2Types #-}
+
 module Data.PaCo2PartitionM
   (
     prtnBuild
   , putPrtn
   ) where
 
-import           Data.Maybe  (isJust)
 import           Data.Monoid
 
 import           Data.Zipper
 
-data Node = Node { size   :: Int
-                 , height :: Int
-                 }
-          deriving (Show, Eq)
+data Node a where
+  Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
-type MemTree = Tree Node
+type MemTree a = Tree (Node a)
 
 instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
-rootHeight :: MemTree -> Int
+rootHeight :: MemTree a -> Int
 rootHeight (Bin x _ _) = height x
 rootHeight Tip         = 0
 
-setRootHeight :: Int -> MemTree -> MemTree
+setRootHeight :: Int -> MemTree a -> MemTree a
 setRootHeight h (Bin x l r) = Bin x { height = h } l r
 setRootHeight _ Tip         = Tip
 
@@ -35,82 +35,74 @@ minPageSize = 128
 maxPageSize :: Int
 maxPageSize = 6 * minPageSize
 
-pageSize :: MemTree -> Int
-pageSize (Bin x _ _) = size x
-pageSize Tip         = 0
-
 -- | 18 bits are reserved for the 'plpm' folder.
-isFitted :: MemTree -> Bool
-isFitted = (maxPageSize - 18 >=) . pageSize
-
--- | For each routing prefix, an RE index (18 bits) is added to the
---   node size.
-totalNodeSize :: Zipper a => a -> Int
-totalNodeSize z = nodeSize z + if isJust . getLabel $ z then 18 else 0
+pageSize :: Zipper a => Node a -> Int
+pageSize x = size (zipper x) + 18
 
 
-separateRoot :: Zipper a => a -> MemTree -> (a, MemTree)
+separateRoot :: Zipper a => a -> MemTree a -> (a, MemTree a)
 separateRoot z (Bin x l r) = (z'', Bin x' l' r')
   where z'  = goUp . delete . goLeft $ z
         z'' = goUp . delete . goRight $ z'
         ht  = height x
         l'  = if rootHeight l /= 0 then l else setRootHeight ht l
         r'  = if rootHeight r /= 0 then r else setRootHeight ht r
-        x'  = Node { size   = totalNodeSize z''
+        x'  = Node { zipper = z''
                    , height = succ $ max (rootHeight l') (rootHeight r')
                    }
 separateRoot z Tip         = (z, Tip)
 
-mergeBoth :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> (a, MemTree a)
 mergeBoth z l r = (z, t)
   where t = Bin x (setRootHeight 0 l) (setRootHeight 0 r)
-        x = Node { size   = totalNodeSize z + pageSize l + pageSize r
+        x = Node { zipper = z
                  , height = maximum [1, rootHeight l, rootHeight r]
                  }
 
-mergeLeft :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+mergeLeft :: Zipper a => a -> MemTree a -> MemTree a -> (a, MemTree a)
 mergeLeft z l r = if isNodeFull z'
                   then (z', t)
                   else mergeBoth (goUp zr) l r'
   where z'       = goUp . delete . goRight $ z
         (zr, r') = separateRoot (goRight z) r
         t        = Bin x (setRootHeight 0 l) r
-        x        = Node { size   = totalNodeSize z' + pageSize l
+        x        = Node { zipper = z'
                         , height = max (rootHeight l) (succ . rootHeight $ r)
                         }
 
-mergeRight :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> (a, MemTree a)
 mergeRight z l r = if isNodeFull z'
                    then (z', t)
                    else mergeBoth (goUp zl) l' r
   where z'       = goUp . delete . goLeft $ z
         (zl, l') = separateRoot (goLeft z) l
         t        = Bin x l (setRootHeight 0 r)
-        x        = Node { size   = totalNodeSize z' + pageSize r
+        x        = Node { zipper = z'
                         , height = max (succ . rootHeight $ l) (rootHeight r)
                         }
 
-pruneTree :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> (a, MemTree a)
 pruneTree z l r = (z'', Bin x l r)
   where z'  = goUp . delete . goLeft $ z
         z'' = goUp . delete . goRight $ z'
-        x   = Node { size   = totalNodeSize z''
+        x   = Node { zipper = z''
                    , height = succ $ max (rootHeight l) (rootHeight r)
                    }
 
-minHeightMerge :: Zipper a => a -> MemTree -> MemTree -> (a, MemTree)
+minHeightMerge :: Zipper a => a -> MemTree a -> MemTree a -> (a, MemTree a)
 minHeightMerge z l r
-  | not . isNodeFull $ z' = error "Unbalanced tree root"
-  | isFitted t            = (z', t)
-  | otherwise             = pruneTree z l r
-  where (z', t) = mergeTree z l r
-        lht     = rootHeight l
-        rht     = rootHeight r
+  | not . isNodeFull $ z'     = error "Unbalanced tree root"
+  | pageSize x <= maxPageSize = (z', t)
+  | otherwise                 = pruneTree z l r
+  where (z', t)   = mergeTree z l r
+        Bin x _ _ = t
+        lht       = rootHeight l
+        rht       = rootHeight r
         mergeTree | lht == rht = mergeBoth
                   | lht > rht  = mergeLeft
                   | otherwise  = mergeRight
 
-prtnBuild :: Zipper a => a -> (a, MemTree)
+prtnBuild :: Zipper a => a -> (a, MemTree a)
 prtnBuild z | isLeaf z  = (z, Tip)
             | otherwise = minHeightMerge z'' l r
   where (zl, l) = prtnBuild . goLeft $ z
@@ -119,29 +111,23 @@ prtnBuild z | isLeaf z  = (z, Tip)
         z''     = goUp zr
 
 
-numOfPages :: MemTree -> Int
+numOfPages :: MemTree a -> Int
 numOfPages = getSum . foldMap (Sum . addPage)
   where addPage x = if height x /= 0 then 1 else 0
 
--- | 18 bits of memory bandwidth are already utilized by the 'plpm'
---   folder.
-memUsage :: MemTree -> Int
-memUsage = getSum . foldMap (Sum . addMemSize)
-  where addMemSize x = if height x /= 0
-                       then fitToMem $ 18 + size x
-                       else 0
-        fitToMem s   = let k = (s + minPageSize - 1) `div` minPageSize
-                       in k * minPageSize
+memUsage :: Zipper a => MemTree a -> Int
+memUsage = getSum . foldMap (Sum . nodeMemUsage)
+  where nodeMemUsage x = if height x /= 0
+                         then fitToMinPage . pageSize $ x
+                         else 0
+        fitToMinPage s = let k = (s + minPageSize - 1) `div` minPageSize
+                         in k * minPageSize
 
--- | 18 bits of memory bandwidth are already utilized by the 'plpm'
---   folder.
-fillSize :: MemTree -> Int
-fillSize = getSum . foldMap (Sum . addFillSize)
-  where addFillSize x = if height x /= 0
-                        then 18 + size x
-                        else 0
+fillSize :: Zipper a => MemTree a -> Int
+fillSize = getSum . foldMap (Sum . nodeFillSize)
+  where nodeFillSize x = if height x /= 0 then pageSize x else 0
 
-putPrtn :: MemTree -> IO ()
+putPrtn :: Zipper a => MemTree a -> IO ()
 putPrtn t = do
   putStrLn "Partition of path-compressed 2-tree"
   putStrLn . (++) "  Height:             " . show . rootHeight $ t

@@ -167,16 +167,29 @@ instance IpRouter PaCo2Tree where
     where addPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
--- | The node size of path-compressed 2-tree is built from the
---   following parts: open/close parenthesis (1 bit), internal prefix
---   (1 bit), Elias gamma code of skip value (the skip value should be
---   increased by one), and node string.
-nodeSizeFromSkip :: Int -> Int
-nodeSizeFromSkip k = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
-
 type PaCo2Zipper = (,,) PaCo2Tree
                    [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
                    [Bool]
+
+{-|
+The node size of path-compressed 2-tree is built from the following
+parts:
+
+    * open/close parenthesis (1 bit);
+
+    * Elias gamma code of skip value (the skip value should be
+      increased by one);
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+nodeSize :: Node -> Int
+nodeSize Node { skip = k, label = s } =
+  1 + (BMP.size . encodeEliasGamma . succ $ k) +
+  k + 1 + if isJust s then 18 else 0
 
 zipper :: PaCo2Tree -> PaCo2Zipper
 zipper t = (t, [], [])
@@ -208,10 +221,7 @@ instance Zipper PaCo2Zipper where
   getLabel (Bin x _ _, _, _) | skip x == 0 = label x
   getLabel _                               = Nothing
 
-  nodeSize (Bin Node { skip = k } _ _, _, _)
-    | k == 0           = nodeSizeFromSkip k
-    | otherwise        = nodeSizeFromSkip k - nodeSizeFromSkip (pred k)
-  nodeSize (Tip, _, _) = 0
+  size (t, _, _) = getSum . foldMap (Sum . nodeSize) $ t
 
   delete (_, es, _ : bs) = (Tip, es, False : bs)
   delete (_, es, [])     = (Tip, es, [])
