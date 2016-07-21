@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE IncoherentInstances #-}
+{-# LANGUAGE Rank2Types          #-}
 
 module Data.PaCo2PartitionM
   (
@@ -13,12 +15,22 @@ import           Data.Zipper
 
 data Node a where
   Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
-data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
+data Tree a = Tip | Bin a (Tree a) (Tree a) deriving Eq
 type MemTree a = Tree (Node a)
 
 instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
+
+instance Zipper a => Show (MemTree a) where
+  show Tip         = ""
+  show (Bin x l r) = "Bin (Node {zipper = " ++ show (zipper x) ++
+                     ", height = " ++ show (height x) ++ "})" ++
+                     leftStr ++ rightStr
+    where leftStr  = let s = show l
+                     in if null s then " Tip" else " (" ++ s ++ ")"
+          rightStr = let s = show r
+                     in if null s then " Tip" else " (" ++ s ++ ")"
 
 
 rootHeight :: MemTree a -> Int
