@@ -15,31 +15,29 @@ import           Data.Zipper
 
 data Node a where
   Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
-data Tree a = Tip | Bin a (Tree a) (Tree a) deriving Eq
+data Tree a = Leaf a | Bin a (Tree a) (Tree a) deriving Eq
 type MemTree a = Tree (Node a)
 
 instance Foldable Tree where
-  foldMap _ Tip         = mempty
+  foldMap f (Leaf x)    = f x
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 instance Zipper a => Show (MemTree a) where
-  show Tip         = ""
-  show (Bin x l r) = "Bin (Node {zipper = " ++ show (zipper x) ++
-                     ", height = " ++ show (height x) ++ "})" ++
-                     leftStr ++ rightStr
-    where leftStr  = let s = show l
-                     in if null s then " Tip" else " (" ++ s ++ ")"
-          rightStr = let s = show r
-                     in if null s then " Tip" else " (" ++ s ++ ")"
+  show t = case t of
+             Leaf x    -> "Leaf " ++ nodeToStr x
+             Bin x l r -> "Bin " ++ nodeToStr x ++
+                          " (" ++ show l ++ ") (" ++ show r ++ ")"
+    where nodeToStr x = "(Node {zipper = " ++ show (zipper x) ++
+                        ", height = " ++ show (height x) ++ "})"
 
 
 rootHeight :: MemTree a -> Int
+rootHeight (Leaf _)    = 0
 rootHeight (Bin x _ _) = height x
-rootHeight Tip         = 0
 
 setRootHeight :: Int -> MemTree a -> MemTree a
+setRootHeight _ t@(Leaf _)  = t
 setRootHeight h (Bin x l r) = Bin x { height = h } l r
-setRootHeight _ Tip         = Tip
 
 minPageSize :: Int
 minPageSize = 128
@@ -53,6 +51,7 @@ pageSize x = size (zipper x) + 18
 
 
 separateRoot :: Zipper a => a -> MemTree a -> (a, MemTree a)
+separateRoot z t@(Leaf _)  = (z, t)
 separateRoot z (Bin x l r) = (z'', Bin x' l' r')
   where z'  = goUp . delete . goLeft $ z
         z'' = goUp . delete . goRight $ z'
@@ -62,7 +61,6 @@ separateRoot z (Bin x l r) = (z'', Bin x' l' r')
         x'  = Node { zipper = z''
                    , height = succ $ max (rootHeight l') (rootHeight r')
                    }
-separateRoot z Tip         = (z, Tip)
 
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> (a, MemTree a)
 mergeBoth z l r = (z, t)
@@ -115,7 +113,7 @@ minHeightMerge z l r
                   | otherwise  = mergeRight
 
 prtnBuild :: Zipper a => a -> (a, MemTree a)
-prtnBuild z | isLeaf z  = (z, Tip)
+prtnBuild z | isLeaf z  = (z, Leaf Node { zipper = z, height = 0 })
             | otherwise = minHeightMerge z'' l r
   where (zl, l) = prtnBuild . goLeft $ z
         z'      = goUp zl
