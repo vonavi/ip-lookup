@@ -223,5 +223,8 @@ instance Zipper PaCo2Zipper where
 
   size (t, _, _) = getSum . foldMap (Sum . nodeSize) $ t
 
+  insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
+  insert (t, _, _) (_, es, [])     = (t, es, [])
+
   delete (_, es, _ : bs) = (Tip, es, False : bs)
   delete (_, es, [])     = (Tip, es, [])

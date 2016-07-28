@@ -15,6 +15,7 @@ class Zipper a where
   isNodeFull :: a -> Bool
   getLabel   :: a -> Maybe Int
   size       :: a -> Int
+  insert     :: a -> a -> a
   delete     :: a -> a
 
   isNodeFull = const True
