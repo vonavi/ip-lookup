@@ -130,7 +130,6 @@ joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
 
 uniteRoot :: PaCo2Tree -> PaCo2Tree
 uniteRoot t@(Bin x _ _) | isJust (label x) = t
-uniteRoot (Bin _ Tip Tip)                  = Tip
 uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
 uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
 uniteRoot t                                = t
