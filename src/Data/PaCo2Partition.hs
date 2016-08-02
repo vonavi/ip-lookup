@@ -92,15 +92,15 @@ separateRoot page = Bin n (Leaf lp) (Leaf rp)
                        , label  = getRoot t
                        }
         lp = case leftChild t of
-               Leaf Nothing -> Nothing
-               x            -> Just Page { tree  = x
-                                         , depth = pageDepth page
-                                         }
+               Leaf p -> p
+               x      -> Just Page { tree  = x
+                                   , depth = pageDepth page
+                                   }
         rp = case rightChild t of
-               Leaf Nothing -> Nothing
-               x            -> Just Page { tree  = x
-                                         , depth = pageDepth page
-                                         }
+               Leaf p -> p
+               x      -> Just Page { tree  = x
+                                   , depth = pageDepth page
+                                   }
 
 mergeBoth :: Maybe Int -> Maybe Page -> Maybe Page -> Maybe Page
 mergeBoth x lp rp =
