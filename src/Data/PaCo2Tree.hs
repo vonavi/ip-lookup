@@ -209,13 +209,18 @@ instance IpRouter (Tree b PaCo2Node) where
 
 
 eliasGammaSize :: Tree b PaCo2Node -> Int
-eliasGammaSize = getSum . foldMap nodeSize
+eliasGammaSize t = case t of
+                     Leaf Nothing -> nodeSize PaCo2Node { skip   = 0
+                                                        , string = 0
+                                                        , label  = Nothing
+                                                        }
+                     _            -> getSum . foldMap (Sum . nodeSize) $ t
   where nodeSize PaCo2Node { skip = k } =
           {- The node size is built from the following parts:
              open/close parenthesis (1 bit), internal prefix (1 bit),
              Elias gamma code of skip value (the skip value should be
              increased by one), and node string. -}
-          Sum $ 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
+          2 + (BMP.size . encodeEliasGamma . succ $ k) + k
 
 
 newtype PaCo2Tree b = PaCo2Tree (Tree b PaCo2Node)
