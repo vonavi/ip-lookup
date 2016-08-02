@@ -54,14 +54,18 @@ pageSize :: Zipper a => Node a -> Int
 pageSize x = size (zipper x) + 18
 
 
+pruneZipper :: Zipper a => MemTree a -> a -> a
+pruneZipper (Leaf _) = id
+pruneZipper _        = delete
+
 separateRoot :: Zipper a => a -> MemTree a -> MemTree a
 separateRoot _ t@(Leaf _)  = t
 separateRoot z (Bin x l r) = Bin x' l' r'
   where ht  = height x
         l'  = if rootHeight l /= 0 then l else setRootHeight ht l
         r'  = if rootHeight r /= 0 then r else setRootHeight ht r
-        z'  = goUp . delete . goLeft $ z
-        z'' = goUp . delete . goRight $ z'
+        z'  = goUp . pruneZipper l . goLeft $ z
+        z'' = goUp . pruneZipper r . goRight $ z'
         x'  = Node { zipper = z''
                    , height = succ $ max (rootHeight l') (rootHeight r')
                    }
@@ -76,7 +80,7 @@ mergeLeft :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeLeft z l r = if isNodeFull z'
                   then Bin x (setRootHeight 0 l) r
                   else mergeBoth (goUp . rootZipper $ r') l r'
-  where z' = goUp . delete . goRight $ z
+  where z' = goUp . pruneZipper r . goRight $ z
         x  = Node { zipper = z'
                   , height = max (rootHeight l) (succ . rootHeight $ r)
                   }
@@ -86,7 +90,7 @@ mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeRight z l r = if isNodeFull z'
                    then Bin x l (setRootHeight 0 r)
                    else mergeBoth (goUp . rootZipper $ l') l' r
-  where z' = goUp . delete . goLeft $ z
+  where z' = goUp . pruneZipper l . goLeft $ z
         x  = Node { zipper = z'
                   , height = max (succ . rootHeight $ l) (rootHeight r)
                   }
@@ -94,8 +98,8 @@ mergeRight z l r = if isNodeFull z'
 
 pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 pruneTree z l r = Bin x l r
-  where z'  = goUp . delete . goLeft $ z
-        z'' = goUp . delete . goRight $ z'
+  where z'  = goUp . pruneZipper l . goLeft $ z
+        z'' = goUp . pruneZipper r . goRight $ z'
         x   = Node { zipper = z''
                    , height = succ $ max (rootHeight l) (rootHeight r)
                    }
