@@ -58,6 +58,25 @@ balanceRoot (Bin x (Leaf Nothing) r)    = Bin x emptyBranch r
 balanceRoot (Bin x l (Leaf Nothing))    = Bin x l emptyBranch
 balanceRoot t                           = t
 
+joinNodes :: PaCo2Node -> Bool -> PaCo2Node -> PaCo2Node
+joinNodes xhead b xlast = PaCo2Node { skip   = succ $ skip xhead + skip xlast
+                                    , string = str
+                                    , label  = label xlast
+                                    }
+  where w      = succ $ skip xhead
+        m      = complement $ (maxBound :: Word32) `shiftR` w
+        shead  = string xhead .&. m
+        slast  = string xlast `shiftR` w
+        setter = if b then setBit else clearBit
+        str    = (shead .|. slast) `setter` (32 - w)
+
+uniteRoot :: Tree b PaCo2Node -> Tree b PaCo2Node
+uniteRoot t@(Bin x _ _) | isJust (label x)      = t
+uniteRoot (Bin _ (Leaf Nothing) (Leaf Nothing)) = Leaf Nothing
+uniteRoot (Bin x (Leaf Nothing) (Bin y l r))    = Bin (joinNodes x True y) l r
+uniteRoot (Bin x (Bin y l r) (Leaf Nothing))    = Bin (joinNodes x False y) l r
+uniteRoot t                                     = t
+
 resizeRoot :: Int -> Tree b PaCo2Node -> Tree b PaCo2Node
 resizeRoot k (Bin x l r) | k < kx = tree
   where kx    = skip x
@@ -81,7 +100,7 @@ instance Monoid (Tree b PaCo2Node) where
   (Leaf Nothing) `mappend` t  = t
   t  `mappend` (Leaf Nothing) = t
   (Leaf _) `mappend` (Leaf _) = error "Cannot append two leaves"
-  t1 `mappend` t2             = balanceRoot $ t1 `helper` t2
+  t1 `mappend` t2             = balanceRoot . uniteRoot $ t1 `helper` t2
     where tx `helper` ty = Bin node (lx <> ly) (rx <> ry)
             where Bin x _ _    = tx
                   Bin y _ _    = ty
@@ -94,25 +113,6 @@ instance Monoid (Tree b PaCo2Node) where
                   Bin y' ly ry = resizeRoot kmin ty
                   node         = x' { label = label x' <|> label y' }
 
-
-joinNodes :: PaCo2Node -> Bool -> PaCo2Node -> PaCo2Node
-joinNodes xhead b xlast = PaCo2Node { skip   = succ $ skip xhead + skip xlast
-                                    , string = str
-                                    , label  = label xlast
-                                    }
-  where w      = succ $ skip xhead
-        m      = complement $ (maxBound :: Word32) `shiftR` w
-        shead  = string xhead .&. m
-        slast  = string xlast `shiftR` w
-        setter = if b then setBit else clearBit
-        str    = (shead .|. slast) `setter` (32 - w)
-
-uniteRoot :: Tree b PaCo2Node -> Tree b PaCo2Node
-uniteRoot t@(Bin x _ _) | isJust (label x)      = t
-uniteRoot (Bin _ (Leaf Nothing) (Leaf Nothing)) = Leaf Nothing
-uniteRoot (Bin x (Leaf Nothing) (Bin y l r))    = Bin (joinNodes x True y) l r
-uniteRoot (Bin x (Bin y l r) (Leaf Nothing))    = Bin (joinNodes x False y) l r
-uniteRoot t                                     = t
 
 instance PrefixTree (Tree b PaCo2Node) where
   isEmpty      = undefined
