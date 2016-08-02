@@ -60,6 +60,24 @@ mkRootFull (Bin x Tip r)     = Bin x emptyBranch r
 mkRootFull (Bin x l Tip)     = Bin x l emptyBranch
 mkRootFull t                 = t
 
+joinNodes :: Node -> Bool -> Node -> Node
+joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
+                               , string = str
+                               , label  = label xlast
+                               }
+  where w      = succ $ skip xhead
+        m      = complement $ (maxBound :: Word32) `shiftR` w
+        shead  = string xhead .&. m
+        slast  = string xlast `shiftR` w
+        setter = if b then setBit else clearBit
+        str    = (shead .|. slast) `setter` (32 - w)
+
+uniteRoot :: PaCo2Tree -> PaCo2Tree
+uniteRoot t@(Bin x _ _) | isJust (label x) = t
+uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
+uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
+uniteRoot t                                = t
+
 resizeRoot :: Int -> PaCo2Tree -> PaCo2Tree
 resizeRoot k (Bin x l r) | k < kx = tree
   where kx    = skip x
@@ -82,7 +100,7 @@ instance Monoid PaCo2Tree where
 
   Tip `mappend` t  = t
   t  `mappend` Tip = t
-  t1 `mappend` t2  = mkRootFull $ t1 `helper` t2
+  t1 `mappend` t2  = mkRootFull . uniteRoot $ t1 `helper` t2
     where tx `helper` ty = Bin node (lx <> ly) (rx <> ry)
             where Bin x _ _    = tx
                   Bin y _ _    = ty
@@ -115,24 +133,6 @@ lookupState (Address a) = helper a
           where kx = skip x
                 k  = countLeadingZeros $ v `xor` string x
         helper _ Tip                     = return ()
-
-joinNodes :: Node -> Bool -> Node -> Node
-joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
-                               , string = str
-                               , label  = label xlast
-                               }
-  where w      = succ $ skip xhead
-        m      = complement $ (maxBound :: Word32) `shiftR` w
-        shead  = string xhead .&. m
-        slast  = string xlast `shiftR` w
-        setter = if b then setBit else clearBit
-        str    = (shead .|. slast) `setter` (32 - w)
-
-uniteRoot :: PaCo2Tree -> PaCo2Tree
-uniteRoot t@(Bin x _ _) | isJust (label x) = t
-uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
-uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
-uniteRoot t                                = t
 
 delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 Tip `delSubtree` _ = Tip
