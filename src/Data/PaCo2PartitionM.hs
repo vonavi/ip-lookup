@@ -46,10 +46,13 @@ rootHeight :: MemTree a -> Int
 rootHeight (Leaf _)    = 0
 rootHeight (Bin x _ _) = fromMaybe 0 $ height <$> x
 
-maybeSetRoot :: Maybe (Node a) -> MemTree a -> MemTree a
-maybeSetRoot _       t@(Leaf _)  = t
-maybeSetRoot Nothing (Bin _ l r) = Bin Nothing l r
-maybeSetRoot x       (Bin y l r) = Bin (y <|> x) l r
+updatePointer :: Node a -> MemTree a -> MemTree a
+updatePointer x (Leaf y)    = Leaf (y <|> Just x)
+updatePointer x (Bin y l r) = Bin (y <|> Just x) l r
+
+removePointer :: MemTree a -> MemTree a
+removePointer (Leaf _)    = Leaf Nothing
+removePointer (Bin _ l r) = Bin Nothing l r
 
 minPageSize :: Int
 minPageSize = 128
@@ -70,8 +73,8 @@ separateRoot :: Zipper a => a -> MemTree a -> MemTree a
 separateRoot _ t@(Leaf _)         = t
 separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
   where h   = height x
-        l'  = maybeSetRoot (Just Node { zipper = goLeft z, height = h }) l
-        r'  = maybeSetRoot (Just Node { zipper = goRight z, height = h }) r
+        l'  = updatePointer Node { zipper = goLeft z, height = h } l
+        r'  = updatePointer Node { zipper = goRight z, height = h } r
         z'  = goUp . pruneZipper l . goLeft $ z
         z'' = goUp . pruneZipper r . goRight $ z'
         x'  = Node { zipper = z''
@@ -79,14 +82,14 @@ separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
                    }
 
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-mergeBoth z l r = Bin (Just x) (maybeSetRoot Nothing l) (maybeSetRoot Nothing r)
+mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
   where x = Node { zipper = z
                  , height = maximum [1, rootHeight l, rootHeight r]
                  }
 
 mergeLeft :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeLeft z l r = if isNodeFull z'
-                  then Bin (Just x) (maybeSetRoot Nothing l) r
+                  then Bin (Just x) (removePointer l) r
                   else mergeBoth (goUp . rootZipper $ r') l r'
   where z' = goUp . pruneZipper r . goRight $ z
         x  = Node { zipper = z'
@@ -96,7 +99,7 @@ mergeLeft z l r = if isNodeFull z'
 
 mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeRight z l r = if isNodeFull z'
-                   then Bin (Just x) l (maybeSetRoot Nothing r)
+                   then Bin (Just x) l (removePointer r)
                    else mergeBoth (goUp . rootZipper $ l') l' r
   where z' = goUp . pruneZipper l . goLeft $ z
         x  = Node { zipper = z'
