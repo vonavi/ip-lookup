@@ -9,39 +9,47 @@ module Data.PaCo2PartitionM
   , putPrtn
   ) where
 
+import           Control.Applicative ((<|>))
+import           Data.Maybe          (fromMaybe)
 import           Data.Monoid
 
 import           Data.Zipper
 
 data Node a where
   Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
-data Tree a = Leaf a | Bin a (Tree a) (Tree a) deriving Eq
+data Tree a = Leaf (Maybe a)
+            | Bin (Maybe a) (Tree a) (Tree a)
+            deriving Eq
 type MemTree a = Tree (Node a)
 
 instance Foldable Tree where
-  foldMap f (Leaf x)    = f x
-  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
+  foldMap _ (Leaf _)    = mempty
+  foldMap f (Bin x l r) = fromMaybe mempty (f <$> x) <>
+                          foldMap f l <> foldMap f r
 
 instance Zipper a => Show (MemTree a) where
   show t = case t of
              Leaf x    -> "Leaf " ++ nodeToStr x
              Bin x l r -> "Bin " ++ nodeToStr x ++
                           " (" ++ show l ++ ") (" ++ show r ++ ")"
-    where nodeToStr x = "(Node {zipper = " ++ show (zipper x) ++
-                        ", height = " ++ show (height x) ++ "})"
+    where nodeToStr (Just x) = "(Just Node {zipper = " ++ show (zipper x) ++
+                               ", height = " ++ show (height x) ++ "})"
+          nodeToStr Nothing  = "Nothing"
 
 
 rootZipper :: Zipper a => MemTree a -> a
-rootZipper (Leaf x)    = zipper x
-rootZipper (Bin x _ _) = zipper x
+rootZipper t | Leaf x    <- t = toZipper x
+             | Bin x _ _ <- t = toZipper x
+  where toZipper = fromMaybe (error "No zipper found") . (zipper <$>)
 
 rootHeight :: MemTree a -> Int
 rootHeight (Leaf _)    = 0
-rootHeight (Bin x _ _) = height x
+rootHeight (Bin x _ _) = fromMaybe 0 $ height <$> x
 
-setRootHeight :: Int -> MemTree a -> MemTree a
-setRootHeight _ t@(Leaf _)  = t
-setRootHeight h (Bin x l r) = Bin x { height = h } l r
+maybeSetRoot :: Maybe (Node a) -> MemTree a -> MemTree a
+maybeSetRoot _       t@(Leaf _)  = t
+maybeSetRoot Nothing (Bin _ l r) = Bin Nothing l r
+maybeSetRoot x       (Bin y l r) = Bin (y <|> x) l r
 
 minPageSize :: Int
 minPageSize = 128
@@ -59,11 +67,11 @@ pruneZipper (Leaf _) = id
 pruneZipper _        = delete
 
 separateRoot :: Zipper a => a -> MemTree a -> MemTree a
-separateRoot _ t@(Leaf _)  = t
-separateRoot z (Bin x l r) = Bin x' l' r'
-  where ht  = height x
-        l'  = if rootHeight l /= 0 then l else setRootHeight ht l
-        r'  = if rootHeight r /= 0 then r else setRootHeight ht r
+separateRoot _ t@(Leaf _)         = t
+separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
+  where h   = height x
+        l'  = maybeSetRoot (Just Node { zipper = goLeft z, height = h }) l
+        r'  = maybeSetRoot (Just Node { zipper = goRight z, height = h }) r
         z'  = goUp . pruneZipper l . goLeft $ z
         z'' = goUp . pruneZipper r . goRight $ z'
         x'  = Node { zipper = z''
@@ -71,14 +79,14 @@ separateRoot z (Bin x l r) = Bin x' l' r'
                    }
 
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-mergeBoth z l r = Bin x (setRootHeight 0 l) (setRootHeight 0 r)
+mergeBoth z l r = Bin (Just x) (maybeSetRoot Nothing l) (maybeSetRoot Nothing r)
   where x = Node { zipper = z
                  , height = maximum [1, rootHeight l, rootHeight r]
                  }
 
 mergeLeft :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeLeft z l r = if isNodeFull z'
-                  then Bin x (setRootHeight 0 l) r
+                  then Bin (Just x) (maybeSetRoot Nothing l) r
                   else mergeBoth (goUp . rootZipper $ r') l r'
   where z' = goUp . pruneZipper r . goRight $ z
         x  = Node { zipper = z'
@@ -88,7 +96,7 @@ mergeLeft z l r = if isNodeFull z'
 
 mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeRight z l r = if isNodeFull z'
-                   then Bin x l (setRootHeight 0 r)
+                   then Bin (Just x) l (maybeSetRoot Nothing r)
                    else mergeBoth (goUp . rootZipper $ l') l' r
   where z' = goUp . pruneZipper l . goLeft $ z
         x  = Node { zipper = z'
@@ -97,7 +105,7 @@ mergeRight z l r = if isNodeFull z'
         l' = separateRoot (goLeft z) l
 
 pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-pruneTree z l r = Bin x l r
+pruneTree z l r = Bin (Just x) l r
   where z'  = goUp . pruneZipper l . goLeft $ z
         z'' = goUp . pruneZipper r . goRight $ z'
         x   = Node { zipper = z''
@@ -109,18 +117,18 @@ minHeightMerge z l r
   | not . isNodeFull . rootZipper $ t = error "Unbalanced tree root"
   | pageSize x <= maxPageSize         = t
   | otherwise                         = pruneTree z l r
-  where t         = mergeTree z l r
-        Bin x _ _ = t
-        lht       = rootHeight l
-        rht       = rootHeight r
+  where t                = mergeTree z l r
+        Bin (Just x) _ _ = t
+        lht              = rootHeight l
+        rht              = rootHeight r
         mergeTree | lht == rht = mergeBoth
                   | lht > rht  = mergeLeft
                   | otherwise  = mergeRight
 
 prtnBuild :: Zipper a => a -> MemTree a
-prtnBuild z | isLeaf z  = Leaf Node { zipper = z
-                                    , height = 0
-                                    }
+prtnBuild z | isLeaf z  = Leaf . Just $ Node { zipper = z
+                                             , height = 0
+                                             }
             | otherwise = minHeightMerge z' l r
   where zl  = goLeft z
         l   = prtnBuild zl
@@ -132,20 +140,15 @@ prtnBuild z | isLeaf z  = Leaf Node { zipper = z
 
 
 numOfPages :: MemTree a -> Int
-numOfPages = getSum . foldMap (Sum . addPage)
-  where addPage x = if height x /= 0 then 1 else 0
+numOfPages = getSum . foldMap (Sum . const 1)
 
 memUsage :: Zipper a => MemTree a -> Int
-memUsage = getSum . foldMap (Sum . nodeMemUsage)
-  where nodeMemUsage x = if height x /= 0
-                         then fitToMinPage . pageSize $ x
-                         else 0
-        fitToMinPage s = let k = (s + minPageSize - 1) `div` minPageSize
+memUsage = getSum . foldMap (Sum . fitToMinPage . pageSize)
+  where fitToMinPage s = let k = (s + minPageSize - 1) `div` minPageSize
                          in k * minPageSize
 
 fillSize :: Zipper a => MemTree a -> Int
-fillSize = getSum . foldMap (Sum . nodeFillSize)
-  where nodeFillSize x = if height x /= 0 then pageSize x else 0
+fillSize = getSum . foldMap (Sum . pageSize)
 
 putPrtn :: Zipper a => MemTree a -> IO ()
 putPrtn t = do
