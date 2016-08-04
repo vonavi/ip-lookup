@@ -14,6 +14,7 @@ class Zipper a where
   isLeaf     :: a -> Bool
   isNodeFull :: a -> Bool
   getLabel   :: a -> Maybe Int
+  setLabel   :: Maybe Int -> a -> a
   size       :: a -> Int
   insert     :: a -> a -> a
   delete     :: a -> a

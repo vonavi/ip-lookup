@@ -6,6 +6,7 @@
 module Data.PaCo2PartitionM
   (
     prtnBuild
+  , prtnInsert
   , putPrtn
   ) where
 
@@ -140,6 +141,22 @@ prtnBuild z | isLeaf z  = Leaf . Just $ Node { zipper = z
         r   = prtnBuild zr
         zr' = insert (rootZipper r) zr
         z'  = goUp zr'
+
+prtnInsert :: Zipper a => a -> MemTree a -> MemTree a
+prtnInsert z (Leaf _)           = prtnBuild z
+prtnInsert z t | isLeaf z       = t
+prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
+  where h   = height x
+        zl  = goLeft z
+        l'  = prtnInsert zl $
+              updatePointer Node { zipper = goLeft . zipper $ x, height = h } l
+        zl' = insert (rootZipper l') zl
+        zr  = goRight . goUp $ zl'
+        r'  = prtnInsert zr $
+              updatePointer Node { zipper = goRight . zipper $ x, height = h } r
+        zr' = insert (rootZipper r') zr
+        z'  = goUp zr'
+        s   = getLabel z' <|> getLabel (zipper x)
 
 
 numOfPages :: MemTree a -> Int

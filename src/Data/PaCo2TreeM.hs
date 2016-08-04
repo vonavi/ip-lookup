@@ -220,6 +220,12 @@ instance Zipper PaCo2Zipper where
   getLabel (Bin x _ _, _, _) | skip x == 0 = label x
   getLabel _                               = Nothing
 
+  setLabel s (t@(Bin x l r), es, bs)
+    | skip x == 0 = (Bin x { label = s } l r, es, bs)
+    | isJust s    = (Bin x' { label = s } l' r', es, bs)
+    where Bin x' l' r' = resizeRoot 0 t
+  setLabel _ z    = z
+
   size (t, _, _) = getSum . foldMap (Sum . nodeSize) $ t
 
   insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
