@@ -215,8 +215,6 @@ instance Zipper PaCo2Zipper where
   isLeaf (Tip, _, _) = True
   isLeaf _           = False
 
-  isNodeFull (t, _, _) = isRootFull t
-
   getLabel (Bin x _ _, _, _) | skip x == 0 = label x
   getLabel _                               = Nothing
 
@@ -233,3 +231,7 @@ instance Zipper PaCo2Zipper where
 
   delete (_, es, _ : bs) = (Tip, es, False : bs)
   delete (_, es, [])     = (Tip, es, [])
+
+  isNodeFull (t, _, _) = isRootFull t
+
+  mkNodeFull (t, es, bs) = (mkRootFull t, es, bs)

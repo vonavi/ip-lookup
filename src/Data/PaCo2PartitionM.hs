@@ -71,7 +71,10 @@ pruneZipper (Leaf _) = id
 pruneZipper _        = delete
 
 separateRoot :: Zipper a => a -> MemTree a -> MemTree a
-separateRoot _ t@(Leaf _)         = t
+separateRoot z (Leaf _)           = Bin (Just x) (Leaf Nothing) (Leaf Nothing)
+  where x = Node { zipper = z
+                 , height = 1
+                 }
 separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
   where h   = height x
         l'  = updatePointer Node { zipper = goLeft z, height = h } l
@@ -96,7 +99,7 @@ mergeLeft z l r = if isNodeFull z'
         x  = Node { zipper = z'
                   , height = max (rootHeight l) (succ . rootHeight $ r)
                   }
-        r' = separateRoot (goRight z) r
+        r' = separateRoot (goRight . mkNodeFull $ z) r
 
 mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeRight z l r = if isNodeFull z'
@@ -106,7 +109,7 @@ mergeRight z l r = if isNodeFull z'
         x  = Node { zipper = z'
                   , height = max (succ . rootHeight $ l) (rootHeight r)
                   }
-        l' = separateRoot (goLeft z) l
+        l' = separateRoot (goLeft . mkNodeFull $ z) l
 
 pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 pruneTree z l r = Bin (Just x) l r
