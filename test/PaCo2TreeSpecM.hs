@@ -9,8 +9,8 @@ import           Data.Bits
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.PaCo2TreeM (PaCo2Tree)
-import qualified Data.PaCo2TreeM as PaCo2 hiding (PaCo2Tree)
+import           Data.PaCo2.Tree (PaCo2Tree)
+import qualified Data.PaCo2.Tree as PaCo2 hiding (PaCo2Tree)
 import           RandomPrefixes
 import           TestIpRouter
 
