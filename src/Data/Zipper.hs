@@ -18,12 +18,6 @@ class Zipper a where
   insert     :: a -> a -> a
   delete     :: a -> a
 
-  isNodeFull :: a -> Bool
-  isNodeFull = const True
-
-  mkNodeFull :: a -> a
-  mkNodeFull = id
-
 instance {-# OVERLAPPABLE #-} Zipper a => Show a where
   show z | isLeaf z  = ""
          | otherwise = show (getLabel z) ++ leftStr ++ rightStr

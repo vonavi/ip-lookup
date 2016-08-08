@@ -70,21 +70,6 @@ pruneZipper :: Zipper a => MemTree a -> a -> a
 pruneZipper (Leaf _) = id
 pruneZipper _        = delete
 
-separateRoot :: Zipper a => a -> MemTree a -> MemTree a
-separateRoot z (Leaf _)           = Bin (Just x) (Leaf Nothing) (Leaf Nothing)
-  where x = Node { zipper = z
-                 , height = 1
-                 }
-separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
-  where h   = height x
-        l'  = updatePointer Node { zipper = goLeft z, height = h } l
-        r'  = updatePointer Node { zipper = goRight z, height = h } r
-        z'  = goUp . pruneZipper l . goLeft $ z
-        z'' = goUp . pruneZipper r . goRight $ z'
-        x'  = Node { zipper = z''
-                   , height = succ $ max (rootHeight l') (rootHeight r')
-                   }
-
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
   where x = Node { zipper = z
@@ -92,24 +77,18 @@ mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
                  }
 
 mergeLeft :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-mergeLeft z l r = if isNodeFull z'
-                  then Bin (Just x) (removePointer l) r
-                  else mergeBoth (goUp . rootZipper $ r') l r'
+mergeLeft z l r = Bin (Just x) (removePointer l) r
   where z' = goUp . pruneZipper r . goRight $ z
         x  = Node { zipper = z'
                   , height = max (rootHeight l) (succ . rootHeight $ r)
                   }
-        r' = separateRoot (goRight . mkNodeFull $ z) r
 
 mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-mergeRight z l r = if isNodeFull z'
-                   then Bin (Just x) l (removePointer r)
-                   else mergeBoth (goUp . rootZipper $ l') l' r
+mergeRight z l r = Bin (Just x) l (removePointer r)
   where z' = goUp . pruneZipper l . goLeft $ z
         x  = Node { zipper = z'
                   , height = max (succ . rootHeight $ l) (rootHeight r)
                   }
-        l' = separateRoot (goLeft . mkNodeFull $ z) l
 
 pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 pruneTree z l r = Bin (Just x) l r
@@ -121,9 +100,8 @@ pruneTree z l r = Bin (Just x) l r
 
 minHeightMerge :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 minHeightMerge z l r
-  | not . isNodeFull . rootZipper $ t = error "Unbalanced tree root"
-  | pageSize x <= maxPageSize         = t
-  | otherwise                         = pruneTree z l r
+  | pageSize x <= maxPageSize = t
+  | otherwise                 = pruneTree z l r
   where t                = mergeTree z l r
         Bin (Just x) _ _ = t
         lht              = rootHeight l
