@@ -145,9 +145,19 @@ prtnBuild z | isLeaf z  = Leaf . Just $ Node { zipper = z
         zr' = insert (rootZipper r) zr
         z'  = goUp zr'
 
+undoSeparateRoot :: Zipper a => MemTree a -> MemTree a
+undoSeparateRoot t@(Bin (Just x) l r)
+  | Bin (Just xl) _ _ <- l, Bin (Just xr) _ _ <- r = merge xl xr
+  | Leaf (Just xl)    <- l, Bin (Just xr) _ _ <- r = merge xl xr
+  | Bin (Just xl) _ _ <- l, Leaf (Just xr)    <- r = merge xl xr
+  | otherwise                                      = t
+  where merge yl yr = minHeightMerge (goUp zr) l r
+          where zl = insert (zipper yl) . goLeft . zipper $ x
+                zr = insert (zipper yr) . goRight . goUp $ zl
+
 prtnInsert :: Zipper a => a -> MemTree a -> MemTree a
 prtnInsert z (Leaf _)           = prtnBuild z
-prtnInsert z t | isLeaf z       = t
+prtnInsert z t | isLeaf z       = undoSeparateRoot t
 prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
   where h   = height x
         zl  = goLeft z
