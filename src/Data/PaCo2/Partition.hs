@@ -70,20 +70,28 @@ pruneZipper :: Zipper a => MemTree a -> a -> a
 pruneZipper (Leaf _) = id
 pruneZipper _        = delete
 
+delEmptyPage :: Zipper a => MemTree a -> MemTree a
+delEmptyPage (Bin (Just x) Leaf{} Leaf{})
+  | Nothing <- getLabel . zipper $ x = Leaf Nothing
+delEmptyPage t                       = t
+
+pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
+pruneTree z l r = Bin (Just x) (delEmptyPage l) (delEmptyPage r)
+  where z'  = goUp . pruneZipper l . goLeft $ z
+        z'' = goUp . pruneZipper r . goRight $ z'
+        x   = Node { zipper = z''
+                   , height = succ $ max (rootHeight l) (rootHeight r)
+                   }
+
 separateRoot :: Zipper a => a -> MemTree a -> MemTree a
 separateRoot z (Leaf _)           = Bin (Just x) (Leaf Nothing) (Leaf Nothing)
   where x = Node { zipper = z
                  , height = 1
                  }
-separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
-  where h   = height x
-        l'  = updatePointer Node { zipper = goLeft z, height = h } l
-        r'  = updatePointer Node { zipper = goRight z, height = h } r
-        z'  = goUp . pruneZipper l . goLeft $ z
-        z'' = goUp . pruneZipper r . goRight $ z'
-        x'  = Node { zipper = z''
-                   , height = succ $ max (rootHeight l') (rootHeight r')
-                   }
+separateRoot z (Bin (Just x) l r) = pruneTree z l' r'
+  where h  = height x
+        l' = updatePointer Node { zipper = goLeft z, height = h } l
+        r' = updatePointer Node { zipper = goRight z, height = h } r
 
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
@@ -110,14 +118,6 @@ mergeRight z l r = if isNodeFull z'
                   , height = max (succ . rootHeight $ l) (rootHeight r)
                   }
         l' = separateRoot (goLeft . mkNodeFull $ z) l
-
-pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-pruneTree z l r = Bin (Just x) l r
-  where z'  = goUp . pruneZipper l . goLeft $ z
-        z'' = goUp . pruneZipper r . goRight $ z'
-        x   = Node { zipper = z''
-                   , height = succ $ max (rootHeight l) (rootHeight r)
-                   }
 
 minHeightMerge :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 minHeightMerge z l r
