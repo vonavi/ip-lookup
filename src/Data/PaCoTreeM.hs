@@ -155,7 +155,7 @@ type PaCoZipper = (,,) PaCoTree
 The node size of path-compressed 2-tree is built from the following
 parts:
 
-    * open/close parenthesis (1 bit);
+    * parenthesis expression (2 bits);
 
     * Elias gamma code of skip value (the skip value should be
       increased by one);
@@ -168,7 +168,7 @@ parts:
 -}
 nodeSize :: Node -> Int
 nodeSize Node { skip = k, label = s } =
-  1 + (BMP.size . encodeEliasGamma . succ $ k) +
+  2 + (BMP.size . encodeEliasGamma . succ $ k) +
   k + 1 + if isJust s then 18 else 0
 
 zipper :: PaCoTree -> PaCoZipper
