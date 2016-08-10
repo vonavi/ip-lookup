@@ -29,13 +29,13 @@ instance Foldable Tree where
                           foldMap f l <> foldMap f r
 
 instance Zipper a => Show (MemTree a) where
-  show t = case t of
-             Leaf x    -> "Leaf " ++ nodeToStr x
-             Bin x l r -> "Bin " ++ nodeToStr x ++
-                          " (" ++ show l ++ ") (" ++ show r ++ ")"
-    where nodeToStr (Just x) = "(Just Node {zipper = " ++ show (zipper x) ++
-                               ", height = " ++ show (height x) ++ "})"
-          nodeToStr Nothing  = "Nothing"
+  show (Leaf _) = ""
+  show t        = tail . helper $ t
+    where helper (Leaf _)    = ""
+          helper (Bin x l r) = fromMaybe (helper l ++ helper r) $ binToStr <$> x
+            where binToStr y = " (Branch (Node {zipper = " ++ show (zipper y) ++
+                               ", height = " ++ show (height y) ++ "})" ++
+                               helper l ++ helper r ++ ")"
 
 
 rootZipper :: Zipper a => MemTree a -> a
