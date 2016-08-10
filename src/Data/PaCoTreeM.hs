@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Data.PaCo2TreeM
+module Data.PaCoTreeM
   (
     Node(..)
   , Tree(..)
-  , PaCo2Tree
+  , PaCoTree
   , zipper
   ) where
 
@@ -34,27 +34,27 @@ instance Eq Node where
 
 
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
-type PaCo2Tree = Tree Node
+type PaCoTree = Tree Node
 
 instance Foldable Tree where
   foldMap _ Tip         = mempty
   foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
-isRootFull :: PaCo2Tree -> Bool
+isRootFull :: PaCoTree -> Bool
 isRootFull (Bin _ Tip Tip) = True
 isRootFull (Bin _ Tip _)   = False
 isRootFull (Bin _ _ Tip)   = False
 isRootFull _               = True
 
-emptyBranch :: PaCo2Tree
+emptyBranch :: PaCoTree
 emptyBranch = Bin emptyRoot Tip Tip
   where emptyRoot = Node { skip   = 0
                          , string = 0
                          , label  = Nothing
                          }
 
-mkRootFull :: PaCo2Tree -> PaCo2Tree
+mkRootFull :: PaCoTree -> PaCoTree
 mkRootFull t@(Bin _ Tip Tip) = t
 mkRootFull (Bin x Tip r)     = Bin x emptyBranch r
 mkRootFull (Bin x l Tip)     = Bin x l emptyBranch
@@ -72,13 +72,13 @@ joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
         setter = if b then setBit else clearBit
         str    = (shead .|. slast) `setter` (32 - w)
 
-uniteRoot :: PaCo2Tree -> PaCo2Tree
+uniteRoot :: PaCoTree -> PaCoTree
 uniteRoot t@(Bin x _ _) | isJust (label x) = t
 uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
 uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
 uniteRoot t                                = t
 
-resizeRoot :: Int -> PaCo2Tree -> PaCo2Tree
+resizeRoot :: Int -> PaCoTree -> PaCoTree
 resizeRoot k (Bin x l r) | k < kx = tree
   where kx    = skip x
         vx    = string x
@@ -95,7 +95,7 @@ resizeRoot k (Bin x l r) | k < kx = tree
                 else Bin xhead (Bin xtail l r) Tip
 resizeRoot _ tree = tree
 
-instance Monoid PaCo2Tree where
+instance Monoid PaCoTree where
   mempty = Tip
 
   Tip `mappend` t  = t
@@ -114,7 +114,7 @@ instance Monoid PaCo2Tree where
                   node         = x' { label = label x' <|> label y' }
 
 
-fromEntry :: Entry -> PaCo2Tree
+fromEntry :: Entry -> PaCoTree
 fromEntry (Entry p n) = Bin node Tip Tip
   where Prefix (Address a) (Mask m) = p
         node                        = Node { skip   = m
@@ -122,9 +122,9 @@ fromEntry (Entry p n) = Bin node Tip Tip
                                            , label  = Just n
                                            }
 
-lookupState :: Address -> PaCo2Tree -> State (Maybe Int) ()
+lookupState :: Address -> PaCoTree -> State (Maybe Int) ()
 lookupState (Address a) = helper a
-  where helper :: Word32 -> PaCo2Tree -> State (Maybe Int) ()
+  where helper :: Word32 -> PaCoTree -> State (Maybe Int) ()
         helper v (Bin x l r) | k < kx    = return ()
                              | otherwise = do
                                  modify (label x <|>)
@@ -134,7 +134,7 @@ lookupState (Address a) = helper a
                 k  = countLeadingZeros $ v `xor` string x
         helper _ Tip                     = return ()
 
-delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
+delSubtree :: PaCoTree -> PaCoTree -> PaCoTree
 Tip `delSubtree` _ = Tip
 t `delSubtree` Tip = uniteRoot t
 tx `delSubtree` ty = mkRootFull . uniteRoot $
@@ -153,7 +153,7 @@ tx `delSubtree` ty = mkRootFull . uniteRoot $
         labelDiff (Just sx) (Just sy) | sx == sy = Nothing
         labelDiff sx        _                    = sx
 
-instance IpRouter PaCo2Tree where
+instance IpRouter PaCoTree where
   mkTable = foldr insEntry mempty
 
   insEntry = mappend . fromEntry
@@ -166,9 +166,9 @@ instance IpRouter PaCo2Tree where
     where addPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
-type PaCo2Zipper = (,,) PaCo2Tree
-                   [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
-                   [Bool]
+type PaCoZipper = (,,) PaCoTree
+                  [Either (Node, PaCoTree) (Node, PaCoTree)]
+                  [Bool]
 
 {-|
 The node size of path-compressed 2-tree is built from the following
@@ -190,10 +190,10 @@ nodeSize Node { skip = k, label = s } =
   1 + (BMP.size . encodeEliasGamma . succ $ k) +
   k + 1 + if isJust s then 18 else 0
 
-zipper :: PaCo2Tree -> PaCo2Zipper
+zipper :: PaCoTree -> PaCoZipper
 zipper t = (t, [], [])
 
-instance Zipper PaCo2Zipper where
+instance Zipper PaCoZipper where
   goLeft (t, es, bs) = case resizeRoot 0 t of
                          Bin x l r -> (l, Right (x, r) : es, True : bs)
                          Tip       -> error "Tried to go left from a leaf"

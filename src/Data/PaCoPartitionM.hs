@@ -3,7 +3,7 @@
 {-# LANGUAGE IncoherentInstances #-}
 {-# LANGUAGE Rank2Types          #-}
 
-module Data.PaCo2PartitionM
+module Data.PaCoPartitionM
   (
     prtnBuild
   , prtnInsert
@@ -175,7 +175,7 @@ fillSize = getSum . foldMap (Sum . pageSize)
 
 putPrtn :: Zipper a => MemTree a -> IO ()
 putPrtn t = do
-  putStrLn "Partition of path-compressed 2-tree"
+  putStrLn "Partition of path-compressed tree"
   putStrLn . (++) "  Height:             " . show . rootHeight $ t
   putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
   putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
