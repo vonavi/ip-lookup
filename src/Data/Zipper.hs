@@ -6,6 +6,8 @@ module Data.Zipper
     Zipper(..)
   ) where
 
+import           Data.Function (on)
+
 class Zipper a where
   goLeft   :: a -> a
   goRight  :: a -> a
@@ -24,3 +26,15 @@ instance {-# OVERLAPPABLE #-} Zipper a => Show a where
                      in if null s then "" else " (L: " ++ s ++ ")"
           rightStr = let s = show . goRight $ z
                      in if null s then "" else " (R: " ++ s ++ ")"
+
+instance {-# OVERLAPPABLE #-} Zipper a => Eq a where
+  z1 == z2
+    | isLeaf z1 && isLeaf z2 = True
+    | Nothing <- getLabel z1
+    , Nothing <- getLabel z2 = cmpSubtrees z1 z2
+    | Just s1 <- getLabel z1
+    , Just s2 <- getLabel z2
+    , s1 == s2               = cmpSubtrees z1 z2
+    | otherwise              = False
+    where cmpSubtrees x1 x2 = ((==) `on` goLeft) x1 x2 &&
+                              ((==) `on` goRight) x1 x2

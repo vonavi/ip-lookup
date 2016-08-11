@@ -30,7 +30,6 @@ main = do
   hspec paCo2PrtnIpRouterSpec
 
   hspec paCoPrtnIpRouterSpec
-  hspec paCoPrtnCheckSpec
 
   hspec ordPrtnIpRouterSpec
   hspec ordPrtnCheckSpec

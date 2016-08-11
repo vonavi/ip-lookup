@@ -12,6 +12,7 @@ module Data.PaCoPartitionM
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Function       (on)
 import           Data.Maybe          (fromMaybe, isNothing)
 import           Data.Monoid
 
@@ -20,6 +21,10 @@ import           Data.Zipper
 
 data Node a where
   Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
+
+instance Zipper a => Eq (Node a) where
+  x1 == x2 = ((==) `on` zipper) x1 x2 && ((==) `on` height) x1 x2
+
 data Tree a = Leaf (Maybe a)
             | Bin (Maybe a) (Tree a) (Tree a)
             deriving Eq
@@ -38,6 +43,13 @@ instance Zipper a => Show (MemTree a) where
             where binToStr y = " (Branch (Node {zipper = " ++ show (zipper y) ++
                                ", height = " ++ show (height y) ++ "})" ++
                                helper l ++ helper r ++ ")"
+
+instance Zipper a => Eq (MemTree a) where
+  (Leaf _)              == (Leaf _)              = True
+  (Bin Nothing l1 r1)   == (Bin Nothing l2 r2)   = l1 == l2 && r1 == r2
+  (Bin (Just x1) l1 r1) == (Bin (Just x2) l2 r2) = x1 == x2 &&
+                                                   l1 == l2 && r1 == r2
+  _                     == _                     = False
 
 
 rootZipper :: Zipper a => MemTree a -> a
