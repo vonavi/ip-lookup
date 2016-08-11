@@ -6,6 +6,7 @@ module Data.PaCoTreeM
   , Tree(..)
   , PaCoTree
   , PaCoZipper
+  , putPaCoTree
   ) where
 
 import           Control.Applicative     ((<|>))
@@ -167,10 +168,16 @@ parts:
 
     * RE index (18 bits) if the prefix bit is set.
 -}
-nodeSize :: Node -> Int
-nodeSize Node { skip = k, label = s } =
-  2 + (BMP.size . encodeEliasGamma . succ $ k) +
-  k + 1 + if isJust s then 18 else 0
+eliasGammaSize :: PaCoTree -> Int
+eliasGammaSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          2 + (BMP.size . encodeEliasGamma . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
+
+putPaCoTree :: PaCoTree -> IO ()
+putPaCoTree t = do
+  putStrLn "Size of path-compressed tree"
+  putStrLn . (++) "  Elias gamma coding " . show . eliasGammaSize $ t
 
 
 type PaCoZipper = (,,) PaCoTree
@@ -212,7 +219,7 @@ instance Zipper PaCoZipper where
     where Bin x' l' r' = resizeRoot 0 t
   setLabel _ z    = z
 
-  size (t, _, _) = getSum . foldMap (Sum . nodeSize) $ t
+  size (t, _, _) = eliasGammaSize t
 
   insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
   insert (t, _, _) (_, es, [])     = (t, es, [])
