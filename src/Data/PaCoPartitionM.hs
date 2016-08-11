@@ -5,16 +5,17 @@
 
 module Data.PaCoPartitionM
   (
-    prtnBuild
-  , prtnInsert
-  , prtnDelete
+    MemTree
   , putPrtn
   ) where
 
 import           Control.Applicative ((<|>))
+import           Control.Monad.State
+import           Data.Bits
 import           Data.Maybe          (fromMaybe, isNothing)
 import           Data.Monoid
 
+import           Data.IpRouter
 import           Data.Zipper
 
 data Node a where
@@ -174,6 +175,26 @@ prtnDelete z (Bin (Just x) l r) = delEmptyPage $
         z'  = goUp zr'
         s   = delLabel (zipper x) z'
 
+lookupState :: Zipper a => Address -> MemTree a -> State (Maybe Int) ()
+lookupState (Address a) = helper 31
+  where helper _ (Leaf _)           = return ()
+        helper n (Bin (Just x) l r) = do
+          modify (getLabel z <|>)
+          if a `testBit` n
+            then helper (pred n) $
+                 updatePointer Node { zipper = goRight z, height = h } r
+            else helper (pred n) $
+                 updatePointer Node { zipper = goLeft z, height = h } l
+            where z = zipper x
+                  h = height x
+
+instance (IpRouter a, Zipper a) => IpRouter (MemTree a) where
+  mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
+  insEntry e    = prtnInsert (mkTable [e] :: IpRouter a => a)
+  delEntry e    = prtnDelete (mkTable [e] :: IpRouter a => a)
+  ipLookup a t  = execState (lookupState a t) Nothing
+  numOfPrefixes = getSum . foldMap (Sum . numOfPrefixes . zipper)
+
 
 numOfPages :: MemTree a -> Int
 numOfPages = getSum . foldMap (Sum . const 1)
@@ -186,9 +207,10 @@ memUsage = getSum . foldMap (Sum . fitToMinPage . pageSize)
 fillSize :: Zipper a => MemTree a -> Int
 fillSize = getSum . foldMap (Sum . pageSize)
 
-putPrtn :: Zipper a => MemTree a -> IO ()
+putPrtn :: (IpRouter a, Zipper a) => MemTree a -> IO ()
 putPrtn t = do
   putStrLn "Partition of path-compressed tree"
+  putStrLn . (++) "  Number of prefixes " . show . numOfPrefixes $ t
   putStrLn . (++) "  Height             " . show . rootHeight $ t
   putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
   putStrLn . (++) "  Memory usage       " . show . memUsage $ t
