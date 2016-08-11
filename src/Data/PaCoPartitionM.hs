@@ -7,11 +7,12 @@ module Data.PaCoPartitionM
   (
     prtnBuild
   , prtnInsert
+  , prtnDelete
   , putPrtn
   ) where
 
 import           Control.Applicative ((<|>))
-import           Data.Maybe          (fromMaybe)
+import           Data.Maybe          (fromMaybe, isNothing)
 import           Data.Monoid
 
 import           Data.Zipper
@@ -138,6 +139,40 @@ prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
         zr' = insert (rootZipper r') zr
         z'  = goUp zr'
         s   = getLabel z' <|> getLabel (zipper x)
+
+delEmptyPage :: Zipper a => MemTree a -> MemTree a
+delEmptyPage t
+  | (Bin (Just x) Leaf{} Leaf{}) <- t
+  , isNothing . getLabel . zipper $ x
+    = Leaf . Just $ Node { zipper = delete . zipper $ x
+                         , height = 0
+                         }
+  | otherwise
+    = t
+
+delLabel :: Zipper a => a -> a -> Maybe Int
+delLabel z1 z2
+  | Just s1 <- getLabel z1
+  , Just s2 <- getLabel z2
+  , s1 == s2               = Nothing
+  | otherwise              = getLabel z1
+
+prtnDelete :: Zipper a => a -> MemTree a -> MemTree a
+prtnDelete _ t@(Leaf _)         = t
+prtnDelete z t | isLeaf z       = t
+prtnDelete z (Bin (Just x) l r) = delEmptyPage $
+                                  minHeightMerge (setLabel s z') l' r'
+  where h   = height x
+        zl  = goLeft z
+        l'  = prtnDelete zl $
+              updatePointer Node { zipper = goLeft . zipper $ x, height = h } l
+        zl' = insert (rootZipper l') zl
+        zr  = goRight . goUp $ zl'
+        r'  = prtnDelete zr $
+              updatePointer Node { zipper = goRight . zipper $ x, height = h } r
+        zr' = insert (rootZipper r') zr
+        z'  = goUp zr'
+        s   = delLabel (zipper x) z'
 
 
 numOfPages :: MemTree a -> Int
