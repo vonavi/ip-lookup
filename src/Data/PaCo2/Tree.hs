@@ -11,6 +11,7 @@ module Data.PaCo2.Tree
 import           Control.Applicative     ((<|>))
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool               (bool)
 import           Data.Maybe              (isJust)
 import           Data.Monoid
 import           Data.Word
@@ -24,14 +25,17 @@ data Node = Node { skip   :: Int
                  , string :: Word32
                  , label  :: Maybe Int
                  }
-          deriving Show
+
+instance Show Node where
+  show Node { skip = k, string = v, label = s } =
+    "(Node {bitmap = \"" ++ bmp ++ "\", label = " ++ show s ++ "})"
+    where bmp = map (bool '0' '1' . (v `testBit`)) [31, 30 .. (32 - k)]
 
 instance Eq Node where
   x == y = kx == ky && n >= kx && label x == label y
     where kx = skip x
           ky = skip y
           n  = countLeadingZeros $ string x `xor` string y
-
 
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
 type PaCo2Tree = Tree Node
@@ -169,6 +173,9 @@ instance IpRouter PaCo2Tree where
 type PaCo2Zipper = (,,) PaCo2Tree
                    [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
                    [Bool]
+
+instance {-# OVERLAPPING #-} Show PaCo2Zipper where
+  show (t, _, _) = show t
 
 {-|
 The node size of path-compressed 2-tree is built from the following
