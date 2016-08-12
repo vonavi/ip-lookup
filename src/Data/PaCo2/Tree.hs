@@ -5,7 +5,7 @@ module Data.PaCo2.Tree
     Node(..)
   , Tree(..)
   , PaCo2Tree
-  , zipper
+  , PaCo2Zipper
   ) where
 
 import           Control.Applicative     ((<|>))
@@ -170,13 +170,6 @@ instance IpRouter PaCo2Tree where
     where addPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
-type PaCo2Zipper = (,,) PaCo2Tree
-                   [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
-                   [Bool]
-
-instance {-# OVERLAPPING #-} Show PaCo2Zipper where
-  show (t, _, _) = show t
-
 {-|
 The node size of path-compressed 2-tree is built from the following
 parts:
@@ -197,8 +190,20 @@ nodeSize Node { skip = k, label = s } =
   1 + (BMP.size . encodeEliasGamma . succ $ k) +
   k + 1 + if isJust s then 18 else 0
 
-zipper :: PaCo2Tree -> PaCo2Zipper
-zipper t = (t, [], [])
+
+type PaCo2Zipper = (,,) PaCo2Tree
+                   [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
+                   [Bool]
+
+instance {-# OVERLAPPING #-} Show PaCo2Zipper where
+  show (t, _, _) = show t
+
+instance IpRouter PaCo2Zipper where
+  mkTable es              = (mkTable es, [], [])
+  insEntry e (t, _, _)    = (insEntry e t, [], [])
+  delEntry e (t, _, _)    = (delEntry e t, [], [])
+  ipLookup e (t, _, _)    = ipLookup e t
+  numOfPrefixes (t, _, _) = numOfPrefixes t
 
 instance Zipper PaCo2Zipper where
   goLeft (t, es, bs) = case resizeRoot 0 t of
