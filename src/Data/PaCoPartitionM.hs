@@ -1,7 +1,5 @@
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE IncoherentInstances #-}
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Data.PaCoPartitionM
   (
@@ -12,44 +10,35 @@ module Data.PaCoPartitionM
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bits
-import           Data.Function       (on)
 import           Data.Maybe          (fromMaybe, isNothing)
 import           Data.Monoid
 
 import           Data.IpRouter
 import           Data.Zipper
 
-data Node a where
-  Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
-
-instance Zipper a => Eq (Node a) where
-  x1 == x2 = ((==) `on` zipper) x1 x2 && ((==) `on` height) x1 x2
-
+data Node a = Node { zipper :: a
+                   , height :: Int
+                   }
+            deriving (Show, Eq)
 data Tree a = Leaf (Maybe a)
             | Bin (Maybe a) (Tree a) (Tree a)
             deriving Eq
 type MemTree a = Tree (Node a)
 
+instance Show a => Show (Tree a) where
+  show = head . nodeList
+    where nodeList (Leaf _)           = []
+          nodeList (Bin Nothing l r)  = nodeList l ++ nodeList r
+          nodeList (Bin (Just x) l r) = ["Branch (" ++ show x ++ ", [" ++
+                                         accStr (nodeList l ++ nodeList r) ++
+                                         "])"]
+            where accStr [] = ""
+                  accStr xs = drop 2 . concatMap (", " ++) $ xs
+
 instance Foldable Tree where
   foldMap _ (Leaf _)    = mempty
   foldMap f (Bin x l r) = fromMaybe mempty (f <$> x) <>
                           foldMap f l <> foldMap f r
-
-instance Zipper a => Show (MemTree a) where
-  show (Leaf _) = ""
-  show t        = tail . helper $ t
-    where helper (Leaf _)    = ""
-          helper (Bin x l r) = fromMaybe (helper l ++ helper r) $ binToStr <$> x
-            where binToStr y = " (Branch (Node {zipper = " ++ show (zipper y) ++
-                               ", height = " ++ show (height y) ++ "})" ++
-                               helper l ++ helper r ++ ")"
-
-instance Zipper a => Eq (MemTree a) where
-  (Leaf _)              == (Leaf _)              = True
-  (Bin Nothing l1 r1)   == (Bin Nothing l2 r2)   = l1 == l2 && r1 == r2
-  (Bin (Just x1) l1 r1) == (Bin (Just x2) l2 r2) = x1 == x2 &&
-                                                   l1 == l2 && r1 == r2
-  _                     == _                     = False
 
 
 rootZipper :: Zipper a => MemTree a -> a

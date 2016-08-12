@@ -12,6 +12,7 @@ module Data.PaCoTreeM
 import           Control.Applicative     ((<|>))
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool               (bool)
 import           Data.Maybe              (isJust)
 import           Data.Monoid
 import           Data.Word
@@ -25,14 +26,17 @@ data Node = Node { skip   :: Int
                  , string :: Word32
                  , label  :: Maybe Int
                  }
-          deriving Show
+
+instance Show Node where
+  show Node { skip = k, string = v, label = s } =
+    "(Node {bitmap = \"" ++ bmp ++ "\", label = " ++ show s ++ "})"
+    where bmp = map (bool '0' '1' . (v `testBit`)) [31, 30 .. (32 - k)]
 
 instance Eq Node where
   x == y = kx == ky && n >= kx && label x == label y
     where kx = skip x
           ky = skip y
           n  = countLeadingZeros $ string x `xor` string y
-
 
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
 type PaCoTree = Tree Node
@@ -183,6 +187,9 @@ putPaCoTree t = do
 type PaCoZipper = (,,) PaCoTree
                   [Either (Node, PaCoTree) (Node, PaCoTree)]
                   [Bool]
+
+instance {-# OVERLAPPING #-} Show PaCoZipper where
+  show (t, _, _) = show t
 
 instance IpRouter PaCoZipper where
   mkTable es              = (mkTable es, [], [])
