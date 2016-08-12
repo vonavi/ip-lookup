@@ -6,7 +6,7 @@ import           BinTreeSpec
 import           OrdPartitionSpec
 import           OrdTreeSpec
 import           PaCo2PartitionSpec
-import           PaCo2TreeSpecM
+import           PaCo2TreeSpec
 import           PaCoPartitionSpec
 import           PaCoTreeSpec
 import           TableSpec
