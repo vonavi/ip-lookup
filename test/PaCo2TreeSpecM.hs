@@ -5,28 +5,12 @@ module PaCo2TreeSpecM
        ) where
 
 import           Control.Monad   (zipWithM_)
-import           Data.Bits
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.PaCo2.Tree (PaCo2Tree)
-import qualified Data.PaCo2.Tree as PaCo2 hiding (PaCo2Tree)
+import           Data.PaCo2.Tree
 import           RandomPrefixes
 import           TestIpRouter
-
-data Node = Node { list :: [Bool]
-                 , pref :: Maybe Int
-                 } deriving (Show, Eq)
-data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
-
-fromPaCo2Tree :: PaCo2Tree -> Tree Node
-fromPaCo2Tree (PaCo2.Bin x l r) = Bin x' (fromPaCo2Tree l) (fromPaCo2Tree r)
-  where PaCo2.Node { PaCo2.skip = k, PaCo2.string = v, PaCo2.label = p } = x
-        bs = map (\n -> v `testBit` (31 - n)) [0 .. pred k]
-        x' = Node { list = bs
-                  , pref = p
-                  }
-fromPaCo2Tree PaCo2.Tip         = Tip
 
 testEntries :: [Entry]
 testEntries = map toEntry l
@@ -46,180 +30,220 @@ testPaCo2Trees = scanr insEntry (mkTable []) . reverse $ testEntries
 testPaCo2Tree5 :: PaCo2Tree
 testPaCo2Tree5 = head testPaCo2Trees
 
-refTree0 :: Tree Node
-refTree0 = Bin Node { list = [False]
-                    , pref = Just 0
-                    }
-               Tip
-               Tip
+refPaCo2Tree0 :: PaCo2Tree
+refPaCo2Tree0 = Bin Node { skip   = 1
+                         , string = 0
+                         , label  = Just 0
+                         }
+                    Tip
+                    Tip
 
-refTree1 :: Tree Node
-refTree1 = Bin Node { list = [False]
-                    , pref = Just 0
-                    }
-               (Bin Node { list = []
-                         , pref = Nothing
+refPaCo2Tree1 :: PaCo2Tree
+refPaCo2Tree1 = Bin Node { skip   = 1
+                         , string = 2130706432
+                         , label  = Just 0
                          }
-                    Tip
-                    Tip)
-               (Bin Node { list = []
-                         , pref = Just 1
-                         }
-                    Tip
-                    Tip)
-
-refTree2 :: Tree Node
-refTree2 = Bin Node { list = [False]
-                    , pref = Just 0
-                    }
-               (Bin Node { list = []
-                         , pref = Nothing
-                         }
-                    Tip
-                    Tip)
-               (Bin Node { list = []
-                         , pref = Just 1
-                         }
-                    (Bin Node { list = []
-                              , pref = Nothing
+                    (Bin Node { skip   = 0
+                              , string = 0
+                              , label  = Nothing
                               }
                          Tip
                          Tip)
-                    (Bin Node { list = [False]
-                              , pref = Just 2
-                              }
-                         Tip
-                         Tip))
-
-refTree3 :: Tree Node
-refTree3 = Bin Node { list = []
-                    , pref = Nothing
-                    }
-               (Bin Node { list = []
-                         , pref = Just 0
-                         }
-                    (Bin Node { list = []
-                              , pref = Nothing
+                    (Bin Node { skip   = 0
+                              , string = 4227858432
+                              , label  = Just 1
                               }
                          Tip
                          Tip)
-                    (Bin Node { list = []
-                              , pref = Just 1
+
+refPaCo2Tree2 :: PaCo2Tree
+refPaCo2Tree2 = Bin Node { skip   = 1
+                         , string = 1862270976
+                         , label  = Just 0
+                         }
+                    (Bin Node { skip   = 0
+                              , string = 0
+                              , label  = Nothing
                               }
-                         (Bin Node { list = []
-                                   , pref = Nothing
+                         Tip
+                         Tip)
+                    (Bin Node { skip   = 0
+                              , string = 3154116608
+                              , label  = Just 1
+                              }
+                         (Bin Node { skip   = 0
+                                   , string = 0
+                                   , label  = Nothing
                                    }
                               Tip
                               Tip)
-                         (Bin Node { list = [False]
-                                   , pref = Just 2
+                         (Bin Node { skip   = 1
+                                   , string = 2013265920
+                                   , label  = Just 2
                                    }
                               Tip
-                              Tip)))
-               (Bin Node { list = []
-                         , pref = Just 3
-                         }
-                    Tip
-                    Tip)
+                              Tip))
 
-refTree4 :: Tree Node
-refTree4 = Bin Node { list = []
-                    , pref = Nothing
-                    }
-               (Bin Node { list = []
-                         , pref = Just 0
+refPaCo2Tree3 :: PaCo2Tree
+refPaCo2Tree3 = Bin Node { skip   = 0
+                         , string = 4278190080
+                         , label  = Nothing
                          }
-                    (Bin Node { list = []
-                              , pref = Nothing
+                    (Bin Node { skip   = 0
+                              , string = 3724541952
+                              , label  = Just 0
                               }
-                         Tip
-                         Tip)
-                    (Bin Node { list = []
-                              , pref = Just 1
-                              }
-                         (Bin Node { list = []
-                                   , pref = Nothing
+                         (Bin Node { skip   = 0
+                                   , string = 0
+                                   , label  = Nothing
                                    }
                               Tip
                               Tip)
-                         (Bin Node { list = [False]
-                                   , pref = Just 2
+                         (Bin Node { skip   = 0
+                                   , string = 3154116608
+                                   , label  = Just 1
                                    }
-                              Tip
-                              Tip)))
-               (Bin Node { list = []
-                         , pref = Just 3
-                         }
-                    (Bin Node { list = []
-                              , pref = Nothing
+                              (Bin Node { skip   = 0
+                                        , string = 0
+                                        , label  = Nothing
+                                        }
+                                   Tip
+                                   Tip)
+                              (Bin Node { skip   = 1
+                                        , string = 2013265920
+                                        , label  = Just 2
+                                        }
+                                   Tip
+                                   Tip)))
+                    (Bin Node { skip   = 0
+                              , string = 4261412864
+                              , label  = Just 3
                               }
                          Tip
                          Tip)
-                    (Bin Node { list = [False, True]
-                              , pref = Just 4
-                              }
-                         Tip
-                         Tip))
 
-refTree5 :: Tree Node
-refTree5 = Bin Node { list = []
-                    , pref = Nothing
-                    }
-               (Bin Node { list = []
-                         , pref = Just 0
+refPaCo2Tree4 :: PaCo2Tree
+refPaCo2Tree4 = Bin Node { skip   = 0
+                         , string = 3741319168
+                         , label  = Nothing
                          }
-                    (Bin Node { list = []
-                              , pref = Nothing
+                    (Bin Node { skip   = 0
+                              , string = 3724541952
+                              , label  = Just 0
                               }
-                         Tip
-                         Tip)
-                    (Bin Node { list = []
-                              , pref = Just 1
-                              }
-                         (Bin Node { list = []
-                                   , pref = Nothing
+                         (Bin Node { skip   = 0
+                                   , string = 0
+                                   , label  = Nothing
                                    }
                               Tip
                               Tip)
-                         (Bin Node { list = [False]
-                                   , pref = Just 2
+                         (Bin Node { skip   = 0
+                                   , string = 3154116608
+                                   , label  = Just 1
                                    }
-                              Tip
-                              Tip)))
-               (Bin Node { list = []
-                         , pref = Just 3
-                         }
-                    (Bin Node { list = []
-                              , pref = Nothing
+                              (Bin Node { skip   = 0
+                                        , string = 0
+                                        , label  = Nothing
+                                        }
+                                   Tip
+                                   Tip)
+                              (Bin Node { skip   = 1
+                                        , string = 2013265920
+                                        , label  = Just 2
+                                        }
+                                   Tip
+                                   Tip)))
+                    (Bin Node { skip   = 0
+                              , string = 3187671040
+                              , label  = Just 3
                               }
-                         Tip
-                         Tip)
-                    (Bin Node { list = [False, True]
-                              , pref = Just 4
-                              }
-                         (Bin Node { list = []
-                                   , pref = Nothing
+                         (Bin Node { skip   = 0
+                                   , string = 0
+                                   , label  = Nothing
                                    }
                               Tip
                               Tip)
-                         (Bin Node { list = []
-                                   , pref = Just 5
+                         (Bin Node { skip   = 2
+                                   , string = 2080374784
+                                   , label  = Just 4
                                    }
                               Tip
-                              Tip)))
+                              Tip))
+
+refPaCo2Tree5 :: PaCo2Tree
+refPaCo2Tree5 = Bin Node { skip   = 0
+                         , string = 3741319168
+                         , label  = Nothing
+                         }
+                    (Bin Node { skip   = 0
+                              , string = 3724541952
+                              , label  = Just 0
+                              }
+                         (Bin Node { skip   = 0
+                                   , string = 0
+                                   , label  = Nothing
+                                   }
+                              Tip
+                              Tip)
+                         (Bin Node { skip   = 0
+                                   , string = 3154116608
+                                   , label  = Just 1
+                                   }
+                              (Bin Node { skip   = 0
+                                        , string = 0
+                                        , label  = Nothing
+                                        }
+                                   Tip
+                                   Tip)
+                              (Bin Node { skip   = 1
+                                        , string = 2013265920
+                                        , label  = Just 2
+                                        }
+                                   Tip
+                                   Tip)))
+                    (Bin Node { skip   = 0
+                              , string = 3187671040
+                              , label  = Just 3
+                              }
+                         (Bin Node { skip   = 0
+                                   , string = 0
+                                   , label  = Nothing
+                                   }
+                              Tip
+                              Tip)
+                         (Bin Node { skip   = 2
+                                   , string = 2080374784
+                                   , label  = Just 4
+                                   }
+                              (Bin Node { skip   = 0
+                                        , string = 0
+                                        , label  = Nothing
+                                        }
+                                   Tip
+                                   Tip)
+                              (Bin Node { skip   = 0
+                                        , string = 3758096384
+                                        , label  = Just 5
+                                        }
+                                   Tip
+                                   Tip)))
 
 
 paCo2TreeSpec :: Spec
 paCo2TreeSpec = do
   describe "Simple path-compressed 2-tree" $ do
     it "Building" $ do
-      zipWithM_ shouldBe (map fromPaCo2Tree testPaCo2Trees)
-        [ refTree5, refTree4, refTree3, refTree2, refTree1, refTree0, Tip ]
+      zipWithM_ shouldBe testPaCo2Trees
+        [ refPaCo2Tree5, refPaCo2Tree4, refPaCo2Tree3, refPaCo2Tree2
+        , refPaCo2Tree1, refPaCo2Tree0, Tip
+        ]
 
     it "Deletion" $ do
       let ts = scanr delEntry testPaCo2Tree5 testEntries
-      zipWithM_ shouldBe (map fromPaCo2Tree ts)
-        [ Tip, refTree0, refTree1, refTree2, refTree3, refTree4, refTree5 ]
+      zipWithM_ shouldBe ts
+        [ Tip, refPaCo2Tree0, refPaCo2Tree1, refPaCo2Tree2
+        , refPaCo2Tree3, refPaCo2Tree4, refPaCo2Tree5
+        ]
 
 paCo2IpRouterSpec :: Spec
 paCo2IpRouterSpec = do
