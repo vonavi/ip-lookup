@@ -188,7 +188,7 @@ delLabel z1 z2
 
 prtnDelete :: Zipper a => a -> MemTree a -> MemTree a
 prtnDelete _ t@(Leaf _)         = t
-prtnDelete z t | isLeaf z       = t
+prtnDelete z t | isLeaf z       = undoSeparateRoot t
 prtnDelete z (Bin (Just x) l r) = delEmptyPage $
                                   minHeightMerge (setLabel s z') l' r'
   where h   = height x
