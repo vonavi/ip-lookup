@@ -139,10 +139,15 @@ lookupState (Address a) = helper a
                 k  = countLeadingZeros $ v `xor` string x
         helper _ Tip                     = return ()
 
+delEmptyNode :: PaCo2Tree -> PaCo2Tree
+delEmptyNode t | Bin x Tip Tip <- t
+               , Nothing <- label x = Tip
+               | otherwise          = t
+
 delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 Tip `delSubtree` _ = Tip
-t `delSubtree` Tip = uniteRoot t
-tx `delSubtree` ty = mkRootFull . uniteRoot $
+t `delSubtree` Tip = delEmptyNode . uniteRoot $ t
+tx `delSubtree` ty = delEmptyNode . mkRootFull . uniteRoot $
                      Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
   where Bin x _ _    = tx
         Bin y _ _    = ty
