@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Data.PaCoTreeM
   (
@@ -6,19 +7,30 @@ module Data.PaCoTreeM
   , Tree(..)
   , PaCoTree
   , PaCoZipper
+  , eliasGammaSize
+  , eliasDeltaSize
+  , eliasFanoSize
+  , huffmanSize
   , putPaCoTree
   ) where
 
-import           Control.Applicative     ((<|>))
+import           Control.Applicative            ((<|>))
+import           Control.Arrow                  (second)
+import           Control.Monad.ST
+import           Control.Monad.ST.UnsafePerform
 import           Control.Monad.State
 import           Data.Bits
-import           Data.Bool               (bool)
-import           Data.Maybe              (isJust)
+import           Data.Bool                      (bool)
+import           Data.Maybe                     (isJust)
 import           Data.Monoid
+import           Data.STRef
+import qualified Data.Vector                    as V
 import           Data.Word
 
-import qualified Data.Compression.Bitmap as BMP
+import qualified Data.Compression.Bitmap        as BMP
 import           Data.Compression.Elias
+import           Data.Compression.Fibonacci
+import           Data.Compression.Huffman
 import           Data.IpRouter
 import           Data.Zipper
 
@@ -145,7 +157,14 @@ tx `delSubtree` ty = delEmptyNode . uniteRoot $
         labelDiff sx        _                    = sx
 
 instance IpRouter PaCoTree where
-  mkTable = foldr insEntry mempty
+  mkTable es = runST $ do
+    modifySTRef huffmanVecRef (V.// hsize)
+    return tree
+      where tree  = foldr insEntry mempty es
+            kvec  = foldr accSkipValues (V.replicate 33 0) tree
+            hsize = map (second length) . freqToEnc .
+                    V.toList . V.indexed $ kvec
+            accSkipValues x v = V.accum (+) v [(skip x, 1)]
 
   insEntry = mappend . fromEntry
 
@@ -158,7 +177,7 @@ instance IpRouter PaCoTree where
 
 
 {-|
-The node size of path-compressed 2-tree is built from the following
+The node size of path-compressed tree is built from the following
 parts:
 
     * parenthesis expression (2 bits);
@@ -178,10 +197,106 @@ eliasGammaSize = getSum . foldMap (Sum . nodeSize)
           2 + (BMP.size . encodeEliasGamma . succ $ k) +
           k + 1 + if isJust s then 18 else 0
 
+{-|
+The node size of path-compressed tree is built from the following
+parts:
+
+    * parenthesis expression (2 bits);
+
+    * Elias delta code of skip value (the skip value should be
+      increased by one);
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+eliasDeltaSize :: PaCoTree -> Int
+eliasDeltaSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          2 + (BMP.size . encodeEliasDelta . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
+
+{-|
+The size of path-compressed tree is built from the following parts:
+
+    * balanced-parentheses expression (2 bits per node);
+
+    * Elias-Fano sequence of skip values;
+
+    * node strings;
+
+    * prefix bits (1 bit per node);
+
+    * RE indexes (18 bits per prefix).
+-}
+eliasFanoSize :: PaCoTree -> Int
+eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
+  where nodeSize Node { skip = k, label = s } =
+          2 + k + 1 + if isJust s then 18 else 0
+
+eliasFanoSeqSize :: PaCoTree -> Int
+eliasFanoSeqSize t
+  | null ks   = 0
+  | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
+                highBits bmp2 <> lowBits bmp2
+  where ks   = foldMap ((:[]) . skip) t
+        bmp2 = encodeEliasFano . scanl1 (+) $ ks
+
+{-|
+The node size of path-compressed tree is built from the following
+parts:
+
+    * parenthesis expression (2 bits);
+
+    * Fibonacci code of skip value (the skip value should be increased
+      by one);
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+fibonacciSize :: PaCoTree -> Int
+fibonacciSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          2 + (BMP.size . encodeFibonacci . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
+
+{-|
+The node size of path-compressed tree is built from the following
+parts:
+
+    * parenthesis expression (2 bits);
+
+    * Huffman code of skip value;
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+huffmanSize :: PaCoTree -> Int
+huffmanSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } = runST $ do
+          hsize <- readSTRef huffmanVecRef
+          return $ 2 + (hsize V.! k) + k + 1 + if isJust s then 18 else 0
+
+{-# NOINLINE huffmanVecRef #-}
+huffmanVecRef :: forall s . STRef s (V.Vector Int)
+huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 33 0
+
 putPaCoTree :: PaCoTree -> IO ()
 putPaCoTree t = do
   putStrLn "Size of path-compressed tree"
   putStrLn . (++) "  Elias gamma coding " . show . eliasGammaSize $ t
+  putStrLn . (++) "  Elias delta coding " . show . eliasDeltaSize $ t
+  putStrLn . (++) "  Elias-Fano coding  " . show . eliasFanoSize $ t
+  putStrLn . (++) "  Fibonacci coding   " . show . fibonacciSize $ t
+  putStrLn . (++) "  Huffman coding     " . show . huffmanSize $ t
 
 
 type PaCoZipper = (,,) PaCoTree
