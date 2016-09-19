@@ -186,12 +186,12 @@ fillSize = getSum . foldMap (Sum . pageSize)
 putPrtn :: Zipper a => MemTree a -> IO ()
 putPrtn t = do
   putStrLn "Partition of path-compressed 2-tree"
-  putStrLn . (++) "  Height:             " . show . rootHeight $ t
-  putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
-  putStrLn . (++) "  Memory utilization: " . show $ memUtil
-  putStrLn . (++) "  Fill size:          " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio:         " . show $ fillRatio
+  putStrLn . (++) "  Height             " . show . rootHeight $ t
+  putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
+  putStrLn . (++) "  Memory usage       " . show . memUsage $ t
+  putStrLn . (++) "  Memory utilization " . show $ memUtil
+  putStrLn . (++) "  Fill size          " . show . fillSize $ t
+  putStrLn . (++) "  Fill ratio         " . show $ fillRatio
     where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
           fillRatio :: Double
           fillRatio = fromIntegral (fillSize t) / fromIntegral (memUsage t)
