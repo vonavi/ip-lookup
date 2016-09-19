@@ -29,13 +29,13 @@ instance Foldable Tree where
                           foldMap f l <> foldMap f r
 
 instance Zipper a => Show (MemTree a) where
-  show t = case t of
-             Leaf x    -> "Leaf " ++ nodeToStr x
-             Bin x l r -> "Bin " ++ nodeToStr x ++
-                          " (" ++ show l ++ ") (" ++ show r ++ ")"
-    where nodeToStr (Just x) = "(Just Node {zipper = " ++ show (zipper x) ++
-                               ", height = " ++ show (height x) ++ "})"
-          nodeToStr Nothing  = "Nothing"
+  show (Leaf _) = ""
+  show t        = tail . helper $ t
+    where helper (Leaf _)    = ""
+          helper (Bin x l r) = fromMaybe (helper l ++ helper r) $ binToStr <$> x
+            where binToStr y = " (Branch (Node {zipper = " ++ show (zipper y) ++
+                               ", height = " ++ show (height y) ++ "})" ++
+                               helper l ++ helper r ++ ")"
 
 
 rootZipper :: Zipper a => MemTree a -> a
@@ -70,20 +70,28 @@ pruneZipper :: Zipper a => MemTree a -> a -> a
 pruneZipper (Leaf _) = id
 pruneZipper _        = delete
 
+delEmptyPage :: Zipper a => MemTree a -> MemTree a
+delEmptyPage (Bin (Just x) Leaf{} Leaf{})
+  | Nothing <- getLabel . zipper $ x = Leaf Nothing
+delEmptyPage t                       = t
+
+pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
+pruneTree z l r = Bin (Just x) (delEmptyPage l) (delEmptyPage r)
+  where z'  = goUp . pruneZipper l . goLeft $ z
+        z'' = goUp . pruneZipper r . goRight $ z'
+        x   = Node { zipper = z''
+                   , height = succ $ max (rootHeight l) (rootHeight r)
+                   }
+
 separateRoot :: Zipper a => a -> MemTree a -> MemTree a
 separateRoot z (Leaf _)           = Bin (Just x) (Leaf Nothing) (Leaf Nothing)
   where x = Node { zipper = z
                  , height = 1
                  }
-separateRoot z (Bin (Just x) l r) = Bin (Just x') l' r'
-  where h   = height x
-        l'  = updatePointer Node { zipper = goLeft z, height = h } l
-        r'  = updatePointer Node { zipper = goRight z, height = h } r
-        z'  = goUp . pruneZipper l . goLeft $ z
-        z'' = goUp . pruneZipper r . goRight $ z'
-        x'  = Node { zipper = z''
-                   , height = succ $ max (rootHeight l') (rootHeight r')
-                   }
+separateRoot z (Bin (Just x) l r) = pruneTree z l' r'
+  where h  = height x
+        l' = updatePointer Node { zipper = goLeft z, height = h } l
+        r' = updatePointer Node { zipper = goRight z, height = h } r
 
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
@@ -111,14 +119,6 @@ mergeRight z l r = if isNodeFull z'
                   }
         l' = separateRoot (goLeft . mkNodeFull $ z) l
 
-pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
-pruneTree z l r = Bin (Just x) l r
-  where z'  = goUp . pruneZipper l . goLeft $ z
-        z'' = goUp . pruneZipper r . goRight $ z'
-        x   = Node { zipper = z''
-                   , height = succ $ max (rootHeight l) (rootHeight r)
-                   }
-
 minHeightMerge :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 minHeightMerge z l r
   | not . isNodeFull . rootZipper $ t = error "Unbalanced tree root"
@@ -145,9 +145,19 @@ prtnBuild z | isLeaf z  = Leaf . Just $ Node { zipper = z
         zr' = insert (rootZipper r) zr
         z'  = goUp zr'
 
+undoSeparateRoot :: Zipper a => MemTree a -> MemTree a
+undoSeparateRoot t@(Bin (Just x) l r)
+  | Bin (Just xl) _ _ <- l, Bin (Just xr) _ _ <- r = merge xl xr
+  | Leaf (Just xl)    <- l, Bin (Just xr) _ _ <- r = merge xl xr
+  | Bin (Just xl) _ _ <- l, Leaf (Just xr)    <- r = merge xl xr
+  | otherwise                                      = t
+  where merge yl yr = minHeightMerge (goUp zr) l r
+          where zl = insert (zipper yl) . goLeft . zipper $ x
+                zr = insert (zipper yr) . goRight . goUp $ zl
+
 prtnInsert :: Zipper a => a -> MemTree a -> MemTree a
 prtnInsert z (Leaf _)           = prtnBuild z
-prtnInsert z t | isLeaf z       = t
+prtnInsert z t | isLeaf z       = undoSeparateRoot t
 prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
   where h   = height x
         zl  = goLeft z
