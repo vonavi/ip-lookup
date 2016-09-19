@@ -229,6 +229,6 @@ newtype PaCo2Tree b = PaCo2Tree (Tree b PaCo2Node)
 putPaCo2Tree :: PaCo2Tree b -> IO ()
 putPaCo2Tree (PaCo2Tree t) = do
   putStrLn "Path-compressed 2-tree"
-  putStrLn "  Memory usage:"
-  putStrLn . (++) "    Elias gamma coding: " . show $ eliasGammaSize t + 18 * n
+  putStrLn "  Memory usage"
+  putStrLn . (++) "    Elias gamma coding " . show $ eliasGammaSize t + 18 * n
     where n = numOfPrefixes t

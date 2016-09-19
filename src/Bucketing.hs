@@ -51,10 +51,10 @@ accPrtnProps ps = PrtnProps { height    = maximum . map height $ ps
 putBuckets :: Int -> IO ()
 putBuckets b = do
   putStrLn "Partition of path-compressed tree with bucketing"
-  putStrLn . (++) "  Bucket size:  " . show $ b
-  putStrLn . (++) "  Height:       " . show . height $ prop
-  putStrLn . (++) "  Memory usage: " . show . memUsage $ prop
-  putStrLn . (++) "  Fill ratio:   " . show . fillRatio $ prop
+  putStrLn . (++) "  Bucket size  " . show $ b
+  putStrLn . (++) "  Height       " . show . height $ prop
+  putStrLn . (++) "  Memory usage " . show . memUsage $ prop
+  putStrLn . (++) "  Fill ratio   " . show . fillRatio $ prop
   where n    = 1000000
         ess  = map (map snd) . groupEntries b $ randomEntries (32, 32) [1 .. n]
         prop = accPrtnProps .
