@@ -16,21 +16,19 @@ main = do
   hspec tableIpRouterSpec
   hspec binIpRouterSpec
 
-  hspec paCo2TreeSpec
-  hspec paCo2IpRouterSpec
-
   hspec paCoTreeSpec
   hspec paCoIpRouterSpec
+  hspec paCoPrtnIpRouterSpec
+  hspec paCoPrtnCheckSpec
 
   hspec ordSizeSpec
   hspec ordBpSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec
 
-  hspec paCo2PrtnIpRouterSpec
-
-  hspec paCoPrtnIpRouterSpec
-  hspec paCoPrtnCheckSpec
-
   hspec ordPrtnIpRouterSpec
   hspec ordPrtnCheckSpec
+
+  hspec paCo2TreeSpec
+  hspec paCo2IpRouterSpec
+  hspec paCo2PrtnIpRouterSpec
