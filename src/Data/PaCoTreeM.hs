@@ -190,9 +190,6 @@ instance Zipper PaCoZipper where
       (_, [], _)                     -> error "Tried to go up from the top"
     where mbUnite b = if b then uniteRoot else id
 
-  isRoot (_, [], _) = True
-  isRoot _          = False
-
   isLeaf (Tip, _, _) = True
   isLeaf _           = False
 
