@@ -1,41 +1,44 @@
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE IncoherentInstances #-}
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Data.PaCo2.Partition
   (
-    prtnBuild
-  , prtnInsert
+    MemTree
   , putPrtn
   ) where
 
 import           Control.Applicative ((<|>))
-import           Data.Maybe          (fromMaybe)
+import           Control.Monad.State
+import           Data.Bits
+import           Data.Maybe          (fromMaybe, isNothing)
 import           Data.Monoid
 
+import           Data.IpRouter
 import           Data.PaCo2.Zipper
 
-data Node a where
-  Node :: { zipper :: Zipper a => a, height :: Int } -> Node a
+data Node a = Node { zipper :: a
+                   , height :: Int
+                   }
+            deriving (Show, Eq)
 data Tree a = Leaf (Maybe a)
             | Bin (Maybe a) (Tree a) (Tree a)
             deriving Eq
 type MemTree a = Tree (Node a)
 
+instance Show a => Show (Tree a) where
+  show = head . nodeList
+    where nodeList (Leaf _)           = []
+          nodeList (Bin Nothing l r)  = nodeList l ++ nodeList r
+          nodeList (Bin (Just x) l r) = ["Branch (" ++ show x ++ ", [" ++
+                                         accStr (nodeList l ++ nodeList r) ++
+                                         "])"]
+            where accStr [] = ""
+                  accStr xs = drop 2 . concatMap (", " ++) $ xs
+
 instance Foldable Tree where
   foldMap _ (Leaf _)    = mempty
   foldMap f (Bin x l r) = fromMaybe mempty (f <$> x) <>
                           foldMap f l <> foldMap f r
-
-instance Zipper a => Show (MemTree a) where
-  show (Leaf _) = ""
-  show t        = tail . helper $ t
-    where helper (Leaf _)    = ""
-          helper (Bin x l r) = fromMaybe (helper l ++ helper r) $ binToStr <$> x
-            where binToStr y = " (Branch (Node {zipper = " ++ show (zipper y) ++
-                               ", height = " ++ show (height y) ++ "})" ++
-                               helper l ++ helper r ++ ")"
 
 
 rootZipper :: Zipper a => MemTree a -> a
@@ -71,9 +74,14 @@ pruneZipper (Leaf _) = id
 pruneZipper _        = delete
 
 delEmptyPage :: Zipper a => MemTree a -> MemTree a
-delEmptyPage (Bin (Just x) Leaf{} Leaf{})
-  | Nothing <- getLabel . zipper $ x = Leaf Nothing
-delEmptyPage t                       = t
+delEmptyPage t
+  | (Bin (Just x) Leaf{} Leaf{}) <- t
+  , isNothing . getLabel . zipper $ x
+    = Leaf . Just $ Node { zipper = delete . zipper $ x
+                         , height = 0
+                         }
+  | otherwise
+    = t
 
 pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 pruneTree z l r = Bin (Just x) (delEmptyPage l) (delEmptyPage r)
@@ -171,6 +179,50 @@ prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
         z'  = goUp zr'
         s   = getLabel z' <|> getLabel (zipper x)
 
+delLabel :: Zipper a => a -> a -> Maybe Int
+delLabel z1 z2
+  | Just s1 <- getLabel z1
+  , Just s2 <- getLabel z2
+  , s1 == s2               = Nothing
+  | otherwise              = getLabel z1
+
+prtnDelete :: Zipper a => a -> MemTree a -> MemTree a
+prtnDelete _ t@(Leaf _)         = t
+prtnDelete z t | isLeaf z       = undoSeparateRoot t
+prtnDelete z (Bin (Just x) l r) = delEmptyPage $
+                                  minHeightMerge (setLabel s z') l' r'
+  where h   = height x
+        zl  = goLeft z
+        l'  = prtnDelete zl $
+              updatePointer Node { zipper = goLeft . zipper $ x, height = h } l
+        zl' = insert (rootZipper l') zl
+        zr  = goRight . goUp $ zl'
+        r'  = prtnDelete zr $
+              updatePointer Node { zipper = goRight . zipper $ x, height = h } r
+        zr' = insert (rootZipper r') zr
+        z'  = goUp zr'
+        s   = delLabel (zipper x) z'
+
+lookupState :: Zipper a => Address -> MemTree a -> State (Maybe Int) ()
+lookupState (Address a) = helper 31
+  where helper _ (Leaf _)           = return ()
+        helper n (Bin (Just x) l r) = do
+          modify (getLabel z <|>)
+          if a `testBit` n
+            then helper (pred n) $
+                 updatePointer Node { zipper = goRight z, height = h } r
+            else helper (pred n) $
+                 updatePointer Node { zipper = goLeft z, height = h } l
+            where z = zipper x
+                  h = height x
+
+instance (IpRouter a, Zipper a) => IpRouter (MemTree a) where
+  mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
+  insEntry e    = prtnInsert (mkTable [e] :: IpRouter a => a)
+  delEntry e    = prtnDelete (mkTable [e] :: IpRouter a => a)
+  ipLookup a t  = execState (lookupState a t) Nothing
+  numOfPrefixes = getSum . foldMap (Sum . numOfPrefixes . zipper)
+
 
 numOfPages :: MemTree a -> Int
 numOfPages = getSum . foldMap (Sum . const 1)
@@ -183,9 +235,10 @@ memUsage = getSum . foldMap (Sum . fitToMinPage . pageSize)
 fillSize :: Zipper a => MemTree a -> Int
 fillSize = getSum . foldMap (Sum . pageSize)
 
-putPrtn :: Zipper a => MemTree a -> IO ()
+putPrtn :: (IpRouter a, Zipper a) => MemTree a -> IO ()
 putPrtn t = do
   putStrLn "Partition of path-compressed 2-tree"
+  putStrLn . (++) "  Number of prefixes " . show . numOfPrefixes $ t
   putStrLn . (++) "  Height             " . show . rootHeight $ t
   putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
   putStrLn . (++) "  Memory usage       " . show . memUsage $ t

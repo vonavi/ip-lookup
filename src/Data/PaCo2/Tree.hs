@@ -5,12 +5,14 @@ module Data.PaCo2.Tree
     Node(..)
   , Tree(..)
   , PaCo2Tree
-  , zipper
+  , PaCo2Zipper
+  , putPaCo2Tree
   ) where
 
 import           Control.Applicative     ((<|>))
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool               (bool)
 import           Data.Maybe              (isJust)
 import           Data.Monoid
 import           Data.Word
@@ -24,14 +26,17 @@ data Node = Node { skip   :: Int
                  , string :: Word32
                  , label  :: Maybe Int
                  }
-          deriving Show
+
+instance Show Node where
+  show Node { skip = k, string = v, label = s } =
+    "(Node {bitmap = \"" ++ bmp ++ "\", label = " ++ show s ++ "})"
+    where bmp = map (bool '0' '1' . (v `testBit`)) [31, 30 .. (32 - k)]
 
 instance Eq Node where
   x == y = kx == ky && n >= kx && label x == label y
     where kx = skip x
           ky = skip y
           n  = countLeadingZeros $ string x `xor` string y
-
 
 data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
 type PaCo2Tree = Tree Node
@@ -134,10 +139,15 @@ lookupState (Address a) = helper a
                 k  = countLeadingZeros $ v `xor` string x
         helper _ Tip                     = return ()
 
+delEmptyNode :: PaCo2Tree -> PaCo2Tree
+delEmptyNode t | Bin x Tip Tip <- t
+               , Nothing <- label x = Tip
+               | otherwise          = t
+
 delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 Tip `delSubtree` _ = Tip
-t `delSubtree` Tip = uniteRoot t
-tx `delSubtree` ty = mkRootFull . uniteRoot $
+t `delSubtree` Tip = delEmptyNode . uniteRoot $ t
+tx `delSubtree` ty = delEmptyNode . mkRootFull . uniteRoot $
                      Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
   where Bin x _ _    = tx
         Bin y _ _    = ty
@@ -166,10 +176,6 @@ instance IpRouter PaCo2Tree where
     where addPrefix x = if (isJust . label) x then Sum 1 else Sum 0
 
 
-type PaCo2Zipper = (,,) PaCo2Tree
-                   [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
-                   [Bool]
-
 {-|
 The node size of path-compressed 2-tree is built from the following
 parts:
@@ -185,13 +191,31 @@ parts:
 
     * RE index (18 bits) if the prefix bit is set.
 -}
-nodeSize :: Node -> Int
-nodeSize Node { skip = k, label = s } =
-  1 + (BMP.size . encodeEliasGamma . succ $ k) +
-  k + 1 + if isJust s then 18 else 0
+eliasGammaSize :: PaCo2Tree -> Int
+eliasGammaSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          1 + (BMP.size . encodeEliasGamma . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
 
-zipper :: PaCo2Tree -> PaCo2Zipper
-zipper t = (t, [], [])
+putPaCo2Tree :: PaCo2Tree -> IO ()
+putPaCo2Tree t = do
+  putStrLn "Size of path-compressed 2-tree"
+  putStrLn . (++) "  Elias gamma coding " . show . eliasGammaSize $ t
+
+
+type PaCo2Zipper = (,,) PaCo2Tree
+                   [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
+                   [Bool]
+
+instance {-# OVERLAPPING #-} Show PaCo2Zipper where
+  show (t, _, _) = show t
+
+instance IpRouter PaCo2Zipper where
+  mkTable es              = (mkTable es, [], [])
+  insEntry e (t, _, _)    = (insEntry e t, [], [])
+  delEntry e (t, _, _)    = (delEntry e t, [], [])
+  ipLookup e (t, _, _)    = ipLookup e t
+  numOfPrefixes (t, _, _) = numOfPrefixes t
 
 instance Zipper PaCo2Zipper where
   goLeft (t, es, bs) = case resizeRoot 0 t of
@@ -221,7 +245,7 @@ instance Zipper PaCo2Zipper where
     where Bin x' l' r' = resizeRoot 0 t
   setLabel _ z    = z
 
-  size (t, _, _) = getSum . foldMap (Sum . nodeSize) $ t
+  size (t, _, _) = eliasGammaSize t
 
   insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
   insert (t, _, _) (_, es, [])     = (t, es, [])
