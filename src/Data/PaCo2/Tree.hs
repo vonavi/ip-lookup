@@ -191,8 +191,8 @@ instance IpRouter PaCo2Tree where
 
   ipLookup a t = execState (lookupState a t) Nothing
 
-  numOfPrefixes = getSum . foldMap addPrefix
-    where addPrefix x = if (isJust . label) x then Sum 1 else Sum 0
+  numOfPrefixes = getSum . foldMap (Sum . nodePrefix)
+    where nodePrefix x = if isJust . label $ x then 1 else 0
 
 
 {-|
