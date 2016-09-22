@@ -42,9 +42,9 @@ instance Foldable Tree where
 
 
 rootZipper :: Zipper a => MemTree a -> a
-rootZipper t | Leaf x    <- t = toZipper x
-             | Bin x _ _ <- t = toZipper x
-  where toZipper = fromMaybe (error "No zipper found") . (zipper <$>)
+rootZipper t = case t of Leaf x    -> toZipper x
+                         Bin x _ _ -> toZipper x
+  where toZipper = fromMaybe (error "No zipper") . (zipper <$>)
 
 rootHeight :: MemTree a -> Int
 rootHeight (Leaf _)    = 0
@@ -141,6 +141,7 @@ prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
         zr' = insert (rootZipper r') zr
         z'  = goUp zr'
         s   = getLabel z' <|> getLabel (zipper x)
+prtnInsert _ (Bin Nothing _ _)  = error "No pointer"
 
 delEmptyPage :: Zipper a => MemTree a -> MemTree a
 delEmptyPage t
@@ -175,6 +176,7 @@ prtnDelete z (Bin (Just x) l r) = delEmptyPage $
         zr' = insert (rootZipper r') zr
         z'  = goUp zr'
         s   = delLabel (zipper x) z'
+prtnDelete _ (Bin Nothing _ _)  = error "No pointer"
 
 lookupState :: Zipper a => Address -> MemTree a -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
@@ -188,6 +190,7 @@ lookupState (Address a) = helper 31
                  updatePointer Node { zipper = goLeft z, height = h } l
             where z = zipper x
                   h = height x
+        helper _ (Bin Nothing _ _)  = error "No pointer"
 
 instance (IpRouter a, Zipper a) => IpRouter (MemTree a) where
   mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
