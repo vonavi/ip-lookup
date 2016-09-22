@@ -346,6 +346,7 @@ instance Zipper PaCo2Zipper where
       (l, Right (x, r) : es, b : bs) -> (mbUnite b $ Bin x l r, es, bs)
       (r, Left (x, l) : es, b : bs)  -> (mbUnite b $ Bin x l r, es, bs)
       (_, [], _)                     -> error "Tried to go up from the top"
+      (_, _, [])                     -> error "Tried to go up from the top"
     where mbUnite b = if b then uniteRoot else id
 
   isLeaf (Tip, _, _) = True

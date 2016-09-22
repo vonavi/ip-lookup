@@ -42,9 +42,9 @@ instance Foldable Tree where
 
 
 rootZipper :: Zipper a => MemTree a -> a
-rootZipper t | Leaf x    <- t = toZipper x
-             | Bin x _ _ <- t = toZipper x
-  where toZipper = fromMaybe (error "No zipper found") . (zipper <$>)
+rootZipper t = case t of Leaf x    -> toZipper x
+                         Bin x _ _ -> toZipper x
+  where toZipper = fromMaybe (error "No zipper") . (zipper <$>)
 
 rootHeight :: MemTree a -> Int
 rootHeight (Leaf _)    = 0
@@ -100,6 +100,7 @@ separateRoot z (Bin (Just x) l r) = pruneTree z l' r'
   where h  = height x
         l' = updatePointer Node { zipper = goLeft z, height = h } l
         r' = updatePointer Node { zipper = goRight z, height = h } r
+separateRoot _ (Bin Nothing _ _)  = error "No pointer"
 
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
@@ -162,6 +163,8 @@ undoSeparateRoot t@(Bin (Just x) l r)
   where merge yl yr = minHeightMerge (goUp zr) l r
           where zl = insert (zipper yl) . goLeft . zipper $ x
                 zr = insert (zipper yr) . goRight . goUp $ zl
+undoSeparateRoot (Bin Nothing _ _)                 = error "No pointer"
+undoSeparateRoot (Leaf _)                          = error "Nothing to separate"
 
 prtnInsert :: Zipper a => a -> MemTree a -> MemTree a
 prtnInsert z (Leaf _)           = prtnBuild z
@@ -178,6 +181,7 @@ prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
         zr' = insert (rootZipper r') zr
         z'  = goUp zr'
         s   = getLabel z' <|> getLabel (zipper x)
+prtnInsert _ (Bin Nothing _ _)  = error "No pointer"
 
 delLabel :: Zipper a => a -> a -> Maybe Int
 delLabel z1 z2
@@ -202,6 +206,7 @@ prtnDelete z (Bin (Just x) l r) = delEmptyPage $
         zr' = insert (rootZipper r') zr
         z'  = goUp zr'
         s   = delLabel (zipper x) z'
+prtnDelete _ (Bin Nothing _ _)  = error "No pointer"
 
 lookupState :: Zipper a => Address -> MemTree a -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
@@ -215,6 +220,7 @@ lookupState (Address a) = helper 31
                  updatePointer Node { zipper = goLeft z, height = h } l
             where z = zipper x
                   h = height x
+        helper _ (Bin Nothing _ _)  = error "No pointer"
 
 instance (IpRouter a, Zipper a) => IpRouter (MemTree a) where
   mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
