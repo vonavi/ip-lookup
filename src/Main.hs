@@ -12,7 +12,7 @@ main = do
   let (_ : _ : prefixLines) = lines input
       es                    = map (getEntry . words) prefixLines
   putPaCo2Prtn (mkTable es :: Maybe Page)
-  where getEntry (aStr : mStr : _ : _ : nStr : _) = Entry (Prefix a m) n
-          where a = strToAddr aStr
-                m = strToMask $ '/' : mStr
-                n = read nStr :: Int
+  where getEntry (aStr : mStr : _ : _ : nStr : _) =
+          Entry { prefix  = read (aStr ++ ('/' : mStr)) :: Prefix
+                , nextHop = read nStr :: Int
+                }

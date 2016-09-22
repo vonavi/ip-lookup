@@ -13,8 +13,7 @@ import           TestIpRouter
 
 testPaCoTree :: PaCoTree
 testPaCoTree = mkTable . map toEntry $ l
-  where toEntry (s, m, h) = Entry p h
-          where p = Prefix (strToAddr s) (strToMask m)
+  where toEntry (s, m, h) = Entry (read (s ++ m) :: Prefix) h
         l = [ ("0.0.0.0",   "/1", 0)
             , ("127.0.0.0", "/2", 1)
             , ("111.0.0.0", "/4", 2)
