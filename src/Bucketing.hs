@@ -38,8 +38,10 @@ data PrtnProps = PrtnProps { height    :: Int
 getPrtnProps :: Partition a => a -> PrtnProps
 getPrtnProps t = PrtnProps { height    = P.height t
                            , memUsage  = P.memUsage t
-                           , fillRatio = P.fillRatio t
+                           , fillRatio = ratio
                            }
+  where ratio :: Double
+        ratio = fromIntegral (P.fillSize t) / fromIntegral (P.memUsage t)
 
 accPrtnProps :: [PrtnProps] -> PrtnProps
 accPrtnProps ps = PrtnProps { height    = maximum . map height $ ps
