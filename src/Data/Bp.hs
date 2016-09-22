@@ -103,11 +103,11 @@ prevSibling n bp
 subtreeSize :: Bp a => Int -> a -> Int
 subtreeSize n bp = fromMaybe 0 . helper $ n
   where ps = toParens bp
-        helper n
-          | not (isClose n ps) = do nc <- findClose n ps
-                                    Just $ (nc - n + 1) `div` 2
-          | otherwise          = do no <- findOpen n ps
-                                    Just $ (n - no + 1) `div` 2
+        helper x
+          | not (isClose x ps) = do xc <- findClose x ps
+                                    Just $ (xc - x + 1) `div` 2
+          | otherwise          = do xo <- findOpen x ps
+                                    Just $ (x - xo + 1) `div` 2
 
 childStateT :: Int -> [Paren] -> StateT [Int] Maybe ()
 childStateT n ps
@@ -119,10 +119,10 @@ childStateT n ps
 degree :: Bp a => Int -> a -> Int
 degree n bp = length . fromMaybe [] . helper $ n
   where ps = toParens bp
-        helper n
-          | not (isClose n ps) = do nc <- findClose n ps
-                                    helper nc
-          | otherwise          = execStateT (childStateT (pred n) ps) []
+        helper x
+          | not (isClose x ps) = do xc <- findClose x ps
+                                    helper xc
+          | otherwise          = execStateT (childStateT (pred x) ps) []
 
 child :: Bp a => Int -> Int -> a -> Maybe Int
 child n i bp
