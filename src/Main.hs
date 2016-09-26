@@ -5,7 +5,8 @@ module Main where
 import           System.Directory
 
 import           Data.IpRouter
-import           Data.PaCo2Partition
+import qualified Data.PaCoPartitionM as PaCo
+import           Data.PaCoTreeM
 
 main :: IO ()
 main = do
@@ -13,7 +14,7 @@ main = do
   input <- readFile $ pwd ++ "/1.route"
   let (_ : _ : prefixLines) = lines input
       es                    = map (getEntry . words) prefixLines
-  putPaCo2Prtn (mkTable es :: Maybe Page)
+  PaCo.putPrtn (mkTable es :: PaCo.MemTree PaCoZipper)
   where getEntry (aStr : mStr : _ : _ : nStr : _) =
           Entry { prefix  = read (aStr ++ ('/' : mStr)) :: Prefix
                 , nextHop = read nStr :: Int
