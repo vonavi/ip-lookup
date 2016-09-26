@@ -41,17 +41,13 @@ instance Foldable Tree where
                           foldMap f l <> foldMap f r
 
 
-rootZipper :: Zipper a => MemTree a -> a
-rootZipper t = case t of Tip x     -> toZipper x
-                         Bin x _ _ -> toZipper x
-  where toZipper = fromMaybe (error "No zipper") . (zipper <$>)
-
-rootHeight :: MemTree a -> Int
-rootHeight (Tip _)     = 0
-rootHeight (Bin x _ _) = fromMaybe 0 $ height <$> x
+fromRoot :: (Node a -> b) -> MemTree a -> b
+fromRoot f t = case t of Bin x _ _ -> apply f x
+                         Tip x     -> apply f x
+  where apply g = fromMaybe (error "No pointer") . (g <$>)
 
 updatePointer :: Node a -> MemTree a -> MemTree a
-updatePointer x (Tip y)     = Tip (y <|> Just x)
+updatePointer x (Tip y)     = Tip (y <|> Just x { height = 0 })
 updatePointer x (Bin y l r) = Bin (y <|> Just x) l r
 
 removePointer :: MemTree a -> MemTree a
@@ -76,21 +72,21 @@ pruneZipper _       = delete
 mergeBoth :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeBoth z l r = Bin (Just x) (removePointer l) (removePointer r)
   where x = Node { zipper = z
-                 , height = maximum [1, rootHeight l, rootHeight r]
+                 , height = maximum [1, fromRoot height l, fromRoot height r]
                  }
 
 mergeLeft :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeLeft z l r = Bin (Just x) (removePointer l) r
   where z' = goUp . pruneZipper r . goRight $ z
         x  = Node { zipper = z'
-                  , height = max (rootHeight l) (succ . rootHeight $ r)
+                  , height = max (fromRoot height l) (succ $ fromRoot height r)
                   }
 
 mergeRight :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 mergeRight z l r = Bin (Just x) l (removePointer r)
   where z' = goUp . pruneZipper l . goLeft $ z
         x  = Node { zipper = z'
-                  , height = max (succ . rootHeight $ l) (rootHeight r)
+                  , height = max (succ $ fromRoot height l) (fromRoot height r)
                   }
 
 pruneTree :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
@@ -98,17 +94,16 @@ pruneTree z l r = Bin (Just x) l r
   where z'  = goUp . pruneZipper l . goLeft $ z
         z'' = goUp . pruneZipper r . goRight $ z'
         x   = Node { zipper = z''
-                   , height = succ $ max (rootHeight l) (rootHeight r)
+                   , height = succ $ max (fromRoot height l) (fromRoot height r)
                    }
 
 minHeightMerge :: Zipper a => a -> MemTree a -> MemTree a -> MemTree a
 minHeightMerge z l r
-  | pageSize x <= maxPageSize = t
-  | otherwise                 = pruneTree z l r
-  where t                = mergeTree z l r
-        Bin (Just x) _ _ = t
-        lht              = rootHeight l
-        rht              = rootHeight r
+  | fromRoot pageSize t <= maxPageSize = t
+  | otherwise                          = pruneTree z l r
+  where t   = mergeTree z l r
+        lht = fromRoot height l
+        rht = fromRoot height r
         mergeTree | lht == rht = mergeBoth
                   | lht > rht  = mergeLeft
                   | otherwise  = mergeRight
@@ -120,10 +115,10 @@ prtnBuild z | isLeaf z  = Tip . Just $ Node { zipper = z
             | otherwise = minHeightMerge z' l r
   where zl  = goLeft z
         l   = prtnBuild zl
-        zl' = insert (rootZipper l) zl
+        zl' = insert (fromRoot zipper l) zl
         zr  = goRight . goUp $ zl'
         r   = prtnBuild zr
-        zr' = insert (rootZipper r) zr
+        zr' = insert (fromRoot zipper r) zr
         z'  = goUp zr'
 
 prtnInsert :: Zipper a => a -> MemTree a -> MemTree a
@@ -134,11 +129,11 @@ prtnInsert z (Bin (Just x) l r) = minHeightMerge (setLabel s z') l' r'
         zl  = goLeft z
         l'  = prtnInsert zl $
               updatePointer Node { zipper = goLeft . zipper $ x, height = h } l
-        zl' = insert (rootZipper l') zl
+        zl' = insert (fromRoot zipper l') zl
         zr  = goRight . goUp $ zl'
         r'  = prtnInsert zr $
               updatePointer Node { zipper = goRight . zipper $ x, height = h } r
-        zr' = insert (rootZipper r') zr
+        zr' = insert (fromRoot zipper r') zr
         z'  = goUp zr'
         s   = getLabel z' <|> getLabel (zipper x)
 prtnInsert _ (Bin Nothing _ _)  = error "No pointer"
@@ -169,11 +164,11 @@ prtnDelete z (Bin (Just x) l r) = delEmptyPage $
         zl  = goLeft z
         l'  = prtnDelete zl $
               updatePointer Node { zipper = goLeft . zipper $ x, height = h } l
-        zl' = insert (rootZipper l') zl
+        zl' = insert (fromRoot zipper l') zl
         zr  = goRight . goUp $ zl'
         r'  = prtnDelete zr $
               updatePointer Node { zipper = goRight . zipper $ x, height = h } r
-        zr' = insert (rootZipper r') zr
+        zr' = insert (fromRoot zipper r') zr
         z'  = goUp zr'
         s   = delLabel (zipper x) z'
 prtnDelete _ (Bin Nothing _ _)  = error "No pointer"
@@ -215,7 +210,7 @@ putPrtn :: (IpRouter a, Zipper a) => MemTree a -> IO ()
 putPrtn t = do
   putStrLn "Partition of path-compressed tree"
   putStrLn . (++) "  Number of prefixes " . show . numOfPrefixes $ t
-  putStrLn . (++) "  Height             " . show . rootHeight $ t
+  putStrLn . (++) "  Height             " . show . fromRoot height $ t
   putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
   putStrLn . (++) "  Memory usage       " . show . memUsage $ t
   putStrLn . (++) "  Memory utilization " . show $ memUtil
