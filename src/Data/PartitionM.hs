@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Data.PaCoPartitionM
+module Data.PartitionM
   (
     MemTree
   , putPrtn
