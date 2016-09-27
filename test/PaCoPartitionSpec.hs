@@ -6,8 +6,8 @@ module PaCoPartitionSpec
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.PaCoPartitionM
-import           Data.PartitionM     (MemTree)
+import           Data.PaCoPartition
+import           Data.PartitionM    (MemTree)
 import           RandomPrefixes
 import           TestIpRouter
 

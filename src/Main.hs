@@ -5,7 +5,7 @@ module Main where
 import           System.Directory
 
 import           Data.IpRouter
-import           Data.PaCoPartitionM (putPaCoMinHeight)
+import           Data.PaCoPartition (putPaCoMinHeight)
 
 main :: IO ()
 main = do
