@@ -19,7 +19,6 @@ main = do
   hspec paCoTreeSpec
   hspec paCoIpRouterSpec
   hspec paCoPrtnIpRouterSpec
-  hspec paCoPrtnCheckSpec
 
   hspec ordSizeSpec
   hspec ordBpSpec

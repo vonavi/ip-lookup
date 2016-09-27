@@ -58,6 +58,7 @@ fromList bs = Bitmap { word = ws, size = length bs }
           | n == 7    = 0 : x' : xs'
           | otherwise =     x' : xs'
           where x' = if b then x `setBit` n else x
+        helper _ []   = error "Empty list of Word8"
 
 fromIntExact :: Int -> Int -> Bitmap
 fromIntExact = toBitmapExact . toInteger

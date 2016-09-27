@@ -38,8 +38,10 @@ data PrtnProps = PrtnProps { height    :: Int
 getPrtnProps :: Partition a => a -> PrtnProps
 getPrtnProps t = PrtnProps { height    = P.height t
                            , memUsage  = P.memUsage t
-                           , fillRatio = P.fillRatio t
+                           , fillRatio = ratio
                            }
+  where ratio :: Double
+        ratio = fromIntegral (P.fillSize t) / fromIntegral (P.memUsage t)
 
 accPrtnProps :: [PrtnProps] -> PrtnProps
 accPrtnProps ps = PrtnProps { height    = maximum . map height $ ps
@@ -51,10 +53,10 @@ accPrtnProps ps = PrtnProps { height    = maximum . map height $ ps
 putBuckets :: Int -> IO ()
 putBuckets b = do
   putStrLn "Partition of path-compressed tree with bucketing"
-  putStrLn . (++) "  Bucket size:  " . show $ b
-  putStrLn . (++) "  Height:       " . show . height $ prop
-  putStrLn . (++) "  Memory usage: " . show . memUsage $ prop
-  putStrLn . (++) "  Fill ratio:   " . show . fillRatio $ prop
+  putStrLn . (++) "  Bucket size  " . show $ b
+  putStrLn . (++) "  Height       " . show . height $ prop
+  putStrLn . (++) "  Memory usage " . show . memUsage $ prop
+  putStrLn . (++) "  Fill ratio   " . show . fillRatio $ prop
   where n    = 1000000
         ess  = map (map snd) . groupEntries b $ randomEntries (32, 32) [1 .. n]
         prop = accPrtnProps .

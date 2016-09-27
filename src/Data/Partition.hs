@@ -28,13 +28,13 @@ class Partition a where
 
 putPartition :: (IpRouter a, Partition a) => a -> IO ()
 putPartition t = do
-  putStrLn . (++) "  Number of prefixes: " . show . numOfPrefixes $ t
-  putStrLn . (++) "  Height:             " . show . height $ t
-  putStrLn . (++) "  Number of pages:    " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage:       " . show . memUsage $ t
-  putStrLn . (++) "  Memory utilization: " . show $ memUtil
-  putStrLn . (++) "  Fill size:          " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio:         " . show $ fillRatio
+  putStrLn . (++) "  Number of prefixes " . show . numOfPrefixes $ t
+  putStrLn . (++) "  Height             " . show . height $ t
+  putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
+  putStrLn . (++) "  Memory usage       " . show . memUsage $ t
+  putStrLn . (++) "  Memory utilization " . show $ memUtil
+  putStrLn . (++) "  Fill size          " . show . fillSize $ t
+  putStrLn . (++) "  Fill ratio         " . show $ fillRatio
     where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
           fillRatio :: Double
           fillRatio = fromIntegral (fillSize t) / fromIntegral (memUsage t)

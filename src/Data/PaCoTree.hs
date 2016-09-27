@@ -1,18 +1,18 @@
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes        #-}
 
 module Data.PaCoTree
-       (
-         PaCoNode(..)
-       , Tree(..)
-       , PaCoTree(..)
-       , gammaSize
-       , deltaSize
-       , eliasFanoSize
-       , huffmanSize
-       , putPaCoTree
-       ) where
+  (
+    Node(..)
+  , Tree(..)
+  , PaCoTree
+  , PaCoZipper
+  , eliasGammaSize
+  , eliasDeltaSize
+  , eliasFanoSize
+  , huffmanSize
+  , putPaCoTree
+  ) where
 
 import           Control.Applicative            ((<|>))
 import           Control.Arrow                  (second)
@@ -20,6 +20,7 @@ import           Control.Monad.ST
 import           Control.Monad.ST.UnsafePerform
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool                      (bool)
 import           Data.Maybe                     (isJust)
 import           Data.Monoid
 import           Data.STRef
@@ -31,80 +32,37 @@ import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
 import           Data.Compression.Huffman
 import           Data.IpRouter
-import           Data.PrefixTree
+import           Data.Zipper
 
-data PaCoNode = PaCoNode { skip   :: Int
-                         , string :: Word32
-                         , label  :: Maybe Int
-                         } deriving Show
+data Node = Node { skip   :: Int
+                 , string :: Word32
+                 , label  :: Maybe Int
+                 }
 
-instance Eq PaCoNode where
+instance Show Node where
+  show Node { skip = k, string = v, label = s } =
+    "(Node {bitmap = \"" ++ bmp ++ "\", label = " ++ show s ++ "})"
+    where bmp = map (bool '0' '1' . (v `testBit`)) [31, 30 .. (32 - k)]
+
+instance Eq Node where
   x == y = kx == ky && n >= kx && label x == label y
     where kx = skip x
           ky = skip y
           n  = countLeadingZeros $ string x `xor` string y
 
-
-data Tree a = Tip | Bin (Tree a) a (Tree a) deriving (Show, Eq)
-
-instance Functor Tree where
-  fmap _ Tip         = Tip
-  fmap f (Bin l x r) = Bin (fmap f l) (f x) (fmap f r)
+data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
+type PaCoTree = Tree Node
 
 instance Foldable Tree where
   foldMap _ Tip         = mempty
-  foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
+  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
-instance Monoid (Tree PaCoNode) where
-  mempty = Tip
-
-  tx `mappend` ty
-    | tx == Tip                = ty
-    | ty == Tip                = tx
-    | kmin == kx && kmin == ky = let n = x { label = label x <|> label y }
-                                 in Bin (lx <> ly) n (rx <> ry)
-    | kmin < kx  && kmin == ky = if xright
-                                 then Bin ly y (ry <> tx')
-                                 else Bin (ly <> tx') y ry
-    | kmin == kx && kmin < ky  = if yright
-                                 then Bin lx x (rx <> ty')
-                                 else Bin (lx <> ty') x rx
-    | xright     && yright     = Bin Tip node (tx' <> ty')
-    | not xright && yright     = Bin tx' node ty'
-    | xright     && not yright = Bin ty' node tx'
-    | otherwise                = Bin (tx' <> ty') node Tip
-    where Bin lx x rx = tx
-          Bin ly y ry = ty
-          kx          = skip x
-          ky          = skip y
-          vx          = string x
-          vy          = string y
-          kmin        = minimum [ kx
-                                , ky
-                                , countLeadingZeros $ vx `xor` vy
-                                ]
-          node        = PaCoNode { skip   = kmin
-                                 , string = vx
-                                 , label  = Nothing
-                                 }
-          xright      = vx `testBit` (31 - kmin)
-          yright      = vy `testBit` (31 - kmin)
-          x'          = x { skip   = kx - kmin - 1
-                          , string = vx `shiftL` (kmin + 1)
-                          }
-          y'          = y { skip   = ky - kmin - 1
-                          , string = vy `shiftL` (kmin + 1)
-                          }
-          tx'         = Bin lx x' rx
-          ty'         = Bin ly y' ry
-
-
-appendNode :: PaCoNode -> Bool -> PaCoNode -> PaCoNode
-appendNode xhead b xlast = PaCoNode { skip   = succ $ skip xhead + skip xlast
-                                    , string = str
-                                    , label  = label xlast
-                                    }
+joinNodes :: Node -> Bool -> Node -> Node
+joinNodes xhead b xlast = Node { skip   = succ $ skip xhead + skip xlast
+                               , string = str
+                               , label  = label xlast
+                               }
   where w      = succ $ skip xhead
         m      = complement $ (maxBound :: Word32) `shiftR` w
         shead  = string xhead .&. m
@@ -112,136 +70,101 @@ appendNode xhead b xlast = PaCoNode { skip   = succ $ skip xhead + skip xlast
         setter = if b then setBit else clearBit
         str    = (shead .|. slast) `setter` (32 - w)
 
-collapseRoot :: Tree PaCoNode -> Tree PaCoNode
-collapseRoot Tip             = Tip
-collapseRoot t@(Bin _ x _)
-  | isJust (label x)         = t
-collapseRoot (Bin Tip _ Tip) = Tip
-collapseRoot (Bin l x Tip)   = let Bin ll xl rl = l
-                               in Bin ll (appendNode x False xl) rl
-collapseRoot (Bin Tip x r)   = let Bin lr xr rr = r
-                               in Bin lr (appendNode x True xr) rr
-collapseRoot t               = t
+uniteRoot :: PaCoTree -> PaCoTree
+uniteRoot t@(Bin x _ _) | isJust (label x) = t
+uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
+uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
+uniteRoot t                                = t
 
-instance PrefixTree (Tree PaCoNode) where
-  isEmpty Tip = True
-  isEmpty _   = False
+resizeRoot :: Int -> PaCoTree -> PaCoTree
+resizeRoot k (Bin x l r) | k < kx = tree
+  where kx    = skip x
+        vx    = string x
+        xhead = Node { skip   = k
+                     , string = vx
+                     , label  = Nothing
+                     }
+        xtail = Node { skip   = kx - k - 1
+                     , string = vx `shiftL` (k + 1)
+                     , label  = label x
+                     }
+        tree  = if vx `testBit` (31 - k)
+                then Bin xhead Tip (Bin xtail l r)
+                else Bin xhead (Bin xtail l r) Tip
+resizeRoot _ tree = tree
 
-  root (Bin _ x _) | skip x == 0 = label x
-  root _                         = Nothing
+instance Monoid PaCoTree where
+  mempty = Tip
 
-  leftSubtree Tip    = Tip
-  leftSubtree (Bin l x r)
-    | k == 0         = l
-    | v `testBit` 31 = Tip
-    | otherwise      = Bin l x' r
-    where k  = skip x
-          v  = string x
-          x' = x { skip   = pred k
-                 , string = v `shiftL` 1
-                 }
-
-  rightSubtree Tip   = Tip
-  rightSubtree (Bin l x r)
-    | k == 0         = r
-    | v `testBit` 31 = Bin l x' r
-    | otherwise      = Tip
-    where k  = skip x
-          v  = string x
-          x' = x { skip   = pred k
-                 , string = v `shiftL` 1
-                 }
-
-  singleton x = Bin Tip node Tip
-    where node = PaCoNode { skip   = 0
-                          , string = 0
-                          , label  = x
-                          }
-
-  merge x l r
-    | isJust x  = singleton x <> lsub <> rsub
-    | otherwise = lsub <> rsub
-    where lsub = case l of
-                   Tip          -> Tip
-                   Bin ll xl rl ->
-                     let xl' = xl { skip   = succ $ skip xl
-                                  , string = (`clearBit` 31) . (`shiftR` 1) $
-                                             string xl
-                                  }
-                     in Bin ll xl' rl
-          rsub = case r of
-                   Tip          -> Tip
-                   Bin lr xr rr ->
-                     let xr' = xr { skip   = succ $ skip xr
-                                  , string = (`setBit` 31) . (`shiftR` 1) $
-                                             string xr
-                                  }
-                     in Bin lr xr' rr
-
-  collapse Tip         = Tip
-  collapse (Bin l x r) = collapseRoot $ Bin (collapse l) x (collapse r)
-
-  delSubtree a b = collapse $ helper a b
-    where helper Tip _   = Tip
-          helper t   Tip = t
-          helper t@(Bin lx x rx) (Bin ly y ry)
-            | kxy < min kx ky = t
-            | kx == ky        = Bin (helper lx ly) ndiff (helper rx ry)
-            | kx < ky         = if vy `testBit` (31 - kx)
-                                then Bin lx ndiff (helper rx $ Bin ly ylast ry)
-                                else Bin (helper lx $ Bin ly ylast ry) ndiff rx
-            | otherwise       = if vx `testBit` (31 - ky)
-                                then Bin Tip xhead (helper (Bin lx xlast rx) ry)
-                                else Bin (helper (Bin lx xlast rx) ly) xhead Tip
-            where kx    = skip x
-                  ky    = skip y
-                  vx    = string x
-                  vy    = string y
-                  kxy   = countLeadingZeros $ vx `xor` vy
-                  ndiff = let labDiff (Just px) (Just py) | px == py = Nothing
-                              labDiff l         _                    = l
-                          in x { label = labDiff (label x) (label y) }
-                  xhead = x { skip  = ky
-                            , label = Nothing
-                            }
-                  xlast = x { skip   = kx - ky - 1
-                            , string = vx `shiftL` (ky + 1)
-                            }
-                  ylast = y { skip   = ky - kx - 1
-                            , string = vy `shiftL` (kx + 1)
-                            }
-
-  size = gammaSize
+  Tip `mappend` t  = t
+  t  `mappend` Tip = t
+  t1 `mappend` t2  = uniteRoot $ t1 `helper` t2
+    where tx `helper` ty = Bin node (lx <> ly) (rx <> ry)
+            where Bin x _ _    = tx
+                  Bin y _ _    = ty
+                  kmin         = minimum [ skip x
+                                         , skip y
+                                         , countLeadingZeros $
+                                           string x `xor` string y
+                                         ]
+                  Bin x' lx rx = resizeRoot kmin tx
+                  Bin y' ly ry = resizeRoot kmin ty
+                  node         = x' { label = label x' <|> label y' }
 
 
-fromEntry :: Entry -> Tree PaCoNode
-fromEntry (Entry p n) = Bin Tip node Tip
+fromEntry :: Entry -> PaCoTree
+fromEntry (Entry p n) = Bin node Tip Tip
   where Prefix (Address a) (Mask m) = p
-        node                        = PaCoNode { skip   = m
-                                               , string = a
-                                               , label  = Just n
-                                               }
+        node                        = Node { skip   = m
+                                           , string = a
+                                           , label  = Just n
+                                           }
 
-lookupState :: Address -> Tree PaCoNode -> State (Maybe Int) ()
+lookupState :: Address -> PaCoTree -> State (Maybe Int) ()
 lookupState (Address a) = helper a
-  where helper :: Word32 -> Tree PaCoNode -> State (Maybe Int) ()
-        helper v t | t == Tip || k < kx = return ()
-                   | otherwise          = do
-                       modify (label x <|>)
-                       helper (v `shiftL` (kx + 1)) $
-                         if v `testBit` (31 - kx) then r else l
-          where Bin l x r = t
-                kx        = skip x
-                k         = countLeadingZeros $ v `xor` string x
+  where helper :: Word32 -> PaCoTree -> State (Maybe Int) ()
+        helper v (Bin x l r) | k < kx    = return ()
+                             | otherwise = do
+                                 modify (label x <|>)
+                                 helper (v `shiftL` (kx + 1)) $
+                                   if v `testBit` (31 - kx) then r else l
+          where kx = skip x
+                k  = countLeadingZeros $ v `xor` string x
+        helper _ Tip                     = return ()
 
-instance IpRouter (Tree PaCoNode) where
+delEmptyNode :: PaCoTree -> PaCoTree
+delEmptyNode t | Bin x Tip Tip <- t
+               , Nothing <- label x = Tip
+               | otherwise          = t
+
+delSubtree :: PaCoTree -> PaCoTree -> PaCoTree
+Tip `delSubtree` _ = Tip
+t `delSubtree` Tip = uniteRoot t
+tx `delSubtree` ty = delEmptyNode . uniteRoot $
+                     Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
+  where Bin x _ _    = tx
+        Bin y _ _    = ty
+        kmin         = minimum [ skip x
+                               , skip y
+                               , countLeadingZeros $
+                                 string x `xor` string y
+                               ]
+        Bin x' lx rx = resizeRoot kmin tx
+        Bin y' ly ry = resizeRoot kmin ty
+        node         = x' { label = labelDiff (label x') (label y') }
+        labelDiff :: Maybe Int -> Maybe Int -> Maybe Int
+        labelDiff (Just sx) (Just sy) | sx == sy = Nothing
+        labelDiff sx        _                    = sx
+
+instance IpRouter PaCoTree where
   mkTable es = runST $ do
-    let tree  = foldr insEntry mempty es
-        kvec  = foldr accSkipValues (V.replicate 33 0) tree
-        hsize = map (second length) . freqToEnc . V.toList . V.indexed $ kvec
     modifySTRef huffmanVecRef (V.// hsize)
     return tree
-      where accSkipValues x v = V.accum (+) v [(skip x, 1)]
+      where tree  = foldr insEntry mempty es
+            kvec  = foldr accSkipValues (V.replicate 33 0) tree
+            hsize = map (second length) . freqToEnc .
+                    V.toList . V.indexed $ kvec
+            accSkipValues x v = V.accum (+) v [(skip x, 1)]
 
   insEntry = mappend . fromEntry
 
@@ -249,76 +172,180 @@ instance IpRouter (Tree PaCoNode) where
 
   ipLookup a t = execState (lookupState a t) Nothing
 
-  numOfPrefixes = getSum . foldMap isPrefix
-    where isPrefix x = if (isJust . label) x then Sum 1 else Sum 0
+  numOfPrefixes = getSum . foldMap (Sum . nodePrefix)
+    where nodePrefix x = if isJust . label $ x then 1 else 0
 
 
-gammaSize :: Tree PaCoNode -> Int
-gammaSize = getSum . foldMap nodeSize
-  where nodeSize PaCoNode { skip = k } =
-          {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
-             Elias gamma code of skip value (the skip value should be
-             increased by one), and node string. -}
-          Sum $ 3 + (BMP.size . encodeEliasGamma . succ $ k) + k
+{-|
+The node size of path-compressed tree is built from the following
+parts:
 
-deltaSize :: Tree PaCoNode -> Int
-deltaSize = getSum . foldMap nodeSize
-  where nodeSize PaCoNode { skip = k } =
-          {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
-             Elias delta code of skip value (the skip value should be
-             increased by one), and node string. -}
-          Sum $ 3 + (BMP.size . encodeEliasDelta . succ $ k) + k
+    * parenthesis expression (2 bits);
 
-eliasFanoSize :: Tree PaCoNode -> Int
-eliasFanoSize t = eliasFanoCodeSize t + (getSum . foldMap nodeSize $ t)
-{- The node size is built from the following parts: parenthesis
-   expression (2 bits), internal prefix (1 bit), and node string. -}
-  where nodeSize x = Sum $ 3 + skip x
+    * Elias gamma code of skip value (the skip value should be
+      increased by one);
 
-eliasFanoCodeSize :: Tree PaCoNode -> Int
-eliasFanoCodeSize t
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+eliasGammaSize :: PaCoTree -> Int
+eliasGammaSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          2 + (BMP.size . encodeEliasGamma . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
+
+{-|
+The node size of path-compressed tree is built from the following
+parts:
+
+    * parenthesis expression (2 bits);
+
+    * Elias delta code of skip value (the skip value should be
+      increased by one);
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+eliasDeltaSize :: PaCoTree -> Int
+eliasDeltaSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          2 + (BMP.size . encodeEliasDelta . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
+
+{-|
+The size of path-compressed tree is built from the following parts:
+
+    * balanced-parentheses expression (2 bits per node);
+
+    * Elias-Fano sequence of skip values;
+
+    * node strings;
+
+    * prefix bits (1 bit per node);
+
+    * RE indexes (18 bits per prefix).
+-}
+eliasFanoSize :: PaCoTree -> Int
+eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
+  where nodeSize Node { skip = k, label = s } =
+          2 + k + 1 + if isJust s then 18 else 0
+
+eliasFanoSeqSize :: PaCoTree -> Int
+eliasFanoSeqSize t
   | null ks   = 0
   | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
                 highBits bmp2 <> lowBits bmp2
   where ks   = foldMap ((:[]) . skip) t
         bmp2 = encodeEliasFano . scanl1 (+) $ ks
 
-fibonacciSize :: Tree PaCoNode -> Int
-fibonacciSize = getSum . foldMap nodeSize
-  where nodeSize PaCoNode { skip = k } =
-          {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
-             Fibonacci code of skip value (the skip value should be
-             increased by one), and node string. -}
-          Sum $ 3 + (BMP.size . encodeFibonacci . succ $ k) + k
+{-|
+The node size of path-compressed tree is built from the following
+parts:
+
+    * parenthesis expression (2 bits);
+
+    * Fibonacci code of skip value (the skip value should be increased
+      by one);
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+fibonacciSize :: PaCoTree -> Int
+fibonacciSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } =
+          2 + (BMP.size . encodeFibonacci . succ $ k) +
+          k + 1 + if isJust s then 18 else 0
+
+{-|
+The node size of path-compressed tree is built from the following
+parts:
+
+    * parenthesis expression (2 bits);
+
+    * Huffman code of skip value;
+
+    * node string;
+
+    * prefix bit (1 bit);
+
+    * RE index (18 bits) if the prefix bit is set.
+-}
+huffmanSize :: PaCoTree -> Int
+huffmanSize = getSum . foldMap (Sum . nodeSize)
+  where nodeSize Node { skip = k, label = s } = runST $ do
+          hsize <- readSTRef huffmanVecRef
+          return $ 2 + (hsize V.! k) + k + 1 + if isJust s then 18 else 0
 
 {-# NOINLINE huffmanVecRef #-}
 huffmanVecRef :: forall s . STRef s (V.Vector Int)
 huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 33 0
 
-huffmanSize :: Tree PaCoNode -> Int
-huffmanSize = getSum . foldMap nodeSize
-  where nodeSize PaCoNode { skip = k } =
-          {- The node size is built from the following parts:
-             parenthesis expression (2 bits), internal prefix (1 bit),
-             Huffman code of skip value (the skip value should be
-             increased by one), and node string. -}
-          Sum $ runST $ do hsize <- readSTRef huffmanVecRef
-                           return $ 3 + (hsize V.! k) + k
-
-
-newtype PaCoTree = PaCoTree (Tree PaCoNode)
-                 deriving (Show, Eq, Monoid, PrefixTree, IpRouter)
-
 putPaCoTree :: PaCoTree -> IO ()
-putPaCoTree (PaCoTree t) = do
-  putStrLn "Path-compressed tree"
-  putStrLn "  Memory usage:"
-  putStrLn . (++) "    Elias gamma coding: " . show $ gammaSize t + 18 * n
-  putStrLn . (++) "    Elias delta coding: " . show $ deltaSize t + 18 * n
-  putStrLn . (++) "    Elias-Fano coding:  " . show $ eliasFanoSize t + 18 * n
-  putStrLn . (++) "    Fibonacci coding:   " . show $ fibonacciSize t + 18 * n
-  putStrLn . (++) "    Huffman coding:     " . show $ huffmanSize t + 18 * n
-    where n = numOfPrefixes t
+putPaCoTree t = do
+  putStrLn "Size of path-compressed tree"
+  putStrLn . (++) "  Elias gamma coding " . show . eliasGammaSize $ t
+  putStrLn . (++) "  Elias delta coding " . show . eliasDeltaSize $ t
+  putStrLn . (++) "  Elias-Fano coding  " . show . eliasFanoSize $ t
+  putStrLn . (++) "  Fibonacci coding   " . show . fibonacciSize $ t
+  putStrLn . (++) "  Huffman coding     " . show . huffmanSize $ t
+
+
+type PaCoZipper = (,,) PaCoTree
+                  [Either (Node, PaCoTree) (Node, PaCoTree)]
+                  [Bool]
+
+instance {-# OVERLAPPING #-} Show PaCoZipper where
+  show (t, _, _) = show t
+
+instance IpRouter PaCoZipper where
+  mkTable es              = (mkTable es, [], [])
+  insEntry e (t, _, _)    = (insEntry e t, [], [])
+  delEntry e (t, _, _)    = (delEntry e t, [], [])
+  ipLookup e (t, _, _)    = ipLookup e t
+  numOfPrefixes (t, _, _) = numOfPrefixes t
+
+instance Zipper PaCoZipper where
+  goLeft (t, es, bs) = case resizeRoot 0 t of
+                         Bin x l r -> (l, Right (x, r) : es, True : bs)
+                         Tip       -> error "Tried to go left from a leaf"
+
+  goRight (t, es, bs) = case resizeRoot 0 t of
+                          Bin x l r -> (r, Left (x, l) : es, True : bs)
+                          Tip       -> error "Tried to go right from a leaf"
+
+  goUp z =
+    case z of
+      (l, Right (x, r) : es, b : bs) -> (mbUnite b $ Bin x l r, es, bs)
+      (r, Left (x, l) : es, b : bs)  -> (mbUnite b $ Bin x l r, es, bs)
+      (_, [], _)                     -> error "Tried to go up from the top"
+      (_, _, [])                     -> error "Tried to go up from the top"
+    where mbUnite b = if b then uniteRoot else id
+
+  isLeaf (Tip, _, _) = True
+  isLeaf _           = False
+
+  getLabel (Bin x _ _, _, _) | skip x == 0 = label x
+  getLabel _                               = Nothing
+
+  setLabel s (t@(Bin x l r), es, bs)
+    | skip x == 0 = (Bin x { label = s } l r, es, bs)
+    | isJust s    = (Bin x' { label = s } l' r', es, bs)
+    where Bin x' l' r' = resizeRoot 0 t
+  setLabel _ z    = z
+
+  size (t, _, _) = eliasGammaSize t
+
+  insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
+  insert (t, _, _) (_, es, [])     = (t, es, [])
+
+  delete (_, es, _ : bs) = (Tip, es, False : bs)
+  delete (_, es, [])     = (Tip, es, [])

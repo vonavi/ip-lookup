@@ -21,6 +21,7 @@ freqToTree xs = head . fromLeaves . map Leaf . sortBy (comparing snd) $ xs
         fromLeaves (t1:t2:ts) = fromLeaves . sortBy (comparing getFreq) $
                                 Branch t1 f t2 : ts
           where f = getFreq t1 + getFreq t2
+        fromLeaves []         = error "Empty list"
 
 freqToEnc :: [(a, Int)] -> [(a, [Bool])]
 freqToEnc = helper . freqToTree

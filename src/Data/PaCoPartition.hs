@@ -1,48 +1,34 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.PaCoPartition
-       (
-         MhPaCoPrtn
-       , MhPaCoPrtnM
-       , MsPaCoPrtn
-       , MsPaCoPrtnM
-       , putPaCoPrtn
-       ) where
+  (
+    PaCoMinHeight(..)
+  , putPaCoMinHeight
+  , PaCoMinSize(..)
+  , putPaCoMinSize
+  ) where
 
 import           Data.IpRouter
-import           Data.PaCoTree   hiding (Tree)
-import           Data.Partition
-import           Data.PrefixTree
+import           Data.PaCoTree   (PaCoZipper)
+import           Data.PartitionM
+import           Data.Zipper
 
-putPaCoPrtn :: (IpRouter a, Partition a) => a -> IO ()
-putPaCoPrtn t = do
-  putStrLn "Partition of path-compressed tree"
+newtype PaCoMinHeight = PaCoMinHeight PaCoZipper
+                      deriving (Eq, Show, IpRouter, Zipper)
+instance Partible PaCoMinHeight where
+  memTreeMerge = minHeightMerge
+
+putPaCoMinHeight :: MemTree PaCoMinHeight -> IO ()
+putPaCoMinHeight t = do
+  putStrLn "Min-height partition of path-compressed tree"
   putPartition t
 
-newtype MhPaCoTree = MhPaCoTree PaCoTree
-                   deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
-newtype MhPaCoPrtn = MhPaCoPrtn (Page MhPaCoTree)
-                   deriving (Eq, Show, Partition, IpRouter)
-instance Partible MhPaCoTree where
-  pageMerge = minHeightMerge False
+newtype PaCoMinSize = PaCoMinSize PaCoZipper
+                    deriving (Eq, Show, IpRouter, Zipper)
+instance Partible PaCoMinSize where
+  memTreeMerge = minSizeMerge
 
-newtype MhPaCoTreeM = MhPaCoTreeM PaCoTree
-                    deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
-newtype MhPaCoPrtnM = MhPaCoPrtnM (Page MhPaCoTreeM)
-                    deriving (Eq, Show, Partition, IpRouter)
-instance Partible MhPaCoTreeM where
-  pageMerge = minHeightMerge True
-
-newtype MsPaCoTree = MsPaCoTree PaCoTree
-                   deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
-newtype MsPaCoPrtn = MsPaCoPrtn (Page MsPaCoTree)
-                   deriving (Eq, Show, Partition, IpRouter)
-instance Partible MsPaCoTree where
-  pageMerge = minSizeMerge False
-
-newtype MsPaCoTreeM = MsPaCoTreeM PaCoTree
-                    deriving (Eq, Show, Monoid, IpRouter, PrefixTree)
-newtype MsPaCoPrtnM = MsPaCoPrtnM (Page MsPaCoTreeM)
-                    deriving (Eq, Show, Partition, IpRouter)
-instance Partible MsPaCoTreeM where
-  pageMerge = minSizeMerge True
+putPaCoMinSize :: MemTree PaCoMinSize -> IO ()
+putPaCoMinSize t = do
+  putStrLn "Min-size partition of path-compressed tree"
+  putPartition t

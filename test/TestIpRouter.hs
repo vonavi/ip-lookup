@@ -8,8 +8,7 @@ import           Data.IpRouter
 
 testIpRouter :: IpRouter a => a
 testIpRouter = mkTable . map toEntry $ l
-  where toEntry (s, m, h) = Entry p h
-          where p = Prefix (strToAddr s) (strToMask m)
+  where toEntry (s, m, h) = Entry (read (s ++ m) :: Prefix) h
         l = [ ("0.0.0.0",       "/0",  0)
             , ("192.168.0.0",   "/24", 1)
             , ("192.168.0.1",   "/22", 2)
@@ -21,7 +20,7 @@ testIpRouter = mkTable . map toEntry $ l
 testIpLookup :: IpRouter a => a -> Bool
 testIpLookup router = and $ zipWith (==) testHopList nextHopList
   where
-    testHopList = map (\x -> ipLookup (strToAddr x) router) addrList
+    testHopList = map (\x -> ipLookup (read x :: Address) router) addrList
     addrList    = [ "0.0.0.0"
                   , "192.168.0.0"
                   , "192.168.0.1"
