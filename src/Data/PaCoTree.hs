@@ -315,10 +315,10 @@ newtype PaCoTree = PaCoTree (Tree PaCoNode)
 putPaCoTree :: PaCoTree -> IO ()
 putPaCoTree (PaCoTree t) = do
   putStrLn "Path-compressed tree"
-  putStrLn "  Memory usage:"
-  putStrLn . (++) "    Elias gamma coding: " . show $ gammaSize t + 18 * n
-  putStrLn . (++) "    Elias delta coding: " . show $ deltaSize t + 18 * n
-  putStrLn . (++) "    Elias-Fano coding:  " . show $ eliasFanoSize t + 18 * n
-  putStrLn . (++) "    Fibonacci coding:   " . show $ fibonacciSize t + 18 * n
-  putStrLn . (++) "    Huffman coding:     " . show $ huffmanSize t + 18 * n
+  putStrLn "  Memory usage"
+  putStrLn . (++) "    Elias gamma coding " . show $ gammaSize t + 18 * n
+  putStrLn . (++) "    Elias delta coding " . show $ deltaSize t + 18 * n
+  putStrLn . (++) "    Elias-Fano coding  " . show $ eliasFanoSize t + 18 * n
+  putStrLn . (++) "    Fibonacci coding   " . show $ fibonacciSize t + 18 * n
+  putStrLn . (++) "    Huffman coding     " . show $ huffmanSize t + 18 * n
     where n = numOfPrefixes t

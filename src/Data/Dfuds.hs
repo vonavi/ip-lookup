@@ -21,7 +21,7 @@ module Data.Dfuds
        , ordToDfudsT4
        ) where
 
-import           Control.Applicative ((<*>), (<|>))
+import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Maybe
 

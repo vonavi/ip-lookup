@@ -14,8 +14,7 @@ import           TestIpRouter
 
 testEntries :: [Entry]
 testEntries = map toEntry l
-  where toEntry (s, m, h) = let p = Prefix (strToAddr s) (strToMask m)
-                            in Entry p h
+  where toEntry (s, m, h) = Entry (read (s ++ m) :: Prefix) h
         l = [ ("0.0.0.0",   "/1", 0)
             , ("127.0.0.0", "/2", 1)
             , ("111.0.0.0", "/4", 2)
