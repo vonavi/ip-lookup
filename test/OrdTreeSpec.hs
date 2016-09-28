@@ -11,7 +11,6 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.OrdTree
 import           Data.Paren
-import           Data.PrefixTree
 import           RandomPrefixes
 import           TestIpRouter
 
@@ -32,16 +31,16 @@ ordSizeSpec :: Spec
 ordSizeSpec = do
   describe "Size of example ordinal tree" $ do
     it "Ordinal tree T1" $ do
-      size (testOrdTree :: OrdTreeT1) `shouldBe` 8
+      ordSize (testOrdTree :: OrdTreeT1) `shouldBe` 8
 
     it "Ordinal tree T2" $ do
-      size (testOrdTree :: OrdTreeT2) `shouldBe` 8
+      ordSize (testOrdTree :: OrdTreeT2) `shouldBe` 8
 
     it "Ordinal tree T3" $ do
-      size (testOrdTree :: OrdTreeT3) `shouldBe` 8
+      ordSize (testOrdTree :: OrdTreeT3) `shouldBe` 8
 
     it "Ordinal tree T4" $ do
-      size (testOrdTree :: OrdTreeT4) `shouldBe` 8
+      ordSize (testOrdTree :: OrdTreeT4) `shouldBe` 8
 
 ordBpSpec :: Spec
 ordBpSpec = do

@@ -9,6 +9,7 @@ module Data.OrdTree
          OrdTree(..)
        , ordToBp
        , ordToDfuds
+       , ordSize
        , OrdTreeT1
        , OrdZipperT1
        , OrdTreeT2
@@ -20,7 +21,6 @@ module Data.OrdTree
        ) where
 
 import           Control.Applicative ((<|>))
-import           Control.Arrow       (second)
 import           Control.Monad.State
 import           Data.Bits
 import           Data.Maybe          (isJust)
@@ -30,7 +30,6 @@ import qualified Data.Sequence       as S
 
 import           Data.IpRouter
 import           Data.Paren
-import           Data.PrefixTree
 import           Data.Zipper
 
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
@@ -39,8 +38,9 @@ class OrdTree a where
   toForest    :: a       -> Forest (Maybe Int)
   fromEntry   :: Entry   -> a
   lookupState :: Address -> a -> State (Maybe Int) ()
+  delSubtree  :: a       -> a -> a
 
-instance {-# OVERLAPPABLE #-} (OrdTree a, PrefixTree a) => IpRouter a where
+instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   mkTable = foldr (mappend . fromEntry) mempty
 
   insEntry e t = t `mappend` fromEntry e
@@ -75,9 +75,6 @@ ordToDfuds x = (Nothing, ps) : forestToDfuds f
   where f  = toForest x
         ps = replicate (length $ getSeq f) Open ++ [Close]
 
-isOrdEmpty :: OrdTree a => a -> Bool
-isOrdEmpty = S.null . getSeq . toForest
-
 ordSize :: OrdTree a => a -> Int
 ordSize x = pred $ execState (helper . toForest $ x) 0
   where helper :: Forest (Maybe Int) -> State Int ()
@@ -87,6 +84,22 @@ ordSize x = pred $ execState (helper . toForest $ x) 0
 
 delRoot :: Maybe Int -> Maybe Int -> Maybe Int
 delRoot x y = if x == y then Nothing else x
+
+delEmptyNodeL :: S.Seq (Maybe Int, Forest (Maybe Int))
+              -> S.Seq (Maybe Int, Forest (Maybe Int))
+delEmptyNodeL t | (Nothing, Forest l) :< r <- S.viewl t
+                , S.null l, S.null r
+                  = S.empty
+                | otherwise
+                  = t
+
+delEmptyNodeR :: S.Seq (Maybe Int, Forest (Maybe Int))
+              -> S.Seq (Maybe Int, Forest (Maybe Int))
+delEmptyNodeR t | l :> (Nothing, Forest r) <- S.viewr t
+                , S.null l, S.null r
+                  = S.empty
+                | otherwise
+                  = t
 
 
 newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
@@ -122,44 +135,15 @@ instance OrdTree OrdTreeT1 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-instance PrefixTree OrdTreeT1 where
-  isEmpty = isOrdEmpty
-
-  root t = case (S.viewl . getSeq . toForest) t of
-             EmptyL      -> Nothing
-             (x, _) :< _ -> x
-
-  leftSubtree t = OrdTreeT1 . Forest $
-                  case (S.viewl . getSeq . toForest) t of
-                    EmptyL             -> S.empty
-                    (_, Forest l) :< _ -> l
-
-  rightSubtree t = OrdTreeT1 . Forest $
-                   case (S.viewl . getSeq . toForest) t of
-                     EmptyL -> S.empty
-                     _ :< r -> r
-
-  singleton x = OrdTreeT1 . Forest . S.singleton $ (x, Forest S.empty)
-
-  merge x ltree rtree = OrdTreeT1 . Forest $
-                        (x, toForest ltree) <| (getSeq . toForest $ rtree)
-
-  collapse = OrdTreeT1 . collapseF . toForest
-    where collapseF = Forest . S.dropWhileR empty .
-                      fmap (second collapseF) . getSeq
-          empty (Nothing, Forest x) = S.null x
-          empty _                   = False
-
-  delSubtree a b = collapse . OrdTreeT1 . Forest $
-                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewl -> EmptyL)    _                      = S.empty
-          helper t                      (S.viewl -> EmptyL)    = t
-          helper (S.viewl -> xs :< xss) (S.viewl -> ys :< yss) =
-            let (x, Forest fx) = xs
-                (y, Forest fy) = ys
-            in (x `delRoot` y, Forest (helper fx fy)) <| helper xss yss
-
-  size = ordSize
+  delSubtree tx ty = OrdTreeT1 . Forest $
+                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where (S.viewl -> EmptyL)   `helper` _                     = S.empty
+          t                     `helper` (S.viewl -> EmptyL)   = t
+          (S.viewl -> hx :< rx) `helper` (S.viewl -> hy :< ry) =
+            delEmptyNodeL $
+            (x `delRoot` y, Forest $ lx `helper` ly) <| (rx `helper` ry)
+            where (x, Forest lx) = hx
+                  (y, Forest ly) = hy
 
 
 type OrdZipperT1 = (,) OrdTreeT1
@@ -245,44 +229,15 @@ instance OrdTree OrdTreeT2 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-instance PrefixTree OrdTreeT2 where
-  isEmpty = isOrdEmpty
-
-  root t = case (S.viewr . getSeq . toForest) t of
-             EmptyR      -> Nothing
-             _ :> (x, _) -> x
-
-  leftSubtree t = OrdTreeT2 . Forest $
-                  case (S.viewr . getSeq . toForest) t of
-                    EmptyR             -> S.empty
-                    _ :> (_, Forest l) -> l
-
-  rightSubtree t = OrdTreeT2 . Forest $
-                   case (S.viewr . getSeq . toForest) t of
-                     EmptyR -> S.empty
-                     r :> _ -> r
-
-  singleton x = OrdTreeT2 . Forest . S.singleton $ (x, Forest S.empty)
-
-  merge x ltree rtree = OrdTreeT2 . Forest $
-                        (getSeq . toForest $ rtree) |> (x, toForest ltree)
-
-  collapse = OrdTreeT2 . collapseF . toForest
-    where collapseF = Forest . S.dropWhileL empty .
-                      fmap (second collapseF) . getSeq
-          empty (Nothing, Forest x) = S.null x
-          empty _                   = False
-
-  delSubtree a b = collapse . OrdTreeT2 . Forest $
-                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewr -> EmptyR)    _                      = S.empty
-          helper t                      (S.viewr -> EmptyR)    = t
-          helper (S.viewr -> xss :> xs) (S.viewr -> yss :> ys) =
-            let (x, Forest fx) = xs
-                (y, Forest fy) = ys
-            in helper xss yss |> (x `delRoot` y, Forest (helper fx fy))
-
-  size = ordSize
+  delSubtree tx ty = OrdTreeT2 . Forest $
+                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where (S.viewr -> EmptyR)   `helper` _                     = S.empty
+          t                     `helper` (S.viewr -> EmptyR)   = t
+          (S.viewr -> rx :> hx) `helper` (S.viewr -> ry :> hy) =
+            delEmptyNodeR $
+            rx `helper` ry |> (x `delRoot` y, Forest $ lx `helper` ly)
+            where (x, Forest lx) = hx
+                  (y, Forest ly) = hy
 
 
 type OrdZipperT2 = (,) OrdTreeT2
@@ -368,44 +323,15 @@ instance OrdTree OrdTreeT3 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-instance PrefixTree OrdTreeT3 where
-  isEmpty = isOrdEmpty
-
-  root t = case (S.viewl . getSeq . toForest) t of
-             EmptyL      -> Nothing
-             (x, _) :< _ -> x
-
-  leftSubtree t = OrdTreeT3 . Forest $
-                  case (S.viewl . getSeq . toForest) t of
-                    EmptyL -> S.empty
-                    _ :< l -> l
-
-  rightSubtree t = OrdTreeT3 . Forest $
-                   case (S.viewl . getSeq . toForest) t of
-                     EmptyL             -> S.empty
-                     (_, Forest r) :< _ -> r
-
-  singleton x = OrdTreeT3 . Forest . S.singleton $ (x, Forest S.empty)
-
-  merge x ltree rtree = OrdTreeT3 . Forest $
-                        (x, toForest rtree) <| (getSeq . toForest $ ltree)
-
-  collapse = OrdTreeT3 . collapseF . toForest
-    where collapseF = Forest . S.dropWhileR empty .
-                      fmap (second collapseF) . getSeq
-          empty (Nothing, Forest x) = S.null x
-          empty _                   = False
-
-  delSubtree a b = collapse . OrdTreeT3 . Forest $
-                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewl -> EmptyL)    _                      = S.empty
-          helper t                      (S.viewl -> EmptyL)    = t
-          helper (S.viewl -> xs :< xss) (S.viewl -> ys :< yss) =
-            let (x, Forest fx) = xs
-                (y, Forest fy) = ys
-            in (x `delRoot` y, Forest (helper fx fy)) <| helper xss yss
-
-  size = ordSize
+  delSubtree tx ty = OrdTreeT3 . Forest $
+                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where (S.viewl -> EmptyL)   `helper` _                     = S.empty
+          t                     `helper` (S.viewl -> EmptyL)   = t
+          (S.viewl -> hx :< lx) `helper` (S.viewl -> hy :< ly) =
+            delEmptyNodeL $
+            (x `delRoot` y, Forest $ rx `helper` ry) <| lx `helper` ly
+            where (x, Forest rx) = hx
+                  (y, Forest ry) = hy
 
 
 type OrdZipperT3 = (,) OrdTreeT3
@@ -491,44 +417,15 @@ instance OrdTree OrdTreeT4 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-instance PrefixTree OrdTreeT4 where
-  isEmpty = isOrdEmpty
-
-  root t = case (S.viewr . getSeq . toForest) t of
-             EmptyR      -> Nothing
-             _ :> (x, _) -> x
-
-  leftSubtree t = OrdTreeT4 . Forest $
-                  case (S.viewr . getSeq . toForest) t of
-                    EmptyR -> S.empty
-                    l :> _ -> l
-
-  rightSubtree t = OrdTreeT4 . Forest $
-                   case (S.viewr . getSeq . toForest) t of
-                     EmptyR             -> S.empty
-                     _ :> (_, Forest r) -> r
-
-  singleton x = OrdTreeT4 . Forest . S.singleton $ (x, Forest S.empty)
-
-  merge x ltree rtree = OrdTreeT4 . Forest $
-                        (getSeq . toForest $ ltree) |> (x, toForest rtree)
-
-  collapse = OrdTreeT4 . collapseF . toForest
-    where collapseF = Forest . S.dropWhileL empty .
-                      fmap (second collapseF) . getSeq
-          empty (Nothing, Forest x) = S.null x
-          empty _                   = False
-
-  delSubtree a b = collapse . OrdTreeT4 . Forest $
-                   helper (getSeq . toForest $ a) (getSeq . toForest $ b)
-    where helper (S.viewr -> EmptyR)    _                      = S.empty
-          helper t                      (S.viewr -> EmptyR)    = t
-          helper (S.viewr -> xss :> xs) (S.viewr -> yss :> ys) =
-            let (x, Forest fx) = xs
-                (y, Forest fy) = ys
-            in helper xss yss |> (x `delRoot` y, Forest (helper fx fy))
-
-  size = ordSize
+  delSubtree tx ty = OrdTreeT4 . Forest $
+                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+    where (S.viewr -> EmptyR)   `helper` _                     = S.empty
+          t                     `helper` (S.viewr -> EmptyR)   = t
+          (S.viewr -> lx :> hx) `helper` (S.viewr -> ly :> hy) =
+            delEmptyNodeR $
+            lx `helper` ly |> (x `delRoot` y, Forest $ rx `helper` ry)
+            where (x, Forest rx) = hx
+                  (y, Forest ry) = hy
 
 
 type OrdZipperT4 = (,) OrdTreeT4
