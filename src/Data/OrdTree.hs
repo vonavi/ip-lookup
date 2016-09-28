@@ -23,7 +23,9 @@ module Data.OrdTree
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool           (bool)
 import           Data.Maybe          (isJust)
+import           Data.Monoid
 import           Data.Sequence       (ViewL ((:<), EmptyL),
                                       ViewR ((:>), EmptyR), (<|), (|>))
 import qualified Data.Sequence       as S
@@ -34,6 +36,11 @@ import           Data.Zipper
 
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
 
+instance Foldable Forest where
+  foldMap f t = case S.viewl . getSeq $ t of
+                  (x, l) :< r -> f x <> foldMap f l <> foldMap f (Forest r)
+                  EmptyL      -> mempty
+
 class OrdTree a where
   toForest    :: a       -> Forest (Maybe Int)
   fromEntry   :: Entry   -> a
@@ -41,20 +48,11 @@ class OrdTree a where
   delSubtree  :: a       -> a -> a
 
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
-  mkTable = foldr (mappend . fromEntry) mempty
-
-  insEntry e t = t `mappend` fromEntry e
-
-  delEntry e t = t `delSubtree` fromEntry e
-
-  ipLookup a t = execState (lookupState a t) Nothing
-
-  numOfPrefixes tree = execState (helper . getSeq . toForest $ tree) 0
-    where helper t = case S.viewl t of
-                       EmptyL             -> return ()
-                       (x, Forest l) :< r -> do helper l
-                                                helper r
-                                                when (isJust x) $ modify succ
+  mkTable       = foldr (mappend . fromEntry) mempty
+  insEntry e t  = t `mappend` fromEntry e
+  delEntry e t  = t `delSubtree` fromEntry e
+  ipLookup a t  = execState (lookupState a t) Nothing
+  numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust) . toForest
 
 forestToBp :: Forest a -> [(a, Paren)]
 forestToBp = concatMap f . getSeq
@@ -76,11 +74,7 @@ ordToDfuds x = (Nothing, ps) : forestToDfuds f
         ps = replicate (length $ getSeq f) Open ++ [Close]
 
 ordSize :: OrdTree a => a -> Int
-ordSize x = pred $ execState (helper . toForest $ x) 0
-  where helper :: Forest (Maybe Int) -> State Int ()
-        helper (Forest xs) = do
-          mapM_ (helper . snd) xs
-          modify succ
+ordSize = getSum . foldMap (Sum . const 1) . toForest
 
 delRoot :: Maybe Int -> Maybe Int -> Maybe Int
 delRoot x y = if x == y then Nothing else x
