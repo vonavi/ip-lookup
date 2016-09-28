@@ -9,8 +9,8 @@ module Data.PaCoPartition
   ) where
 
 import           Data.IpRouter
-import           Data.PaCoTree   (PaCoZipper)
-import           Data.PartitionM
+import           Data.PaCoTree  (PaCoZipper)
+import           Data.Partition
 import           Data.Zipper
 
 newtype PaCoMinHeight = PaCoMinHeight PaCoZipper

@@ -6,7 +6,7 @@ module OrdPartitionSpec
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.OrdPartitionM
+import           Data.OrdPartition
 import           RandomPrefixes
 import           TestIpRouter
 

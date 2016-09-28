@@ -7,7 +7,7 @@ import           Test.Hspec
 
 import           Data.IpRouter
 import           Data.PaCoPartition
-import           Data.PartitionM    (MemTree)
+import           Data.Partition     (MemTree)
 import           RandomPrefixes
 import           TestIpRouter
 
