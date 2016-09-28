@@ -10,9 +10,13 @@ module Data.OrdTree
        , ordToBp
        , ordToDfuds
        , OrdTreeT1
+       , OrdZipperT1
        , OrdTreeT2
+       , OrdZipperT2
        , OrdTreeT3
+       , OrdZipperT3
        , OrdTreeT4
+       , OrdZipperT4
        ) where
 
 import           Control.Applicative ((<|>))
@@ -27,6 +31,7 @@ import qualified Data.Sequence       as S
 import           Data.IpRouter
 import           Data.Paren
 import           Data.PrefixTree
+import           Data.Zipper
 
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
 
@@ -157,6 +162,56 @@ instance PrefixTree OrdTreeT1 where
   size = ordSize
 
 
+type OrdZipperT1 = (,) OrdTreeT1
+                   [Either (Maybe Int, OrdTreeT1) (Maybe Int, OrdTreeT1)]
+
+instance {-# OVERLAPPING #-} Show OrdZipperT1 where
+  show (t, _) = show t
+
+instance IpRouter OrdZipperT1 where
+  mkTable es           = (mkTable es, [])
+  insEntry e (t, _)    = (insEntry e t, [])
+  delEntry e (t, _)    = (delEntry e t, [])
+  ipLookup e (t, _)    = ipLookup e t
+  numOfPrefixes (t, _) = numOfPrefixes t
+
+instance Zipper OrdZipperT1 where
+  goLeft (t, es) =
+    case S.viewl . getSeq . toForest $ t of
+      (x, l) :< r -> (OrdTreeT1 l, Right (x, OrdTreeT1 . Forest $ r) : es)
+      EmptyL      -> error "Tried to go left from a leaf"
+
+  goRight (t, es) =
+    case S.viewl . getSeq . toForest $ t of
+      (x, l) :< r -> (OrdTreeT1 . Forest $ r, Left (x, OrdTreeT1 l) : es)
+      EmptyL      -> error "Tried to go right from a leaf"
+
+  goUp z = case z of (OrdTreeT1 l, Right (x, OrdTreeT1 (Forest r)) : es)
+                       -> (OrdTreeT1 . Forest $ (x, l) <| r, es)
+                     (OrdTreeT1 (Forest r), Left (x, OrdTreeT1 l) : es)
+                       -> (OrdTreeT1 . Forest $ (x, l) <| r, es)
+                     (_, [])
+                       -> error "Tried to go up from the top"
+
+  isLeaf (t, _) = case S.viewl . getSeq . toForest $ t of
+                    EmptyL -> True
+                    _      -> False
+
+  getLabel (t, _) = case S.viewl . getSeq . toForest $ t of
+                      (x, _) :< _ -> x
+                      EmptyL      -> Nothing
+
+  setLabel s z@(t, es) = case S.viewl . getSeq . toForest $ t of
+                           (_, l) :< r -> (OrdTreeT1 . Forest $ (s, l) <| r, es)
+                           EmptyL      -> z
+
+  size (t, _) = ordSize t + 18 * numOfPrefixes t
+
+  insert (t, _) (_, es) = (t, es)
+
+  delete (_, es) = (OrdTreeT1 . Forest $ S.empty, es)
+
+
 newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT2 where
@@ -228,6 +283,56 @@ instance PrefixTree OrdTreeT2 where
             in helper xss yss |> (x `delRoot` y, Forest (helper fx fy))
 
   size = ordSize
+
+
+type OrdZipperT2 = (,) OrdTreeT2
+                   [Either (Maybe Int, OrdTreeT2) (Maybe Int, OrdTreeT2)]
+
+instance {-# OVERLAPPING #-} Show OrdZipperT2 where
+  show (t, _) = show t
+
+instance IpRouter OrdZipperT2 where
+  mkTable es           = (mkTable es, [])
+  insEntry e (t, _)    = (insEntry e t, [])
+  delEntry e (t, _)    = (delEntry e t, [])
+  ipLookup e (t, _)    = ipLookup e t
+  numOfPrefixes (t, _) = numOfPrefixes t
+
+instance Zipper OrdZipperT2 where
+  goLeft (t, es) =
+    case S.viewr . getSeq . toForest $ t of
+      r :> (x, l) -> (OrdTreeT2 l, Right (x, OrdTreeT2 . Forest $ r) : es)
+      EmptyR      -> error "Tried to go left from a leaf"
+
+  goRight (t, es) =
+    case S.viewr . getSeq . toForest $ t of
+      r :> (x, l) -> (OrdTreeT2 . Forest $ r, Left (x, OrdTreeT2 l) : es)
+      EmptyR      -> error "Tried to go right from a leaf"
+
+  goUp z = case z of (OrdTreeT2 l, Right (x, OrdTreeT2 (Forest r)) : es)
+                       -> (OrdTreeT2 . Forest $ r |> (x, l), es)
+                     (OrdTreeT2 (Forest r), Left (x, OrdTreeT2 l) : es)
+                       -> (OrdTreeT2 . Forest $ r |> (x, l), es)
+                     (_, [])
+                       -> error "Tried to go up from the top"
+
+  isLeaf (t, _) = case S.viewr . getSeq . toForest $ t of
+                    EmptyR -> True
+                    _      -> False
+
+  getLabel (t, _) = case S.viewr . getSeq . toForest $ t of
+                      _ :> (x, _) -> x
+                      EmptyR      -> Nothing
+
+  setLabel s z@(t, es) = case S.viewr . getSeq . toForest $ t of
+                           r :> (_, l) -> (OrdTreeT2 . Forest $ r |> (s, l), es)
+                           EmptyR      -> z
+
+  size (t, _) = ordSize t + 18 * numOfPrefixes t
+
+  insert (t, _) (_, es) = (t, es)
+
+  delete (_, es) = (OrdTreeT2 . Forest $ S.empty, es)
 
 
 newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving (Eq, Show)
@@ -303,6 +408,56 @@ instance PrefixTree OrdTreeT3 where
   size = ordSize
 
 
+type OrdZipperT3 = (,) OrdTreeT3
+                   [Either (Maybe Int, OrdTreeT3) (Maybe Int, OrdTreeT3)]
+
+instance {-# OVERLAPPING #-} Show OrdZipperT3 where
+  show (t, _) = show t
+
+instance IpRouter OrdZipperT3 where
+  mkTable es           = (mkTable es, [])
+  insEntry e (t, _)    = (insEntry e t, [])
+  delEntry e (t, _)    = (delEntry e t, [])
+  ipLookup e (t, _)    = ipLookup e t
+  numOfPrefixes (t, _) = numOfPrefixes t
+
+instance Zipper OrdZipperT3 where
+  goLeft (t, es) =
+    case S.viewl . getSeq . toForest $ t of
+      (x, r) :< l -> (OrdTreeT3 . Forest $ l, Right (x, OrdTreeT3 r) : es)
+      EmptyL      -> error "Tried to go left from a leaf"
+
+  goRight (t, es) =
+    case S.viewl . getSeq . toForest $ t of
+      (x, r) :< l -> (OrdTreeT3 r, Left (x, OrdTreeT3 . Forest $ l) : es)
+      EmptyL      -> error "Tried to go right from a leaf"
+
+  goUp z = case z of (OrdTreeT3 (Forest l), Right (x, OrdTreeT3 r) : es)
+                       -> (OrdTreeT3 . Forest $ (x, r) <| l, es)
+                     (OrdTreeT3 r, Left (x, OrdTreeT3 (Forest l)) : es)
+                       -> (OrdTreeT3 . Forest $ (x, r) <| l, es)
+                     (_, [])
+                       -> error "Tried to go up from the top"
+
+  isLeaf (t, _) = case S.viewl . getSeq . toForest $ t of
+                    EmptyL -> True
+                    _      -> False
+
+  getLabel (t, _) = case S.viewl . getSeq . toForest $ t of
+                      (x, _) :< _ -> x
+                      EmptyL      -> Nothing
+
+  setLabel s z@(t, es) = case S.viewl . getSeq . toForest $ t of
+                           (_, r) :< l -> (OrdTreeT3 . Forest $ (s, r) <| l, es)
+                           EmptyL      -> z
+
+  size (t, _) = ordSize t + 18 * numOfPrefixes t
+
+  insert (t, _) (_, es) = (t, es)
+
+  delete (_, es) = (OrdTreeT3 . Forest $ S.empty, es)
+
+
 newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT4 where
@@ -374,3 +529,53 @@ instance PrefixTree OrdTreeT4 where
             in helper xss yss |> (x `delRoot` y, Forest (helper fx fy))
 
   size = ordSize
+
+
+type OrdZipperT4 = (,) OrdTreeT4
+                   [Either (Maybe Int, OrdTreeT4) (Maybe Int, OrdTreeT4)]
+
+instance {-# OVERLAPPING #-} Show OrdZipperT4 where
+  show (t, _) = show t
+
+instance IpRouter OrdZipperT4 where
+  mkTable es           = (mkTable es, [])
+  insEntry e (t, _)    = (insEntry e t, [])
+  delEntry e (t, _)    = (delEntry e t, [])
+  ipLookup e (t, _)    = ipLookup e t
+  numOfPrefixes (t, _) = numOfPrefixes t
+
+instance Zipper OrdZipperT4 where
+  goLeft (t, es) =
+    case S.viewr . getSeq . toForest $ t of
+      l :> (x, r) -> (OrdTreeT4 . Forest $ l, Right (x, OrdTreeT4 r) : es)
+      EmptyR      -> error "Tried to go left from a leaf"
+
+  goRight (t, es) =
+    case S.viewr . getSeq . toForest $ t of
+      l :> (x, r) -> (OrdTreeT4 r, Left (x, OrdTreeT4 . Forest $ l) : es)
+      EmptyR      -> error "Tried to go right from a leaf"
+
+  goUp z = case z of (OrdTreeT4 (Forest l), Right (x, OrdTreeT4 r) : es)
+                       -> (OrdTreeT4 . Forest $ l |> (x, r), es)
+                     (OrdTreeT4 r, Left (x, OrdTreeT4 (Forest l)) : es)
+                       -> (OrdTreeT4 . Forest $ l |> (x, r), es)
+                     (_, [])
+                       -> error "Tried to go up from the top"
+
+  isLeaf (t, _) = case S.viewr . getSeq . toForest $ t of
+                    EmptyR -> True
+                    _      -> False
+
+  getLabel (t, _) = case S.viewr . getSeq . toForest $ t of
+                      _ :> (x, _) -> x
+                      EmptyR      -> Nothing
+
+  setLabel s z@(t, es) = case S.viewr . getSeq . toForest $ t of
+                           l :> (_, r) -> (OrdTreeT4 . Forest $ l |> (s, r), es)
+                           EmptyR      -> z
+
+  size (t, _) = ordSize t + 18 * numOfPrefixes t
+
+  insert (t, _) (_, es) = (t, es)
+
+  delete (_, es) = (OrdTreeT4 . Forest $ S.empty, es)

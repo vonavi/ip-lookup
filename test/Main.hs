@@ -24,9 +24,7 @@ main = do
   hspec ordBpSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec
-
   hspec ordPrtnIpRouterSpec
-  hspec ordPrtnCheckSpec
 
   hspec paCo2TreeSpec
   hspec paCo2IpRouterSpec
