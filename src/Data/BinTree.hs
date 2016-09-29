@@ -1,5 +1,4 @@
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Data.BinTree
   (
@@ -11,7 +10,6 @@ import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bits
 import           Data.Bool           (bool)
-import           Data.Function       (on)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
 
@@ -32,12 +30,11 @@ instance Monoid (Tree (Maybe Int)) where
   (Bin ll x lr) `mappend` (Bin rl y rr) =
     Bin (ll `mappend` rl) (x <|> y) (lr `mappend` rr)
 
-newtype BinTree = BinTree { getTree :: Tree (Maybe Int) }
-                deriving (Eq, Show, Monoid)
+type BinTree = Tree (Maybe Int)
 
 
 fromEntry :: Entry -> BinTree
-fromEntry (Entry p n) = BinTree $ helper 31 (Bin Tip (Just n) Tip)
+fromEntry (Entry p n) = helper 31 (Bin Tip (Just n) Tip)
     where Prefix (Address a) (Mask m) = p
           helper i x
             | i == 31 - m = x
@@ -58,7 +55,7 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   insEntry = mappend . fromEntry
 
-  delEntry e btree = BinTree $ (helper `on` getTree) btree (fromEntry e)
+  delEntry e btree = btree `helper` fromEntry e
     where Tip           `helper` _             = Tip
           tree          `helper` Tip           = tree
           (Bin lx x rx) `helper` (Bin ly y ry) =
@@ -67,9 +64,9 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
                   delEmptyNode t                     = t
                   z = if x == y then Nothing else x
 
-  ipLookup a (BinTree t) = execState (lookupState a t) Nothing
+  ipLookup a t = execState (lookupState a t) Nothing
 
-  numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust) . getTree
+  numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust)
 
 
 type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])
@@ -96,34 +93,31 @@ The size of binary tree is built from the following parts:
     * RE indexes (18 bits per prefix).
 -}
 binSize :: BinTree -> Int
-binSize = (2 +) . getSum . foldMap (Sum . nodeSize) . getTree
+binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 3 + if isJust x then 18 else 0
 
 instance Zipper BinZipper where
-  goLeft (t, es) =
-    case t of BinTree (Bin l x r) -> (BinTree l, Right (x, BinTree r) : es)
-              _                   -> error "Tried to go left from a leaf"
+  goLeft (Bin l x r, es) = (l, Right (x, r) : es)
+  goLeft _               = error "Tried to go left from a leaf"
 
-  goRight (t, es) =
-    case t of BinTree (Bin l x r) -> (BinTree r, Left (x, BinTree l) : es)
-              _                   -> error "Tried to go right from a leaf"
+  goRight (Bin l x r, es) = (r, Left (x, l) : es)
+  goRight _               = error "Tried to go right from a leaf"
 
-  goUp (l, Right (x, r) : es) = (BinTree $ Bin (getTree l) x (getTree r), es)
-  goUp (r, Left (x, l) : es)  = (BinTree $ Bin (getTree l) x (getTree r), es)
+  goUp (l, Right (x, r) : es) = (Bin l x r, es)
+  goUp (r, Left (x, l) : es)  = (Bin l x r, es)
   goUp _                      = error "Tried to go up from the top"
 
-  isLeaf (BinTree Tip, _) = True
-  isLeaf _                = False
+  isLeaf (Tip, _) = True
+  isLeaf _        = False
 
-  getLabel (BinTree (Bin _ x _), _) = x
-  getLabel _                        = Nothing
+  getLabel (Bin _ x _, _) = x
+  getLabel _              = Nothing
 
-  setLabel s z@(t, es) =
-    case t of BinTree (Bin l _ r) -> (BinTree (Bin l s r), es)
-              _                   -> z
+  setLabel s (Bin l _ r, es) = (Bin l s r, es)
+  setLabel _ z               = z
 
   size (t, _) = binSize t
 
   insert (t, _) (_, es) = (t, es)
 
-  delete (_, es) = (BinTree Tip, es)
+  delete (_, es) = (Tip, es)
