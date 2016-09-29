@@ -1,13 +1,16 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.BinTree
-       (
-         BinTree
-       ) where
+  (
+    BinTree
+  ) where
 
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool           (bool)
+import           Data.Function       (on)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
 
@@ -27,12 +30,8 @@ instance Monoid (Tree (Maybe Int)) where
   (Bin ll x lr) `mappend` (Bin rl y rr) =
     Bin (ll `mappend` rl) (x <|> y) (lr `mappend` rr)
 
-
-newtype BinTree = BinTree { getTree :: Tree (Maybe Int) } deriving (Eq, Show)
-
-instance Monoid BinTree where
-  mempty        = BinTree mempty
-  x `mappend` y = BinTree $ getTree x `mappend` getTree y
+newtype BinTree = BinTree { getTree :: Tree (Maybe Int) }
+                deriving (Eq, Show, Monoid)
 
 
 fromEntry :: Entry -> BinTree
@@ -44,13 +43,6 @@ fromEntry (Entry p n) = BinTree $ helper 31 (Bin Tip (Just n) Tip)
                             then Bin Tip Nothing y
                             else Bin y Nothing Tip
             where y = helper (pred i) x
-
-collapse :: BinTree -> BinTree
-collapse = BinTree . helper . getTree
-  where helper Tip         = Tip
-        helper (Bin l x r) = reduce $ Bin (helper l) x (helper r)
-          where reduce (Bin Tip Nothing Tip) = Tip
-                reduce t                     = t
 
 lookupState :: Address -> Tree (Maybe Int) -> State (Maybe Int) ()
 lookupState (Address a) = helper 31
@@ -64,15 +56,15 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   insEntry = mappend . fromEntry
 
-  delEntry e (BinTree a) = collapse . BinTree $ helper a b
-    where BinTree b = fromEntry e
-          helper Tip           _             = Tip
-          helper t             Tip           = t
-          helper (Bin lx x rx) (Bin ly y ry) =
-            Bin (helper lx ly) z (helper rx ry)
-            where z = if x == y then Nothing else x
+  delEntry e btree = BinTree $ (helper `on` getTree) btree (fromEntry e)
+    where Tip           `helper` _             = Tip
+          tree          `helper` Tip           = tree
+          (Bin lx x rx) `helper` (Bin ly y ry) =
+            delEmptyNode $ Bin (lx `helper` ly) z (rx `helper` ry)
+            where delEmptyNode (Bin Tip Nothing Tip) = Tip
+                  delEmptyNode t                     = t
+                  z = if x == y then Nothing else x
 
   ipLookup a (BinTree t) = execState (lookupState a t) Nothing
 
-  numOfPrefixes = getSum . foldMap isPrefix . getTree
-    where isPrefix x = if isJust x then Sum 1 else Sum 0
+  numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust) . getTree
