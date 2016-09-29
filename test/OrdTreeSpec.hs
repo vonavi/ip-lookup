@@ -1,6 +1,6 @@
 module OrdTreeSpec
        (
-         ordBpSpec
+         ordBpsSpec
        , ordDfudsSpec
        , ordIpRouterSpec
        ) where
@@ -26,11 +26,11 @@ testOrdTree = mkTable . map toEntry $ l
             , ("192.0.0.0", "/2", 8)
             ]
 
-ordBpSpec :: Spec
-ordBpSpec = do
-  describe "Balanced-parentheses (BP) representation" $ do
+ordBpsSpec :: Spec
+ordBpsSpec = do
+  describe "Balanced-parentheses sequence (BPS)" $ do
     it "Ordinal tree T1" $ do
-      ordToBp (testOrdTree :: OrdTreeT1) `shouldBe`
+      ordToBps (testOrdTree :: OrdTreeT1) `shouldBe`
         [ (Nothing, Open), (Just 4, Open), (Just 3, Open), (Just 1, Open)
         , (Just 1, Close), (Just 2, Open), (Just 2, Close), (Just 3, Close)
         , (Just 4, Close), (Just 6, Open), (Just 5, Open), (Just 5, Close)
@@ -39,7 +39,7 @@ ordBpSpec = do
         ]
 
     it "Ordinal tree T2" $ do
-      ordToBp (testOrdTree :: OrdTreeT2) `shouldBe`
+      ordToBps (testOrdTree :: OrdTreeT2) `shouldBe`
         [ (Nothing, Open), (Just 8, Open), (Just 7, Open), (Just 7, Close)
         , (Just 8, Close), (Just 6, Open), (Just 5, Open), (Just 5, Close)
         , (Just 6, Close), (Just 4, Open), (Just 3, Open), (Just 2, Open)
@@ -48,7 +48,7 @@ ordBpSpec = do
         ]
 
     it "Ordinal tree T3" $ do
-      ordToBp (testOrdTree :: OrdTreeT3) `shouldBe`
+      ordToBps (testOrdTree :: OrdTreeT3) `shouldBe`
         [ (Nothing, Open), (Just 4, Open), (Just 6, Open), (Just 8, Open)
         , (Just 8, Close), (Just 7, Open), (Just 7, Close), (Just 6, Close)
         , (Just 5, Open), (Just 5, Close), (Just 4, Close), (Just 3, Open)
@@ -57,7 +57,7 @@ ordBpSpec = do
         ]
 
     it "Ordinal tree T4" $ do
-      ordToBp (testOrdTree :: OrdTreeT4) `shouldBe`
+      ordToBps (testOrdTree :: OrdTreeT4) `shouldBe`
         [ (Nothing, Open), (Just 1, Open), (Just 2, Open), (Just 2, Close)
         , (Just 1, Close), (Just 3, Open), (Just 3, Close), (Just 4, Open)
         , (Just 5, Open), (Just 5, Close), (Just 6, Open), (Just 7, Open)

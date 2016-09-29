@@ -17,7 +17,7 @@ main = do
   hspec paCoIpRouterSpec
   hspec paCoPrtnIpRouterSpec
 
-  hspec ordBpSpec
+  hspec ordBpsSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec
   hspec ordPrtnIpRouterSpec

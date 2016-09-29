@@ -7,7 +7,7 @@
 module Data.OrdTree
        (
          OrdTree(..)
-       , ordToBp
+       , ordToBps
        , ordToDfuds
        , ordSize
        , OrdTreeT1
@@ -54,12 +54,12 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust) . toForest
 
-forestToBp :: Forest a -> [(a, Paren)]
-forestToBp = concatMap f . getSeq
-  where f (x, l) = [(x, Open)] ++ forestToBp l ++ [(x, Close)]
+forestToBps :: Forest a -> [(a, Paren)]
+forestToBps = concatMap f . getSeq
+  where f (x, l) = [(x, Open)] ++ forestToBps l ++ [(x, Close)]
 
-ordToBp :: OrdTree a => a -> [(Maybe Int, Paren)]
-ordToBp x = [(Nothing, Open)] ++ forestToBp (toForest x) ++ [(Nothing, Close)]
+ordToBps :: OrdTree a => a -> [(Maybe Int, Paren)]
+ordToBps x = [(Nothing, Open)] ++ forestToBps (toForest x) ++ [(Nothing, Close)]
 
 forestToDfuds :: Forest a -> [(a, [Paren])]
 forestToDfuds = helper . getSeq
