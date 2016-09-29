@@ -10,12 +10,9 @@ import           PaCo2PartitionSpec
 import           PaCo2TreeSpec
 import           PaCoPartitionSpec
 import           PaCoTreeSpec
-import           TableSpec
 
 main :: IO ()
 main = do
-  hspec tableIpRouterSpec
-
   hspec paCoTreeSpec
   hspec paCoIpRouterSpec
   hspec paCoPrtnIpRouterSpec
