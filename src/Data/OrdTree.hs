@@ -24,6 +24,7 @@ import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bits
 import           Data.Bool           (bool)
+import           Data.Function       (on)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
 import           Data.Sequence       (ViewL ((:<), EmptyL),
@@ -113,14 +114,13 @@ newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT1 where
   mempty = OrdTreeT1 $ Forest S.empty
 
-  tx `mappend` ty = OrdTreeT1 . Forest $
-                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
-    where helper xs                   (S.viewl -> EmptyL)  = xs
-          helper (S.viewl -> EmptyL)  ys                   = ys
-          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in (a <|> b, Forest (helper fa fb)) <| helper xs ys
+  tx `mappend` ty = OrdTreeT1 . Forest $ (helper `on` getSeq . toForest) tx ty
+    where xs                   `helper` (S.viewl -> EmptyL)  = xs
+          (S.viewl -> EmptyL)  `helper` ys                   = ys
+          (S.viewl -> x :< xs) `helper` (S.viewl -> y :< ys) =
+            (a <|> b, Forest $ fa `helper` fb) <| (xs `helper` ys)
+            where (a, Forest fa) = x
+                  (b, Forest fb) = y
 
 instance OrdTree OrdTreeT1 where
   toForest (OrdTreeT1 x) = x
@@ -141,8 +141,7 @@ instance OrdTree OrdTreeT1 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  delSubtree tx ty = OrdTreeT1 . Forest $
-                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+  delSubtree tx ty = OrdTreeT1 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewl -> EmptyL)   `helper` _                     = S.empty
           t                     `helper` (S.viewl -> EmptyL)   = t
           (S.viewl -> hx :< rx) `helper` (S.viewl -> hy :< ry) =
@@ -207,14 +206,13 @@ newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT2 where
   mempty = OrdTreeT2 $ Forest S.empty
 
-  tx `mappend` ty = OrdTreeT2 . Forest $
-                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
-    where helper xs                   (S.viewr -> EmptyR)  = xs
-          helper (S.viewr -> EmptyR)  ys                   = ys
-          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in helper xs ys |> (a <|> b, Forest (helper fa fb))
+  tx `mappend` ty = OrdTreeT2 . Forest $ (helper `on` getSeq . toForest) tx ty
+    where xs                   `helper` (S.viewr -> EmptyR)  = xs
+          (S.viewr -> EmptyR)  `helper` ys                   = ys
+          (S.viewr -> xs :> x) `helper` (S.viewr -> ys :> y) =
+            (xs `helper` ys) |> (a <|> b, Forest $ fa `helper` fb)
+            where (a, Forest fa) = x
+                  (b, Forest fb) = y
 
 instance OrdTree OrdTreeT2 where
   toForest (OrdTreeT2 x) = x
@@ -235,13 +233,12 @@ instance OrdTree OrdTreeT2 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  delSubtree tx ty = OrdTreeT2 . Forest $
-                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+  delSubtree tx ty = OrdTreeT2 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewr -> EmptyR)   `helper` _                     = S.empty
           t                     `helper` (S.viewr -> EmptyR)   = t
           (S.viewr -> rx :> hx) `helper` (S.viewr -> ry :> hy) =
             delEmptyNodeR $
-            rx `helper` ry |> (x `delRoot` y, Forest $ lx `helper` ly)
+            (rx `helper` ry) |> (x `delRoot` y, Forest $ lx `helper` ly)
             where (x, Forest lx) = hx
                   (y, Forest ly) = hy
 
@@ -301,14 +298,13 @@ newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT3 where
   mempty = OrdTreeT3 $ Forest S.empty
 
-  tx `mappend` ty = OrdTreeT3 . Forest $
-                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
-    where helper xs                   (S.viewl -> EmptyL)  = xs
-          helper (S.viewl -> EmptyL)  ys                   = ys
-          helper (S.viewl -> x :< xs) (S.viewl -> y :< ys) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in (a <|> b, Forest (helper fa fb)) <| helper xs ys
+  tx `mappend` ty = OrdTreeT3 . Forest $ (helper `on` getSeq . toForest) tx ty
+    where xs                   `helper` (S.viewl -> EmptyL)  = xs
+          (S.viewl -> EmptyL)  `helper` ys                   = ys
+          (S.viewl -> x :< xs) `helper` (S.viewl -> y :< ys) =
+            (a <|> b, Forest $ fa `helper` fb) <| (xs `helper` ys)
+            where (a, Forest fa) = x
+                  (b, Forest fb) = y
 
 instance OrdTree OrdTreeT3 where
   toForest (OrdTreeT3 x) = x
@@ -329,13 +325,12 @@ instance OrdTree OrdTreeT3 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  delSubtree tx ty = OrdTreeT3 . Forest $
-                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+  delSubtree tx ty = OrdTreeT3 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewl -> EmptyL)   `helper` _                     = S.empty
           t                     `helper` (S.viewl -> EmptyL)   = t
           (S.viewl -> hx :< lx) `helper` (S.viewl -> hy :< ly) =
             delEmptyNodeL $
-            (x `delRoot` y, Forest $ rx `helper` ry) <| lx `helper` ly
+            (x `delRoot` y, Forest $ rx `helper` ry) <| (lx `helper` ly)
             where (x, Forest rx) = hx
                   (y, Forest ry) = hy
 
@@ -395,14 +390,13 @@ newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving (Eq, Show)
 instance Monoid OrdTreeT4 where
   mempty = OrdTreeT4 $ Forest S.empty
 
-  tx `mappend` ty = OrdTreeT4 . Forest $
-                    helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
-    where helper xs                   (S.viewr -> EmptyR)  = xs
-          helper (S.viewr -> EmptyR)  ys                   = ys
-          helper (S.viewr -> xs :> x) (S.viewr -> ys :> y) =
-            let (a, Forest fa) = x
-                (b, Forest fb) = y
-            in helper xs ys |> (a <|> b, Forest (helper fa fb))
+  tx `mappend` ty = OrdTreeT4 . Forest $ (helper `on` getSeq . toForest) tx ty
+    where xs                   `helper` (S.viewr -> EmptyR)  = xs
+          (S.viewr -> EmptyR)  `helper` ys                   = ys
+          (S.viewr -> xs :> x) `helper` (S.viewr -> ys :> y) =
+            (xs `helper` ys) |> (a <|> b, Forest $ fa `helper` fb)
+            where (a, Forest fa) = x
+                  (b, Forest fb) = y
 
 instance OrdTree OrdTreeT4 where
   toForest (OrdTreeT4 x) = x
@@ -423,13 +417,12 @@ instance OrdTree OrdTreeT4 where
             modify (x <|>)
             helper (pred n) $ if a `testBit` n then r else l
 
-  delSubtree tx ty = OrdTreeT4 . Forest $
-                     helper (getSeq . toForest $ tx) (getSeq . toForest $ ty)
+  delSubtree tx ty = OrdTreeT4 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewr -> EmptyR)   `helper` _                     = S.empty
           t                     `helper` (S.viewr -> EmptyR)   = t
           (S.viewr -> lx :> hx) `helper` (S.viewr -> ly :> hy) =
             delEmptyNodeR $
-            lx `helper` ly |> (x `delRoot` y, Forest $ rx `helper` ry)
+            (lx `helper` ly) |> (x `delRoot` y, Forest $ rx `helper` ry)
             where (x, Forest rx) = hx
                   (y, Forest ry) = hy
 
