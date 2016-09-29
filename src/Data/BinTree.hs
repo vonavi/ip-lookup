@@ -4,6 +4,7 @@
 module Data.BinTree
   (
     BinTree
+  , BinZipper
   ) where
 
 import           Control.Applicative ((<|>))
@@ -15,6 +16,7 @@ import           Data.Maybe          (isJust)
 import           Data.Monoid
 
 import           Data.IpRouter
+import           Data.Zipper
 
 data Tree a = Tip | Bin (Tree a) !a (Tree a) deriving (Eq, Show)
 
@@ -68,3 +70,60 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
   ipLookup a (BinTree t) = execState (lookupState a t) Nothing
 
   numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust) . getTree
+
+
+type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])
+
+instance {-# OVERLAPPING #-} Show BinZipper where
+  show (t, _) = show t
+
+instance IpRouter BinZipper where
+  mkTable es           = (mkTable es, [])
+  insEntry e (t, _)    = (insEntry e t, [])
+  delEntry e (t, _)    = (delEntry e t, [])
+  ipLookup e (t, _)    = ipLookup e t
+  numOfPrefixes (t, _) = numOfPrefixes t
+
+{-|
+The size of binary tree is built from the following parts:
+
+    * balanced parentheses of additional ordinal-root (2 bits);
+
+    * balanced-parentheses sequence (2 bits per inner node);
+
+    * prefix bit (1 bit per inner node);
+
+    * RE indexes (18 bits per prefix).
+-}
+binSize :: BinTree -> Int
+binSize = (2 +) . getSum . foldMap (Sum . nodeSize) . getTree
+  where nodeSize x = 3 + if isJust x then 18 else 0
+
+instance Zipper BinZipper where
+  goLeft (t, es) =
+    case t of BinTree (Bin l x r) -> (BinTree l, Right (x, BinTree r) : es)
+              _                   -> error "Tried to go left from a leaf"
+
+  goRight (t, es) =
+    case t of BinTree (Bin l x r) -> (BinTree r, Left (x, BinTree l) : es)
+              _                   -> error "Tried to go right from a leaf"
+
+  goUp (l, Right (x, r) : es) = (BinTree $ Bin (getTree l) x (getTree r), es)
+  goUp (r, Left (x, l) : es)  = (BinTree $ Bin (getTree l) x (getTree r), es)
+  goUp _                      = error "Tried to go up from the top"
+
+  isLeaf (BinTree Tip, _) = True
+  isLeaf _                = False
+
+  getLabel (BinTree (Bin _ x _), _) = x
+  getLabel _                        = Nothing
+
+  setLabel s z@(t, es) =
+    case t of BinTree (Bin l _ r) -> (BinTree (Bin l s r), es)
+              _                   -> z
+
+  size (t, _) = binSize t
+
+  insert (t, _) (_, es) = (t, es)
+
+  delete (_, es) = (BinTree Tip, es)
