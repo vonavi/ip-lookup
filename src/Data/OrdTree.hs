@@ -73,8 +73,20 @@ ordToDfuds x = (Nothing, ps) : forestToDfuds f
   where f  = toForest x
         ps = replicate (length $ getSeq f) Open ++ [Close]
 
+{-|
+The size of ordinal tree is built from the following parts:
+
+    * balanced parentheses of the root (2 bits);
+
+    * balanced-parentheses sequence (2 bits per inner node);
+
+    * prefix bit (1 bit per inner node);
+
+    * RE indexes (18 bits per prefix).
+-}
 ordSize :: OrdTree a => a -> Int
-ordSize = getSum . foldMap (Sum . const 1) . toForest
+ordSize = (2 +) . getSum . foldMap (Sum . nodeSize) . toForest
+  where nodeSize x = 3 + if isJust x then 18 else 0
 
 delRoot :: Maybe Int -> Maybe Int -> Maybe Int
 delRoot x y = if x == y then Nothing else x
@@ -183,7 +195,7 @@ instance Zipper OrdZipperT1 where
                            (_, l) :< r -> (OrdTreeT1 . Forest $ (s, l) <| r, es)
                            EmptyL      -> z
 
-  size (t, _) = ordSize t + 18 * numOfPrefixes t
+  size (t, _) = ordSize t
 
   insert (t, _) (_, es) = (t, es)
 
@@ -277,7 +289,7 @@ instance Zipper OrdZipperT2 where
                            r :> (_, l) -> (OrdTreeT2 . Forest $ r |> (s, l), es)
                            EmptyR      -> z
 
-  size (t, _) = ordSize t + 18 * numOfPrefixes t
+  size (t, _) = ordSize t
 
   insert (t, _) (_, es) = (t, es)
 
@@ -371,7 +383,7 @@ instance Zipper OrdZipperT3 where
                            (_, r) :< l -> (OrdTreeT3 . Forest $ (s, r) <| l, es)
                            EmptyL      -> z
 
-  size (t, _) = ordSize t + 18 * numOfPrefixes t
+  size (t, _) = ordSize t
 
   insert (t, _) (_, es) = (t, es)
 
@@ -465,7 +477,7 @@ instance Zipper OrdZipperT4 where
                            l :> (_, r) -> (OrdTreeT4 . Forest $ l |> (s, r), es)
                            EmptyR      -> z
 
-  size (t, _) = ordSize t + 18 * numOfPrefixes t
+  size (t, _) = ordSize t
 
   insert (t, _) (_, es) = (t, es)
 

@@ -20,7 +20,6 @@ main = do
   hspec paCoIpRouterSpec
   hspec paCoPrtnIpRouterSpec
 
-  hspec ordSizeSpec
   hspec ordBpSpec
   hspec ordDfudsSpec
   hspec ordIpRouterSpec

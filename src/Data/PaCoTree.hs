@@ -177,43 +177,45 @@ instance IpRouter PaCoTree where
 
 
 {-|
-The node size of path-compressed tree is built from the following
-parts:
+The size of path-compressed tree is built from the following parts:
 
-    * parenthesis expression (2 bits);
+    * balanced parentheses of additional ordinal-tree root (2 bits);
 
-    * Elias gamma code of skip value (the skip value should be
-      increased by one);
+    * balanced-parentheses sequence (2 bits per node);
 
-    * node string;
+    * Elias gamma codes of skip values of the nodes (the skip value
+      should be increased by one);
 
-    * prefix bit (1 bit);
+    * node strings of the nodes;
 
-    * RE index (18 bits) if the prefix bit is set.
+    * prefix bits (1 bit per node);
+
+    * RE indexes (18 bits per prefix).
 -}
 eliasGammaSize :: PaCoTree -> Int
-eliasGammaSize = getSum . foldMap (Sum . nodeSize)
+eliasGammaSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize Node { skip = k, label = s } =
           2 + (BMP.size . encodeEliasGamma . succ $ k) +
           k + 1 + if isJust s then 18 else 0
 
 {-|
-The node size of path-compressed tree is built from the following
-parts:
+The size of path-compressed tree is built from the following parts:
 
-    * parenthesis expression (2 bits);
+    * balanced parentheses of additional ordinal-tree root (2 bits);
 
-    * Elias delta code of skip value (the skip value should be
-      increased by one);
+    * balanced-parentheses sequence (2 bits per node);
 
-    * node string;
+    * Elias delta codes of skip values of the nodes (the skip value
+      should be increased by one);
 
-    * prefix bit (1 bit);
+    * node strings of the nodes;
 
-    * RE index (18 bits) if the prefix bit is set.
+    * prefix bits (1 bit per node);
+
+    * RE indexes (18 bits per prefix).
 -}
 eliasDeltaSize :: PaCoTree -> Int
-eliasDeltaSize = getSum . foldMap (Sum . nodeSize)
+eliasDeltaSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize Node { skip = k, label = s } =
           2 + (BMP.size . encodeEliasDelta . succ $ k) +
           k + 1 + if isJust s then 18 else 0
@@ -221,18 +223,21 @@ eliasDeltaSize = getSum . foldMap (Sum . nodeSize)
 {-|
 The size of path-compressed tree is built from the following parts:
 
-    * balanced-parentheses expression (2 bits per node);
+    * balanced parentheses of additional ordinal-tree root (2 bits);
 
-    * Elias-Fano sequence of skip values;
+    * balanced-parentheses sequence (2 bits per node);
 
-    * node strings;
+    * Elias-Fano sequence of skip values of the nodes;
+
+    * node strings of the nodes;
 
     * prefix bits (1 bit per node);
 
     * RE indexes (18 bits per prefix).
 -}
 eliasFanoSize :: PaCoTree -> Int
-eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
+eliasFanoSize t =
+  2 + (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
   where nodeSize Node { skip = k, label = s } =
           2 + k + 1 + if isJust s then 18 else 0
 
@@ -245,42 +250,45 @@ eliasFanoSeqSize t
         bmp2 = encodeEliasFano . scanl1 (+) $ ks
 
 {-|
-The node size of path-compressed tree is built from the following
-parts:
+The size of path-compressed tree is built from the following parts:
 
-    * parenthesis expression (2 bits);
+    * balanced parentheses of additional ordinal-tree root (2 bits);
 
-    * Fibonacci code of skip value (the skip value should be increased
-      by one);
+    * balanced-parentheses sequence (2 bits per node);
 
-    * node string;
+    * Fibonacci codes of skip values of the nodes (the skip value
+      should be increased by one);
 
-    * prefix bit (1 bit);
+    * node strings of the nodes;
 
-    * RE index (18 bits) if the prefix bit is set.
+    * prefix bits (1 bit per node);
+
+    * RE indexes (18 bits per prefix).
 -}
 fibonacciSize :: PaCoTree -> Int
-fibonacciSize = getSum . foldMap (Sum . nodeSize)
+fibonacciSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize Node { skip = k, label = s } =
           2 + (BMP.size . encodeFibonacci . succ $ k) +
           k + 1 + if isJust s then 18 else 0
 
 {-|
-The node size of path-compressed tree is built from the following
-parts:
+The size of path-compressed tree is built from the following parts:
 
-    * parenthesis expression (2 bits);
+    * balanced parentheses of additional ordinal-tree root (2 bits);
 
-    * Huffman code of skip value;
+    * balanced-parentheses sequence (2 bits per node);
 
-    * node string;
+    * Huffman codes of skip values of the nodes (the skip value should
+      be increased by one);
 
-    * prefix bit (1 bit);
+    * node strings of the nodes;
 
-    * RE index (18 bits) if the prefix bit is set.
+    * prefix bits (1 bit per node);
+
+    * RE indexes (18 bits per prefix).
 -}
 huffmanSize :: PaCoTree -> Int
-huffmanSize = getSum . foldMap (Sum . nodeSize)
+huffmanSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize Node { skip = k, label = s } = runST $ do
           hsize <- readSTRef huffmanVecRef
           return $ 2 + (hsize V.! k) + k + 1 + if isJust s then 18 else 0

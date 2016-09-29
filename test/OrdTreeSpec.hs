@@ -1,7 +1,6 @@
 module OrdTreeSpec
        (
-         ordSizeSpec
-       , ordBpSpec
+         ordBpSpec
        , ordDfudsSpec
        , ordIpRouterSpec
        ) where
@@ -26,21 +25,6 @@ testOrdTree = mkTable . map toEntry $ l
             , ("192.0.0.0", "/3", 7)
             , ("192.0.0.0", "/2", 8)
             ]
-
-ordSizeSpec :: Spec
-ordSizeSpec = do
-  describe "Size of example ordinal tree" $ do
-    it "Ordinal tree T1" $ do
-      ordSize (testOrdTree :: OrdTreeT1) `shouldBe` 8
-
-    it "Ordinal tree T2" $ do
-      ordSize (testOrdTree :: OrdTreeT2) `shouldBe` 8
-
-    it "Ordinal tree T3" $ do
-      ordSize (testOrdTree :: OrdTreeT3) `shouldBe` 8
-
-    it "Ordinal tree T4" $ do
-      ordSize (testOrdTree :: OrdTreeT4) `shouldBe` 8
 
 ordBpSpec :: Spec
 ordBpSpec = do
