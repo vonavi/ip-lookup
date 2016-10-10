@@ -2,8 +2,7 @@
 
 module Data.Entry
   (
-    Ipv4Address
-  , Ipv6Address
+    Address
   ) where
 
 import           Control.Arrow       (first, second)
@@ -95,3 +94,20 @@ instance Show Ipv6Address where
   show (Ipv6Address x) = intercalate ":" . map showHex $ offsets
     where offsets = map (65536 *) [7, 6 .. 0]
           showHex = show . intToHex . (fromInteger :: Integer -> Int) . shiftR x
+
+
+data Address = Ipv4 Ipv4Address
+             | Ipv6 Ipv6Address
+
+instance Read Address where
+  readsPrec d s = [ (Ipv4 x, t)
+                  | (x, t) <- (readsPrec d :: ReadS Ipv4Address) s
+                  ]
+                  ++
+                  [ (Ipv6 x, t)
+                  | (x, t) <- (readsPrec d :: ReadS Ipv6Address) s
+                  ]
+
+instance Show Address where
+  show (Ipv4 x) = show x
+  show (Ipv6 x) = show x
