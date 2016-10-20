@@ -8,9 +8,11 @@ module Data.Entry
 import           Control.Arrow       (first, second)
 import           Control.Monad.State
 import           Data.Bits
+import           Data.Bool           (bool)
 import           Data.Char
-import           Data.List           (intercalate)
+import           Data.List           (intercalate, maximumBy)
 import           Data.List.Split
+import           Data.Ord            (comparing)
 import           Data.Word
 
 splitBitsAt :: (Num a, Bits a) => Int -> a -> (a, a)
@@ -90,10 +92,26 @@ instance Read Ipv6Address where
           addZeros "::" = intercalate "," $ replicate (9 - length xs) "0"
           addZeros x    = x
 
+indicesOfMaxGroup :: (a -> Bool) -> [a] -> [Int]
+indicesOfMaxGroup p = maximumBy (comparing length) . reverse . grIndices
+  where grIndices = map (map fst) . wordsBy (not . p . snd) . zip [0 ..]
+
 instance Show Ipv6Address where
-  show (Ipv6Address x) = intercalate ":" . map showHex $ offsets
-    where offsets = map (65536 *) [7, 6 .. 0]
-          showHex = show . intToHex . (fromInteger :: Integer -> Int) . shiftR x
+  show (Ipv6Address x)
+    | maxLen <= 1        = intercalate ":" . map (show . intToHex) $ octets
+    | maxLen == 8        = "::"
+    | head maxZeros == 0 = ':' : addrStr
+    | last maxZeros == 7 = addrStr ++ ":"
+    | otherwise          = addrStr
+    where offsets  = map (65536 *) [7, 6 .. 0]
+          octets   = map ((fromInteger :: Integer -> Int) . shiftR x) offsets
+          maxZeros = indicesOfMaxGroup (== 0) octets
+          maxLen   = length maxZeros
+          addrStr  = tail . concat . (`evalState` maxZeros)
+                     . mapM (state . dropGroup) . zip [0 ..] $ octets
+          dropGroup :: (Int, Int) -> [Int] -> (String, [Int])
+          dropGroup (n, _) (g:gs) | n == g = (bool "" ":" (null gs), gs)
+          dropGroup (_, h) gs              = (':' : show (intToHex h), gs)
 
 
 data Address = Ipv4 Ipv4Address
