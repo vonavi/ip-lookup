@@ -7,7 +7,7 @@ module Data.Entry
   , Vpn
   , Prefix
   , mkPrefix
-  , addVpn
+  , setVpn
   , Entry
   , mkEntry
   , maskLength
@@ -153,17 +153,17 @@ mkPrefix :: Address -> Mask -> Prefix
 mkPrefix (IPv4Addr (IPv4Address x)) = IPv4 x
 mkPrefix (IPv6Addr (IPv6Address x)) = IPv6 x
 
-addVpn :: Vpn -> Prefix -> Prefix
-addVpn v (IPv4  x m) = VPNv4 (vpnBits .|. addrBits) (m + 16)
+setVpn :: Vpn -> Prefix -> Prefix
+setVpn v (IPv4  x m) = VPNv4 (vpnBits .|. addrBits) (m + 16)
   where vpnBits  = fromIntegral (hexToWord v) `shiftL` 32
         addrBits = fromIntegral x
-addVpn v (VPNv4 x m) = VPNv4 (vpnBits .|. addrBits) m
+setVpn v (VPNv4 x m) = VPNv4 (vpnBits .|. addrBits) m
   where vpnBits  = fromIntegral (hexToWord v) `shiftL` 32
         addrBits = x .&. (bit 32 - bit 0)
-addVpn v (IPv6  x m) = VPNv6 (vpnBits .|. addrBits) (m + 16)
+setVpn v (IPv6  x m) = VPNv6 (vpnBits .|. addrBits) (m + 16)
   where vpnBits  = toInteger (hexToWord v) `shiftL` 128
         addrBits = x
-addVpn v (VPNv6 x m) = VPNv6 (vpnBits .|. addrBits) m
+setVpn v (VPNv6 x m) = VPNv6 (vpnBits .|. addrBits) m
   where vpnBits  = toInteger (hexToWord v) `shiftL` 128
         addrBits = x .&. (bit 128 - bit 0)
 

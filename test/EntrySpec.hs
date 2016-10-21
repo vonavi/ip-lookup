@@ -40,8 +40,8 @@ testPrefixBitSpec :: Spec
 testPrefixBitSpec = do
   describe "Test prefix bits" $ do
     let p1 = mkPrefix (read "192.168.0.1" :: Address) (read "16" :: Mask)
-        p2 = addVpn (read "db8" :: Vpn) p1
-        p3 = addVpn (read "2001" :: Vpn) p2
+        p2 = setVpn (read "db8" :: Vpn) p1
+        p3 = setVpn (read "2001" :: Vpn) p2
     it "IPv4 prefix" $ do
       getPrefixBits (mkEntry 0 p1)
         `shouldBe` [ True, True, False, False, False, False, False, False
@@ -63,8 +63,8 @@ testPrefixBitSpec = do
                    ]
 
     let p4 = mkPrefix (read "2001:db8::" :: Address) (read "32" :: Mask)
-        p5 = addVpn (read "ac10" :: Vpn) p4
-        p6 = addVpn (read "fe01" :: Vpn) p5
+        p5 = setVpn (read "ac10" :: Vpn) p4
+        p6 = setVpn (read "fe01" :: Vpn) p5
     it "IPv6 prefix" $ do
       getPrefixBits (mkEntry 10 p4)
         `shouldBe` [ False, False, True, False, False, False, False, False
