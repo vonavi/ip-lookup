@@ -1,7 +1,7 @@
 module Data.Compression.Huffman
-       (
-         freqToEnc
-       ) where
+  (
+    freqToEnc
+  ) where
 
 import           Control.Arrow (second)
 import           Data.List     (sortBy)

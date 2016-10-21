@@ -1,7 +1,7 @@
 module BinPartitionSpec
-       (
-         binPrtnIpRouterSpec
-       ) where
+  (
+    binPrtnIpRouterSpec
+  ) where
 
 import           Test.Hspec
 

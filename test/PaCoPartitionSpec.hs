@@ -1,7 +1,7 @@
 module PaCoPartitionSpec
-       (
-         paCoPrtnIpRouterSpec
-       ) where
+  (
+    paCoPrtnIpRouterSpec
+  ) where
 
 import           Test.Hspec
 

@@ -1,7 +1,7 @@
 module BinTreeSpec
-       (
-         binIpRouterSpec
-       ) where
+  (
+    binIpRouterSpec
+  ) where
 
 import           Test.Hspec
 

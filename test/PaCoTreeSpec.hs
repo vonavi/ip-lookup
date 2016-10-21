@@ -1,8 +1,8 @@
 module PaCoTreeSpec
-       (
-         paCoTreeSpec
-       , paCoIpRouterSpec
-       ) where
+  (
+    paCoTreeSpec
+  , paCoIpRouterSpec
+  ) where
 
 import           Test.Hspec
 

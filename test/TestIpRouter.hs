@@ -1,8 +1,8 @@
 module TestIpRouter
-       (
-         testIpRouter
-       , testIpLookup
-       ) where
+  (
+    testIpRouter
+  , testIpLookup
+  ) where
 
 import           Data.IpRouter
 

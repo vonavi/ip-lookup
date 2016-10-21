@@ -1,19 +1,19 @@
 module Data.Compression.Bitmap
-       (
-         Bitmap(..)
-       , fromList
-       , fromIntExact
-       , fromInt
-       , toInt
-       , inverse
-       , takeBits
-       , dropBits
-       , leadingZeros
-       , rank1
-       , rank0
-       , select1
-       , select0
-       ) where
+  (
+    Bitmap(..)
+  , fromList
+  , fromIntExact
+  , fromInt
+  , toInt
+  , inverse
+  , takeBits
+  , dropBits
+  , leadingZeros
+  , rank1
+  , rank0
+  , select1
+  , select0
+  ) where
 
 import           Data.Bits
 import           Data.List   (foldl')

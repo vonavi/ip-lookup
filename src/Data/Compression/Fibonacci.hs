@@ -1,8 +1,8 @@
 module Data.Compression.Fibonacci
-       (
-         encodeFibonacci
-       , decodeFibonacci
-       ) where
+  (
+    encodeFibonacci
+  , decodeFibonacci
+  ) where
 
 import           Control.Arrow           (second)
 import           Data.List               (unfoldr)

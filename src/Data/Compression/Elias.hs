@@ -1,15 +1,15 @@
 module Data.Compression.Elias
-       (
-         Bitmap2(..)
-       , encodeUnary
-       , decodeUnary
-       , encodeEliasGamma
-       , decodeEliasGamma
-       , encodeEliasDelta
-       , decodeEliasDelta
-       , encodeEliasFano
-       , decodeEliasFano
-       ) where
+  (
+    Bitmap2(..)
+  , encodeUnary
+  , decodeUnary
+  , encodeEliasGamma
+  , decodeEliasGamma
+  , encodeEliasDelta
+  , decodeEliasDelta
+  , encodeEliasFano
+  , decodeEliasFano
+  ) where
 
 import           Data.Bits
 import           Data.List               (unfoldr)

@@ -1,9 +1,9 @@
 module OrdTreeSpec
-       (
-         ordBpsSpec
-       , ordDfudsSpec
-       , ordIpRouterSpec
-       ) where
+  (
+    ordBpsSpec
+  , ordDfudsSpec
+  , ordIpRouterSpec
+  ) where
 
 import           Test.Hspec
 

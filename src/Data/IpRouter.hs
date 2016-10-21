@@ -1,13 +1,13 @@
 module Data.IpRouter
-       (
-         Address(Address)
-       , Mask(Mask)
-       , Prefix(..)
-       , Entry(..)
-       , IpRouter(..)
-       , insEntries
-       , delEntries
-       ) where
+  (
+    Address(Address)
+  , Mask(Mask)
+  , Prefix(..)
+  , Entry(..)
+  , IpRouter(..)
+  , insEntries
+  , delEntries
+  ) where
 
 import           Control.Arrow   (first)
 import           Data.Bits

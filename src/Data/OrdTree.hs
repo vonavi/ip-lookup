@@ -5,20 +5,20 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.OrdTree
-       (
-         OrdTree(..)
-       , ordToBps
-       , ordToDfuds
-       , ordSize
-       , OrdTreeT1
-       , OrdZipperT1
-       , OrdTreeT2
-       , OrdZipperT2
-       , OrdTreeT3
-       , OrdZipperT3
-       , OrdTreeT4
-       , OrdZipperT4
-       ) where
+  (
+    OrdTree(..)
+  , ordToBps
+  , ordToDfuds
+  , ordSize
+  , OrdTreeT1
+  , OrdZipperT1
+  , OrdTreeT2
+  , OrdZipperT2
+  , OrdTreeT3
+  , OrdZipperT3
+  , OrdTreeT4
+  , OrdZipperT4
+  ) where
 
 import           Control.Applicative ((<|>))
 import           Control.Monad.State

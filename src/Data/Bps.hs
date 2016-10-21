@@ -3,24 +3,24 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.Bps
-       (
-         parent
-       , firstChild
-       , lastChild
-       , nextSibling
-       , prevSibling
-       , subtreeSize
-       , degree
-       , child
-       , BpsT1
-       , ordToBpsT1
-       , BpsT2
-       , ordToBpsT2
-       , BpsT3
-       , ordToBpsT3
-       , BpsT4
-       , ordToBpsT4
-       ) where
+  (
+    parent
+  , firstChild
+  , lastChild
+  , nextSibling
+  , prevSibling
+  , subtreeSize
+  , degree
+  , child
+  , BpsT1
+  , ordToBpsT1
+  , BpsT2
+  , ordToBpsT2
+  , BpsT3
+  , ordToBpsT3
+  , BpsT4
+  , ordToBpsT4
+  ) where
 
 import           Control.Applicative       ((<|>))
 import           Control.Monad             (guard, when)

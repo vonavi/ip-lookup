@@ -1,8 +1,8 @@
 module RandomPrefixes
-       (
-         randomEntries
-       , genRandomEntries
-       ) where
+  (
+    randomEntries
+  , genRandomEntries
+  ) where
 
 import           Data.Bits
 import           Data.List     (unfoldr)
