@@ -37,14 +37,15 @@ instance Show IPv4Address where
                          . mapM (state . splitBitsAt) $ [24, 16, 8, 0]
 
 
-newtype HexDigit = HexDigit { unHexDigit :: Int }
+newtype HexDigit = HexDigit { unHexDigit :: Word16 }
 
 hexDigitToChar :: HexDigit -> Char
-hexDigitToChar = intToDigit . unHexDigit
+hexDigitToChar = intToDigit . fromIntegral . unHexDigit
 
 instance Read HexDigit where
-  readsPrec _ (c:cs) | isHexDigit c = [ (HexDigit . digitToInt $ c, cs) ]
-  readsPrec _ _                     = []
+  readsPrec _ (c:cs)
+    | isHexDigit c = [ (HexDigit . fromIntegral . digitToInt $ c, cs) ]
+  readsPrec _ _    = []
 
 instance Show HexDigit where
   show = show . hexDigitToChar
@@ -63,21 +64,21 @@ instance {-# OVERLAPPING #-} Read Hex where
 instance {-# OVERLAPPING #-} Show Hex where
   show = map hexDigitToChar
 
-hexToInt :: Hex -> Int
-hexToInt xs = sum . zipWith (flip shiftL) offsets . map unHexDigit $ xs
+hexToWord :: Hex -> Word16
+hexToWord xs = sum . zipWith (flip shiftL) offsets . map unHexDigit $ xs
   where offsets = drop (4 - length xs) [12, 8, 4, 0]
 
-intToHex :: Int -> Hex
-intToHex 0 = [HexDigit 0]
-intToHex x = map HexDigit . dropWhile (0 ==)
-             . (`evalState` x) . mapM (state . splitBitsAt) $ [12, 8, 4, 0]
+wordToHex :: Word16 -> Hex
+wordToHex 0 = [HexDigit 0]
+wordToHex x = map HexDigit . dropWhile (0 ==)
+              . (`evalState` x) . mapM (state . splitBitsAt) $ [12, 8, 4, 0]
 
 
 newtype IPv6Address = IPv6Address Integer
 
 fromHexList :: [Hex] -> IPv6Address
 fromHexList = IPv6Address . sum . zipWith (flip shiftL) offsets
-              . map (toInteger . hexToInt)
+              . map (toInteger . hexToWord)
   where offsets = map (65536 *) [7, 6 .. 0]
 
 instance Read IPv6Address where
@@ -99,20 +100,20 @@ indicesOfMaxGroup p = maximumBy (comparing length) . reverse . grIndices
 
 instance Show IPv6Address where
   show (IPv6Address x)
-    | maxLen <= 1        = intercalate ":" . map (show . intToHex) $ octets
+    | maxLen <= 1        = intercalate ":" . map (show . wordToHex) $ octets
     | maxLen == 8        = "::"
     | head maxZeros == 0 = ':' : addrStr
     | last maxZeros == 7 = addrStr ++ ":"
     | otherwise          = addrStr
     where offsets  = map (65536 *) [7, 6 .. 0]
-          octets   = map ((fromInteger :: Integer -> Int) . shiftR x) offsets
+          octets   = map ((fromInteger :: Integer -> Word16) . shiftR x) offsets
           maxZeros = indicesOfMaxGroup (== 0) octets
           maxLen   = length maxZeros
           addrStr  = tail . concat . (`evalState` maxZeros)
                      . mapM (state . dropGroup) . zip [0 ..] $ octets
-          dropGroup :: (Int, Int) -> [Int] -> (String, [Int])
+          dropGroup :: (Int, Word16) -> [Int] -> (String, [Int])
           dropGroup (n, _) (g:gs) | n == g = (bool "" ":" (null gs), gs)
-          dropGroup (_, h) gs              = (':' : show (intToHex h), gs)
+          dropGroup (_, h) gs              = (':' : show (wordToHex h), gs)
 
 
 data Address = IPv4Addr IPv4Address
