@@ -88,7 +88,7 @@ newtype IPv6Address = IPv6Address Integer
 fromHexList :: [Hex] -> IPv6Address
 fromHexList = IPv6Address . sum . zipWith (flip shiftL) offsets
               . map (toInteger . hexToWord)
-  where offsets = map (65536 *) [7, 6 .. 0]
+  where offsets = map (16 *) [7, 6 .. 0]
 
 instance Read IPv6Address where
   readsPrec _ s
@@ -114,7 +114,7 @@ instance Show IPv6Address where
     | head maxZeros == 0 = ':' : addrStr
     | last maxZeros == 7 = addrStr ++ ":"
     | otherwise          = addrStr
-    where offsets  = map (65536 *) [7, 6 .. 0]
+    where offsets  = map (16 *) [7, 6 .. 0]
           octets   = map ((fromInteger :: Integer -> Word16) . shiftR x) offsets
           maxZeros = indicesOfMaxGroup (== 0) octets
           maxLen   = length maxZeros
