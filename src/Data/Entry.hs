@@ -186,8 +186,8 @@ maskLength = helper . prefix
 
 testPrefixBit :: Entry -> Int -> Bool
 testPrefixBit = helper . prefix
-  where helper (IPv4  x m) n | n < m = x `testBit` (31 - n)
-        helper (VPNv4 x m) n | n < m = x `testBit` (47 - n)
-        helper (IPv6  x m) n | n < m = x `testBit` (127 - n)
-        helper (VPNv6 x m) n | n < m = x `testBit` (143 - n)
-        helper _           _         = error "test outside of mask"
+  where helper (IPv4  x m) n | n >= 0 && n < m = x `testBit` (31 - n)
+        helper (VPNv4 x m) n | n >= 0 && n < m = x `testBit` (47 - n)
+        helper (IPv6  x m) n | n >= 0 && n < m = x `testBit` (127 - n)
+        helper (VPNv6 x m) n | n >= 0 && n < m = x `testBit` (143 - n)
+        helper _           _                   = error "test outside of mask"
