@@ -19,12 +19,12 @@ splitBitsAt :: (Num a, Bits a) => Int -> a -> (a, a)
 splitBitsAt n x = (h, x - (h `shiftL` n))
   where h = x `shiftR` n
 
-newtype Ipv4Address = Ipv4Address Word32
+newtype IPv4Address = IPv4Address Word32
 
-fromOctetList :: [Word32] -> Ipv4Address
-fromOctetList = Ipv4Address . sum . zipWith (flip shiftL) [24, 16, 8, 0]
+fromOctetList :: [Word32] -> IPv4Address
+fromOctetList = IPv4Address . sum . zipWith (flip shiftL) [24, 16, 8, 0]
 
-instance Read Ipv4Address where
+instance Read IPv4Address where
   readsPrec _ s
     | length xs /= 4 = []
     | otherwise      = map (first fromOctetList) . (readList :: ReadS [Word32])
@@ -32,8 +32,8 @@ instance Read Ipv4Address where
     where (addr, other) = span (\c -> isDigit c || '.' == c) s
           xs            = splitOn "." addr
 
-instance Show Ipv4Address where
-  show (Ipv4Address x) = intercalate "." . map show . (`evalState` x)
+instance Show IPv4Address where
+  show (IPv4Address x) = intercalate "." . map show . (`evalState` x)
                          . mapM (state . splitBitsAt) $ [24, 16, 8, 0]
 
 
@@ -72,14 +72,15 @@ intToHex 0 = [HexDigit 0]
 intToHex x = map HexDigit . dropWhile (0 ==)
              . (`evalState` x) . mapM (state . splitBitsAt) $ [12, 8, 4, 0]
 
-newtype Ipv6Address = Ipv6Address Integer
 
-fromHexList :: [Hex] -> Ipv6Address
-fromHexList = Ipv6Address . sum . zipWith (flip shiftL) offsets
+newtype IPv6Address = IPv6Address Integer
+
+fromHexList :: [Hex] -> IPv6Address
+fromHexList = IPv6Address . sum . zipWith (flip shiftL) offsets
               . map (toInteger . hexToInt)
   where offsets = map (65536 *) [7, 6 .. 0]
 
-instance Read Ipv6Address where
+instance Read IPv6Address where
   readsPrec _ s
     | lenx > 8                        = []
     | (lenx /= 8) /= ("::" `elem` xs) = []
@@ -96,8 +97,8 @@ indicesOfMaxGroup :: (a -> Bool) -> [a] -> [Int]
 indicesOfMaxGroup p = maximumBy (comparing length) . reverse . grIndices
   where grIndices = map (map fst) . wordsBy (not . p . snd) . zip [0 ..]
 
-instance Show Ipv6Address where
-  show (Ipv6Address x)
+instance Show IPv6Address where
+  show (IPv6Address x)
     | maxLen <= 1        = intercalate ":" . map (show . intToHex) $ octets
     | maxLen == 8        = "::"
     | head maxZeros == 0 = ':' : addrStr
@@ -114,18 +115,18 @@ instance Show Ipv6Address where
           dropGroup (_, h) gs              = (':' : show (intToHex h), gs)
 
 
-data Address = Ipv4 Ipv4Address
-             | Ipv6 Ipv6Address
+data Address = IPv4Addr IPv4Address
+             | IPv6Addr IPv6Address
 
 instance Read Address where
-  readsPrec d s = [ (Ipv4 x, t)
-                  | (x, t) <- (readsPrec d :: ReadS Ipv4Address) s
+  readsPrec d s = [ (IPv4Addr x, t)
+                  | (x, t) <- (readsPrec d :: ReadS IPv4Address) s
                   ]
                   ++
-                  [ (Ipv6 x, t)
-                  | (x, t) <- (readsPrec d :: ReadS Ipv6Address) s
+                  [ (IPv6Addr x, t)
+                  | (x, t) <- (readsPrec d :: ReadS IPv6Address) s
                   ]
 
 instance Show Address where
-  show (Ipv4 x) = show x
-  show (Ipv6 x) = show x
+  show (IPv4Addr x) = show x
+  show (IPv6Addr x) = show x
