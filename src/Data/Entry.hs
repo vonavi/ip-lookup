@@ -3,6 +3,15 @@
 module Data.Entry
   (
     Address
+  , Mask
+  , Vpn
+  , Prefix
+  , mkPrefix
+  , addVpn
+  , Entry
+  , mkEntry
+  , maskLength
+  , testPrefixBit
   ) where
 
 import           Control.Arrow       (first, second)
@@ -131,3 +140,54 @@ instance Read Address where
 instance Show Address where
   show (IPv4Addr x) = show x
   show (IPv6Addr x) = show x
+
+
+type Mask = Int
+type Vpn = Hex
+data Prefix = IPv4  Word32  Mask
+            | VPNv4 Word64  Mask
+            | IPv6  Integer Mask
+            | VPNv6 Integer Mask
+
+mkPrefix :: Address -> Mask -> Prefix
+mkPrefix (IPv4Addr (IPv4Address x)) = IPv4 x
+mkPrefix (IPv6Addr (IPv6Address x)) = IPv6 x
+
+addVpn :: Vpn -> Prefix -> Prefix
+addVpn v (IPv4  x m) = VPNv4 (vpnBits .|. addrBits) (m + 16)
+  where vpnBits  = fromIntegral (hexToWord v) `shiftL` 32
+        addrBits = fromIntegral x
+addVpn v (VPNv4 x m) = VPNv4 (vpnBits .|. addrBits) m
+  where vpnBits  = fromIntegral (hexToWord v) `shiftL` 32
+        addrBits = x .&. (bit 32 - bit 0)
+addVpn v (IPv6  x m) = VPNv6 (vpnBits .|. addrBits) (m + 16)
+  where vpnBits  = toInteger (hexToWord v) `shiftL` 128
+        addrBits = x
+addVpn v (VPNv6 x m) = VPNv6 (vpnBits .|. addrBits) m
+  where vpnBits  = toInteger (hexToWord v) `shiftL` 128
+        addrBits = x .&. (bit 128 - bit 0)
+
+
+data Entry = Entry { prefix  :: Prefix
+                   , nextHop :: Int
+                   }
+
+mkEntry :: Int -> Prefix -> Entry
+mkEntry n p = Entry { prefix  = p
+                    , nextHop = n
+                    }
+
+maskLength :: Entry -> Int
+maskLength = helper . prefix
+  where helper (IPv4  _ m) = m
+        helper (VPNv4 _ m) = m
+        helper (IPv6  _ m) = m
+        helper (VPNv6 _ m) = m
+
+testPrefixBit :: Entry -> Int -> Bool
+testPrefixBit = helper . prefix
+  where helper (IPv4  x m) n | n < m = x `testBit` (31 - n)
+        helper (VPNv4 x m) n | n < m = x `testBit` (47 - n)
+        helper (IPv6  x m) n | n < m = x `testBit` (127 - n)
+        helper (VPNv6 x m) n | n < m = x `testBit` (143 - n)
+        helper _           _         = error "test outside of mask"
