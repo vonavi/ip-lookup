@@ -35,32 +35,32 @@ ipv6AddressSpec = do
 
 
 prefixSpec :: Spec
-prefixSpec = do testPrefixBitSpec
+prefixSpec = do testBitSpec
                 commonPrefixSpec
 
-getPrefixBits :: Entry -> [Bool]
-getPrefixBits e = map (e `testPrefixBit`) . take (maskLength e) $ [0 ..]
+significantBits :: Prefix -> [Bool]
+significantBits p = map (p `testBitOf`) . take (maskLength p) $ [0 ..]
 
-testPrefixBitSpec :: Spec
-testPrefixBitSpec = do
+testBitSpec :: Spec
+testBitSpec = do
   describe "Test prefix bits" $ do
     let p1 = mkPrefix (read "192.168.0.1" :: Address) (read "16" :: Mask)
         p2 = setVpn (read "db8" :: Vpn) p1
         p3 = setVpn (read "2001" :: Vpn) p2
     it "IPv4 prefix" $ do
-      getPrefixBits (mkEntry 0 p1)
+      significantBits p1
         `shouldBe` [ True, True, False, False, False, False, False, False
                    , True, False, True, False, True, False, False, False
                    ]
     it "VPNv4 prefix" $ do
-      getPrefixBits (mkEntry 255 p2)
+      significantBits p2
         `shouldBe` [ False, False, False, False, True, True, False, True
                    , True, False, True, True, True, False, False, False
                    , True, True, False, False, False, False, False, False
                    , True, False, True, False, True, False, False, False
                    ]
     it "VPNv4 prefix (changed)" $ do
-      getPrefixBits (mkEntry 1 p3)
+      significantBits p3
         `shouldBe` [ False, False, True, False, False, False, False, False
                    , False, False, False, False, False, False, False, True
                    , True, True, False, False, False, False, False, False
@@ -71,14 +71,14 @@ testPrefixBitSpec = do
         p5 = setVpn (read "ac10" :: Vpn) p4
         p6 = setVpn (read "fe01" :: Vpn) p5
     it "IPv6 prefix" $ do
-      getPrefixBits (mkEntry 10 p4)
+      significantBits p4
         `shouldBe` [ False, False, True, False, False, False, False, False
                    , False, False, False, False, False, False, False, True
                    , False, False, False, False, True, True, False, True
                    , True, False, True, True, True, False, False, False
                    ]
     it "VPNv6 prefix" $ do
-      getPrefixBits (mkEntry 128 p5)
+      significantBits p5
         `shouldBe` [ True, False, True, False, True, True, False, False
                    , False, False, False, True, False, False, False, False
                    , False, False, True, False, False, False, False, False
@@ -87,7 +87,7 @@ testPrefixBitSpec = do
                    , True, False, True, True, True, False, False, False
                    ]
     it "VPNv6 prefix (changed)" $ do
-      getPrefixBits (mkEntry 7 p6)
+      significantBits p6
         `shouldBe` [ True, True, True, True, True, True, True, False
                    , False, False, False, False, False, False, False, True
                    , False, False, True, False, False, False, False, False

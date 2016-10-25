@@ -8,11 +8,10 @@ module Data.Entry
   , Prefix
   , mkPrefix
   , setVpn
-  , commonPrefix
-  , Entry
-  , mkEntry
   , maskLength
-  , testPrefixBit
+  , testBitOf
+  , commonPrefix
+  , Entry(..)
   ) where
 
 import           Control.Arrow       (first, second)
@@ -182,6 +181,19 @@ setVpn v (VPNv6 x m) = VPNv6 (vpnBits .|. addrBits) m
   where vpnBits  = toInteger (hexToWord v) `shiftL` 128
         addrBits = x .&. (bit 128 - bit 0)
 
+maskLength :: Prefix -> Int
+maskLength (IPv4  _ m) = m
+maskLength (VPNv4 _ m) = m
+maskLength (IPv6  _ m) = m
+maskLength (VPNv6 _ m) = m
+
+testBitOf :: Prefix -> Int -> Bool
+testBitOf (IPv4  x m) n | n >= 0 && n < m = x `testBit` (31 - n)
+testBitOf (VPNv4 x m) n | n >= 0 && n < m = x `testBit` (47 - n)
+testBitOf (IPv6  x m) n | n >= 0 && n < m = x `testBit` (127 - n)
+testBitOf (VPNv6 x m) n | n >= 0 && n < m = x `testBit` (143 - n)
+testBitOf _           _                   = error "test outside of mask"
+
 widthOfInteger :: Integer -> Int
 widthOfInteger = ceiling . logBase (2::Double) . fromInteger . succ
 
@@ -200,23 +212,3 @@ commonPrefix _             _             = error "incompatible prefixes"
 data Entry = Entry { prefix  :: Prefix
                    , nextHop :: Int
                    }
-
-mkEntry :: Int -> Prefix -> Entry
-mkEntry n p = Entry { prefix  = p
-                    , nextHop = n
-                    }
-
-maskLength :: Entry -> Int
-maskLength = helper . prefix
-  where helper (IPv4  _ m) = m
-        helper (VPNv4 _ m) = m
-        helper (IPv6  _ m) = m
-        helper (VPNv6 _ m) = m
-
-testPrefixBit :: Entry -> Int -> Bool
-testPrefixBit = helper . prefix
-  where helper (IPv4  x m) n | n >= 0 && n < m = x `testBit` (31 - n)
-        helper (VPNv4 x m) n | n >= 0 && n < m = x `testBit` (47 - n)
-        helper (IPv6  x m) n | n >= 0 && n < m = x `testBit` (127 - n)
-        helper (VPNv6 x m) n | n >= 0 && n < m = x `testBit` (143 - n)
-        helper _           _                   = error "test outside of mask"
