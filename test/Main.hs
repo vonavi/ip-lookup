@@ -31,3 +31,4 @@ main = do
   hspec paCo2PrtnIpRouterSpec
 
   hspec addressSpec
+  hspec prefixSpec

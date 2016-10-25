@@ -8,6 +8,7 @@ module Data.Entry
   , Prefix
   , mkPrefix
   , setVpn
+  , commonPrefix
   , Entry
   , mkEntry
   , maskLength
@@ -150,6 +151,18 @@ data Prefix = IPv4  Word32  Mask
             | VPNv4 Word64  Mask
             | IPv6  Integer Mask
             | VPNv6 Integer Mask
+            deriving Show
+
+instance Eq Prefix where
+  (IPv4  a1 m1) == (IPv4  a2 m2) =
+    (m1 == m2) && ((a1 `xor` a2) .&. (bit 32 - bit (32 - m1)) == 0)
+  (VPNv4 a1 m1) == (VPNv4 a2 m2) =
+    (m1 == m2) && ((a1 `xor` a2) .&. (bit 48 - bit (48 - m1)) == 0)
+  (IPv6  a1 m1) == (IPv6  a2 m2) =
+    (m1 == m2) && ((a1 `xor` a2) .&. (bit 128 - bit (128 - m1)) == 0)
+  (VPNv6 a1 m1) == (VPNv6 a2 m2) =
+    (m1 == m2) && ((a1 `xor` a2) .&. (bit 144 - bit (144 - m1)) == 0)
+  _             == _             = False
 
 mkPrefix :: Address -> Mask -> Prefix
 mkPrefix (IPv4Addr (IPv4Address x)) = IPv4 x
@@ -168,6 +181,20 @@ setVpn v (IPv6  x m) = VPNv6 (vpnBits .|. addrBits) (m + 16)
 setVpn v (VPNv6 x m) = VPNv6 (vpnBits .|. addrBits) m
   where vpnBits  = toInteger (hexToWord v) `shiftL` 128
         addrBits = x .&. (bit 128 - bit 0)
+
+widthOfInteger :: Integer -> Int
+widthOfInteger = ceiling . logBase (2::Double) . fromInteger . succ
+
+commonPrefix :: Prefix -> Prefix -> Prefix
+commonPrefix (IPv4  a1 m1) (IPv4  a2 m2) = IPv4  a1 m
+  where m = minimum [m1, m2, countLeadingZeros (a1 `xor` a2)]
+commonPrefix (VPNv4 a1 m1) (VPNv4 a2 m2) = VPNv4 a1 m
+  where m = minimum [m1, m2, countLeadingZeros (a1 `xor` a2) - 16]
+commonPrefix (IPv6  a1 m1) (IPv6  a2 m2) = IPv6  a1 m
+  where m = minimum [m1, m2, 128 - widthOfInteger (a1 `xor` a2)]
+commonPrefix (VPNv6 a1 m1) (VPNv6 a2 m2) = VPNv6 a1 m
+  where m = minimum [m1, m2, 144 - widthOfInteger (a1 `xor` a2)]
+commonPrefix _             _             = error "incompatible prefixes"
 
 
 data Entry = Entry { prefix  :: Prefix
