@@ -103,9 +103,11 @@ instance Read IPv6Address where
           addZeros "::" = intercalate "," $ replicate (9 - length xs) "0"
           addZeros x    = x
 
-indicesOfMaxGroup :: (a -> Bool) -> [a] -> [Int]
-indicesOfMaxGroup p = maximumBy (comparing length) . reverse . grIndices
-  where grIndices = map (map fst) . wordsBy (not . p . snd) . zip [0 ..]
+longestGroupIndices :: (a -> Bool) -> [a] -> [Int]
+longestGroupIndices p xs
+  | null indexGroups = []
+  | otherwise        = maximumBy (comparing length) . reverse $ indexGroups
+  where indexGroups = map (map fst) . wordsBy (not . p . snd) . zip [0 ..] $ xs
 
 instance Show IPv6Address where
   show (IPv6Address x)
@@ -116,7 +118,7 @@ instance Show IPv6Address where
     | otherwise          = addrStr
     where offsets  = map (16 *) [7, 6 .. 0]
           octets   = map ((fromInteger :: Integer -> Word16) . shiftR x) offsets
-          maxZeros = indicesOfMaxGroup (== 0) octets
+          maxZeros = longestGroupIndices (== 0) octets
           maxLen   = length maxZeros
           addrStr  = tail . concat . (`evalState` maxZeros)
                      . mapM (state . dropGroup) . zip [0 ..] $ octets
