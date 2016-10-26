@@ -1,4 +1,4 @@
-module EntrySpec
+module PrefixSpec
   (
     addressSpec
   , prefixSpec
@@ -7,7 +7,7 @@ module EntrySpec
 import           Data.Function (on)
 import           Test.Hspec
 
-import           Data.Entry
+import           Data.Prefix
 
 addressSpec :: Spec
 addressSpec = do ipv4AddressSpec

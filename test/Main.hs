@@ -4,13 +4,13 @@ import           Test.Hspec
 
 import           BinPartitionSpec
 import           BinTreeSpec
-import           EntrySpec
 import           OrdPartitionSpec
 import           OrdTreeSpec
 import           PaCo2PartitionSpec
 import           PaCo2TreeSpec
 import           PaCoPartitionSpec
 import           PaCoTreeSpec
+import           PrefixSpec
 
 main :: IO ()
 main = do

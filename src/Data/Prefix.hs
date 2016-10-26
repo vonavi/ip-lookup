@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Data.Entry
+module Data.Prefix
   (
     Address
   , Mask
@@ -11,7 +11,6 @@ module Data.Entry
   , maskLength
   , testBitOf
   , commonPrefix
-  , Entry(..)
   ) where
 
 import           Control.Arrow       (first, second)
@@ -207,8 +206,3 @@ commonPrefix (IPv6  a1 m1) (IPv6  a2 m2) = IPv6  a1 m
 commonPrefix (VPNv6 a1 m1) (VPNv6 a2 m2) = VPNv6 a1 m
   where m = minimum [m1, m2, 144 - widthOfInteger (a1 `xor` a2)]
 commonPrefix _             _             = error "incompatible prefixes"
-
-
-data Entry = Entry { prefix  :: Prefix
-                   , nextHop :: Int
-                   }
