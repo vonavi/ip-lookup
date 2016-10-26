@@ -44,9 +44,9 @@ significantBits = unfoldr uncons
 testBitSpec :: Spec
 testBitSpec = do
   describe "Test prefix bits" $ do
-    let p1 = mkPrefix (read "192.168.0.1" :: Address) (read "16" :: Mask)
-        p2 = setVpn (read "db8" :: Vpn) p1
-        p3 = setVpn (read "2001" :: Vpn) p2
+    let p1 = mkPrefix (read "192.168.0.1") 16
+        p2 = setVpn (read "db8") p1
+        p3 = setVpn (read "2001") p2
     it "IPv4 prefix" $ do
       significantBits p1
         `shouldBe` [ True, True, False, False, False, False, False, False
@@ -67,9 +67,9 @@ testBitSpec = do
                    , True, False, True, False, True, False, False, False
                    ]
 
-    let p4 = mkPrefix (read "2001:db8::" :: Address) (read "32" :: Mask)
-        p5 = setVpn (read "ac10" :: Vpn) p4
-        p6 = setVpn (read "fe01" :: Vpn) p5
+    let p4 = mkPrefix (read "2001:db8::") 32
+        p5 = setVpn (read "ac10") p4
+        p6 = setVpn (read "fe01") p5
     it "IPv6 prefix" $ do
       significantBits p4
         `shouldBe` [ False, False, True, False, False, False, False, False
