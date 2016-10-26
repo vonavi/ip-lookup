@@ -9,6 +9,8 @@ module Data.Prefix
   , mkPrefix
   , setVpn
   , maskLength
+  , empty
+  , breakAt
   , cons
   , uncons
   , append
@@ -187,6 +189,31 @@ maskLength (IPv4  _ m) = m
 maskLength (VPNv4 _ m) = m
 maskLength (IPv6  _ m) = m
 maskLength (VPNv6 _ m) = m
+
+empty :: Prefix -> Bool
+empty (IPv4  _ 0) = True
+empty (VPNv4 _ 0) = True
+empty (IPv6  _ 0) = True
+empty (VPNv6 _ 0) = True
+empty _           = False
+
+breakAt :: Int -> Prefix -> (Prefix, Prefix)
+breakAt n p@(IPv4  x m) | n <= 0    = (IPv4 0 0, p)
+                        | n >= m    = (p, IPv4 0 0)
+                        | otherwise = (IPv4 x n, IPv4 x' (m - n))
+  where x' = x `shiftL` n
+breakAt n p@(VPNv4 x m) | n <= 0    = (VPNv4 0 0, p)
+                        | n >= m    = (p, VPNv4 0 0)
+                        | otherwise = (VPNv4 x n, VPNv4 x' (m - n))
+  where x' = (x `shiftL` n) .&. (bit 48 - bit 0)
+breakAt n p@(IPv6  x m) | n <= 0    = (IPv6 0 0, p)
+                        | n >= m    = (p, IPv6 0 0)
+                        | otherwise = (IPv6 x n, IPv6 x' (m - n))
+  where x' = (x `shiftL` n) .&. (bit 128 - bit 0)
+breakAt n p@(VPNv6 x m) | n <= 0    = (VPNv6 0 0, p)
+                        | n >= m    = (p, VPNv6 0 0)
+                        | otherwise = (VPNv6 x n, VPNv6 x' (m - n))
+  where x' = (x `shiftL` n) .&. (bit 144 - bit 0)
 
 cons :: Bool -> Prefix -> Prefix
 cons b (IPv4  x m) = IPv4  x' (succ m)

@@ -106,6 +106,8 @@ commonPrefixesSpec = do
           p1' = mkPrefix (read "0.0.0.0") 7
           p2' = mkPrefix (read "254.0.0.0") 11
       commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
+      breakAt 17 p1 `shouldBe` (p3, p1')
+      breakAt 17 p2 `shouldBe` (p3, p2')
       append p3 p1' `shouldBe` p1
       append p3 p2' `shouldBe` p2
 
@@ -116,6 +118,8 @@ commonPrefixesSpec = do
           p1' = setVpn (read "ff00") $ mkPrefix (read "0.0.0.0") 0
           p2' = setVpn (read "7f00") $ mkPrefix (read "0.0.0.0") 0
       commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
+      breakAt 32 p1 `shouldBe` (p3, p1')
+      breakAt 32 p2 `shouldBe` (p3, p2')
       append p3 p1' `shouldBe` p1
       append p3 p2' `shouldBe` p2
 
@@ -126,6 +130,8 @@ commonPrefixesSpec = do
           p1' = mkPrefix (read "7000::") 39
           p2' = mkPrefix (read "9000::") 23
       commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
+      breakAt 25 p1 `shouldBe` (p3, p1')
+      breakAt 25 p2 `shouldBe` (p3, p2')
       append p3 p1' `shouldBe` p1
       append p3 p2' `shouldBe` p2
 
@@ -136,5 +142,7 @@ commonPrefixesSpec = do
           p1' = setVpn (read "7000") $ mkPrefix (read "::") 23
           p2' = setVpn (read "9000") $ mkPrefix (read "::") 7
       commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
+      breakAt 41 p1 `shouldBe` (p3, p1')
+      breakAt 41 p2 `shouldBe` (p3, p2')
       append p3 p1' `shouldBe` p1
       append p3 p2' `shouldBe` p2
