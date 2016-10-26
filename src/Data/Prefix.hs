@@ -9,7 +9,8 @@ module Data.Prefix
   , mkPrefix
   , setVpn
   , maskLength
-  , testBitOf
+  , pushBit
+  , popBit
   , commonPrefix
   ) where
 
@@ -186,12 +187,25 @@ maskLength (VPNv4 _ m) = m
 maskLength (IPv6  _ m) = m
 maskLength (VPNv6 _ m) = m
 
-testBitOf :: Prefix -> Int -> Bool
-testBitOf (IPv4  x m) n | n >= 0 && n < m = x `testBit` (31 - n)
-testBitOf (VPNv4 x m) n | n >= 0 && n < m = x `testBit` (47 - n)
-testBitOf (IPv6  x m) n | n >= 0 && n < m = x `testBit` (127 - n)
-testBitOf (VPNv6 x m) n | n >= 0 && n < m = x `testBit` (143 - n)
-testBitOf _           _                   = error "test outside of mask"
+pushBit :: Bool -> Prefix -> Prefix
+pushBit b (IPv4  x m) = IPv4  x' (succ m)
+  where x' = bool clearBit setBit b (x `shiftR` 1) 31
+pushBit b (VPNv4 x m) = VPNv4 x' (succ m)
+  where x' = bool clearBit setBit b (x `shiftR` 1) 47
+pushBit b (IPv6  x m) = IPv6  x' (succ m)
+  where x' = bool clearBit setBit b (x `shiftR` 1) 127
+pushBit b (VPNv6 x m) = VPNv6 x' (succ m)
+  where x' = bool clearBit setBit b (x `shiftR` 1) 143
+
+popBit :: Prefix -> (Bool, Prefix)
+popBit (IPv4  x m) = (x `testBit` 31,  IPv4  x' (pred m))
+  where x' = x `shiftL` 1
+popBit (VPNv4 x m) = (x `testBit` 47,  VPNv4 x' (pred m))
+  where x' = (x `shiftL` 1) `clearBit` 48
+popBit (IPv6  x m) = (x `testBit` 127, IPv6  x' (pred m))
+  where x' = (x `shiftL` 1) `clearBit` 128
+popBit (VPNv6 x m) = (x `testBit` 143, VPNv6 x' (pred m))
+  where x' = (x `shiftL` 1) `clearBit` 144
 
 widthOfInteger :: Integer -> Int
 widthOfInteger = ceiling . logBase (2::Double) . fromInteger . succ
