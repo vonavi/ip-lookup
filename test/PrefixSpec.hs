@@ -4,8 +4,8 @@ module PrefixSpec
   , prefixSpec
   ) where
 
-import           Control.Monad.State
-import           Data.Function       (on)
+import           Data.Function (on)
+import           Data.List     (unfoldr)
 import           Test.Hspec
 
 import           Data.Prefix
@@ -40,7 +40,7 @@ prefixSpec = do testBitSpec
                 commonPrefixSpec
 
 significantBits :: Prefix -> [Bool]
-significantBits p = (`evalState` p) $ replicateM (maskLength p) (state popBit)
+significantBits = unfoldr uncons
 
 testBitSpec :: Spec
 testBitSpec = do
