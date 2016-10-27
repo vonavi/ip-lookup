@@ -10,20 +10,23 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.OrdTree
 import           Data.Paren
-import           RandomPrefixes
+import           Data.Prefix
+import           RandomEntries
 import           TestIpRouter
 
 testOrdTree :: IpRouter a => a
 testOrdTree = mkTable . map toEntry $ l
-  where toEntry (s, m, h) = Entry (read (s ++ m) :: Prefix) h
-        l = [ ("63.0.0.0",  "/2", 1)
-            , ("63.0.0.0",  "/3", 2)
-            , ("63.0.0.0",  "/1", 3)
-            , ("63.0.0.0",  "/0", 4)
-            , ("128.0.0.0", "/2", 5)
-            , ("128.0.0.0", "/1", 6)
-            , ("192.0.0.0", "/3", 7)
-            , ("192.0.0.0", "/2", 8)
+  where toEntry (v, m, n) = Entry { network = mkPrefix (read v :: Address) m
+                                  , nextHop = n
+                                  }
+        l = [ ("63.0.0.0",  2, 1)
+            , ("63.0.0.0",  3, 2)
+            , ("63.0.0.0",  1, 3)
+            , ("63.0.0.0",  0, 4)
+            , ("128.0.0.0", 2, 5)
+            , ("128.0.0.0", 1, 6)
+            , ("192.0.0.0", 3, 7)
+            , ("192.0.0.0", 2, 8)
             ]
 
 ordBpsSpec :: Spec

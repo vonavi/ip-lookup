@@ -22,9 +22,9 @@ module Data.OrdTree
 
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
-import           Data.Bits
 import           Data.Bool           (bool)
 import           Data.Function       (on)
+import           Data.List           (unfoldr)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
 import           Data.Sequence       (ViewL ((:<), EmptyL),
@@ -33,6 +33,7 @@ import qualified Data.Sequence       as S
 
 import           Data.IpRouter
 import           Data.Paren
+import           Data.Prefix
 import           Data.Zipper
 
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
@@ -43,17 +44,17 @@ instance Foldable Forest where
                   EmptyL      -> mempty
 
 class OrdTree a where
-  toForest    :: a       -> Forest (Maybe Int)
-  fromEntry   :: Entry   -> a
-  lookupState :: Address -> a -> State (Maybe Int) ()
-  delSubtree  :: a       -> a -> a
+  toForest    :: a      -> Forest (Maybe Int)
+  fromEntry   :: Entry  -> a
+  lookupState :: Prefix -> a -> State (Maybe Int) ()
+  delSubtree  :: a      -> a -> a
 
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   mkTable       = foldr (mappend . fromEntry) mempty
   insEntry e t  = t `mappend` fromEntry e
   delEntry e t  = t `delSubtree` fromEntry e
   ipLookup a t  = execState (lookupState a t) Nothing
-  numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust) . toForest
+  numOfPrefixes = getSum . foldMap (Sum . fromEnum . isJust) . toForest
 
 forestToBps :: Forest a -> [(a, Paren)]
 forestToBps = concatMap f . getSeq
@@ -87,7 +88,7 @@ The size of ordinal tree is built from the following parts:
 -}
 ordSize :: OrdTree a => a -> Int
 ordSize = (2 +) . getSum . foldMap (Sum . nodeSize) . toForest
-  where nodeSize x = 3 + if isJust x then 18 else 0
+  where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
 
 delRoot :: Maybe Int -> Maybe Int -> Maybe Int
 delRoot x y = if x == y then Nothing else x
@@ -125,21 +126,20 @@ instance Monoid OrdTreeT1 where
 instance OrdTree OrdTreeT1 where
   toForest (OrdTreeT1 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT1 . Forest . helper 31 $
-                          S.singleton (Just n, Forest S.empty)
-    where Prefix (Address a) (Mask m) = p
-          helper i x
-            | i == 31 - m = x
-            | otherwise   = if a `testBit` i
-                            then (Nothing, Forest S.empty) <| y
-                            else S.singleton (Nothing, Forest y)
-            where y = helper (pred i) x
+  fromEntry Entry { network = p, nextHop = n } =
+    OrdTreeT1 . Forest
+    . (`appEndo` S.singleton (Just n, Forest S.empty))
+    . foldMap (Endo . bool pushLeft pushRight) . unfoldr uncons $ p
+    where pushLeft x  = S.singleton (Nothing, Forest x)
+          pushRight x = (Nothing, Forest S.empty) <| x
 
-  lookupState (Address a) = helper 31 . getSeq . toForest
+  lookupState v0 = helper v0 . getSeq . toForest
     where helper _ (S.viewl -> EmptyL)             = return ()
-          helper n (S.viewl -> (x, Forest l) :< r) = do
+          helper v (S.viewl -> (x, Forest l) :< r) = do
             modify (x <|>)
-            helper (pred n) $ if a `testBit` n then r else l
+            case uncons v of
+              Nothing      -> return ()
+              Just (b, v') -> helper v' $ bool l r b
 
   delSubtree tx ty = OrdTreeT1 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewl -> EmptyL)   `helper` _                     = S.empty
@@ -217,21 +217,20 @@ instance Monoid OrdTreeT2 where
 instance OrdTree OrdTreeT2 where
   toForest (OrdTreeT2 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT2 . Forest . helper 31 $
-                          S.singleton (Just n, Forest S.empty)
-    where Prefix (Address a) (Mask m) = p
-          helper i x
-            | i == 31 - m = x
-            | otherwise   = if a `testBit` i
-                            then y |> (Nothing, Forest S.empty)
-                            else S.singleton (Nothing, Forest y)
-            where y = helper (pred i) x
+  fromEntry Entry { network = p, nextHop = n } =
+    OrdTreeT2 . Forest
+    . (`appEndo` S.singleton (Just n, Forest S.empty))
+    . foldMap (Endo . bool pushLeft pushRight) . unfoldr uncons $ p
+    where pushLeft x  = S.singleton (Nothing, Forest x)
+          pushRight x = x |> (Nothing, Forest S.empty)
 
-  lookupState (Address a) = helper 31 . getSeq . toForest
+  lookupState v0 = helper v0 . getSeq . toForest
     where helper _ (S.viewr -> EmptyR)             = return ()
-          helper n (S.viewr -> r :> (x, Forest l)) = do
+          helper v (S.viewr -> r :> (x, Forest l)) = do
             modify (x <|>)
-            helper (pred n) $ if a `testBit` n then r else l
+            case uncons v of
+              Nothing      -> return ()
+              Just (b, v') -> helper v' $ bool l r b
 
   delSubtree tx ty = OrdTreeT2 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewr -> EmptyR)   `helper` _                     = S.empty
@@ -309,21 +308,20 @@ instance Monoid OrdTreeT3 where
 instance OrdTree OrdTreeT3 where
   toForest (OrdTreeT3 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT3 . Forest . helper 31 $
-                          S.singleton (Just n, Forest S.empty)
-    where Prefix (Address a) (Mask m) = p
-          helper i x
-            | i == 31 - m = x
-            | otherwise   = if a `testBit` i
-                            then S.singleton (Nothing, Forest y)
-                            else (Nothing, Forest S.empty) <| y
-            where y = helper (pred i) x
+  fromEntry Entry { network = p, nextHop = n } =
+    OrdTreeT3 . Forest
+    . (`appEndo` S.singleton (Just n, Forest S.empty))
+    . foldMap (Endo . bool pushLeft pushRight) . unfoldr uncons $ p
+    where pushLeft x  = (Nothing, Forest S.empty) <| x
+          pushRight x = S.singleton (Nothing, Forest x)
 
-  lookupState (Address a) = helper 31 . getSeq . toForest
+  lookupState v0 = helper v0 . getSeq . toForest
     where helper _ (S.viewl -> EmptyL)             = return ()
-          helper n (S.viewl -> (x, Forest r) :< l) = do
+          helper v (S.viewl -> (x, Forest r) :< l) = do
             modify (x <|>)
-            helper (pred n) $ if a `testBit` n then r else l
+            case uncons v of
+              Nothing      -> return ()
+              Just (b, v') -> helper v' $ bool l r b
 
   delSubtree tx ty = OrdTreeT3 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewl -> EmptyL)   `helper` _                     = S.empty
@@ -401,21 +399,20 @@ instance Monoid OrdTreeT4 where
 instance OrdTree OrdTreeT4 where
   toForest (OrdTreeT4 x) = x
 
-  fromEntry (Entry p n) = OrdTreeT4 . Forest . helper 31 $
-                          S.singleton (Just n, Forest S.empty)
-    where Prefix (Address a) (Mask m) = p
-          helper i x
-            | i == 31 - m = x
-            | otherwise   = if a `testBit` i
-                            then S.singleton (Nothing, Forest y)
-                            else y |> (Nothing, Forest S.empty)
-            where y = helper (pred i) x
+  fromEntry Entry { network = p, nextHop = n } =
+    OrdTreeT4 . Forest
+    . (`appEndo` S.singleton (Just n, Forest S.empty))
+    . foldMap (Endo . bool pushLeft pushRight) . unfoldr uncons $ p
+    where pushLeft x  = x |> (Nothing, Forest S.empty)
+          pushRight x = S.singleton (Nothing, Forest x)
 
-  lookupState (Address a) = helper 31 . getSeq . toForest
+  lookupState v0 = helper v0 . getSeq . toForest
     where helper _ (S.viewr -> EmptyR)             = return ()
-          helper n (S.viewr -> l :> (x, Forest r)) = do
+          helper v (S.viewr -> l :> (x, Forest r)) = do
             modify (x <|>)
-            helper (pred n) $ if a `testBit` n then r else l
+            case uncons v of
+              Nothing      -> return ()
+              Just (b, v') -> helper v' $ bool l r b
 
   delSubtree tx ty = OrdTreeT4 . Forest $ (helper `on` getSeq . toForest) tx ty
     where (S.viewr -> EmptyR)   `helper` _                     = S.empty

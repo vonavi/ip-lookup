@@ -7,7 +7,7 @@ import           Test.Hspec
 
 import           Data.IpRouter
 import           Data.OrdPartition
-import           RandomPrefixes
+import           RandomEntries
 import           TestIpRouter
 
 ordPrtnIpRouterSpec :: Spec
