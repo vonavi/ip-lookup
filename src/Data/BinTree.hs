@@ -8,12 +8,13 @@ module Data.BinTree
 
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
-import           Data.Bits
 import           Data.Bool           (bool)
+import           Data.List           (unfoldr)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
 
 import           Data.IpRouter
+import           Data.Prefix
 import           Data.Zipper
 
 data Tree a = Tip | Bin (Tree a) !a (Tree a) deriving (Eq, Show)
@@ -34,21 +35,18 @@ type BinTree = Tree (Maybe Int)
 
 
 fromEntry :: Entry -> BinTree
-fromEntry (Entry p n) = helper 31 (Bin Tip (Just n) Tip)
-    where Prefix (Address a) (Mask m) = p
-          helper i x
-            | i == 31 - m = x
-            | otherwise   = if a `testBit` i
-                            then Bin Tip Nothing y
-                            else Bin y Nothing Tip
-            where y = helper (pred i) x
+fromEntry Entry { network = p, nextHop = n } =
+  (`appEndo` Bin Tip (Just n) Tip)
+  . foldMap (Endo . bool pushLeft pushRight) . unfoldr uncons $ p
+  where pushLeft x  = Bin x Nothing Tip
+        pushRight x = Bin Tip Nothing x
 
-lookupState :: Address -> Tree (Maybe Int) -> State (Maybe Int) ()
-lookupState (Address a) = helper 31
-  where helper _ Tip         = return ()
-        helper n (Bin l x r) = do
-          modify (x <|>)
-          helper (pred n) $ if a `testBit` n then r else l
+lookupState :: Prefix -> Tree (Maybe Int) -> State (Maybe Int) ()
+lookupState _ Tip         = return ()
+lookupState v (Bin l x r) = do modify (x <|>)
+                               case uncons v of
+                                 Nothing      -> return ()
+                                 Just (b, v') -> lookupState v' $ bool l r b
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
   mkTable = foldr insEntry mempty
@@ -66,7 +64,7 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   ipLookup a t = execState (lookupState a t) Nothing
 
-  numOfPrefixes = getSum . foldMap (Sum . bool 0 1 . isJust)
+  numOfPrefixes = getSum . foldMap (Sum . fromEnum . isJust)
 
 
 type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])
@@ -94,7 +92,7 @@ The size of binary tree is built from the following parts:
 -}
 binSize :: BinTree -> Int
 binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 3 + if isJust x then 18 else 0
+  where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
 
 instance Zipper BinZipper where
   goLeft (Bin l x r, es) = (l, Right (x, r) : es)

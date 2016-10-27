@@ -2,8 +2,8 @@ module Main where
 
 import           Test.Hspec
 
--- import           BinPartitionSpec
--- import           BinTreeSpec
+import           BinPartitionSpec
+import           BinTreeSpec
 -- import           OrdPartitionSpec
 -- import           OrdTreeSpec
 -- import           PaCo2PartitionSpec
@@ -23,8 +23,8 @@ main = do
   -- hspec ordIpRouterSpec
   -- hspec ordPrtnIpRouterSpec
 
-  -- hspec binIpRouterSpec
-  -- hspec binPrtnIpRouterSpec
+  hspec binIpRouterSpec
+  hspec binPrtnIpRouterSpec
 
   -- hspec paCo2TreeSpec
   -- hspec paCo2IpRouterSpec
