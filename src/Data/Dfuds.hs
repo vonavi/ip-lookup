@@ -1,27 +1,28 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.Dfuds
-       (
-         parent
-       , firstChild
-       , lastChild
-       , nextSibling
-       , prevSibling
-       , subtreeSize
-       , degree
-       , child
-       , DfudsT1
-       , ordToDfudsT1
-       , DfudsT2
-       , ordToDfudsT2
-       , DfudsT3
-       , ordToDfudsT3
-       , DfudsT4
-       , ordToDfudsT4
-       ) where
+  (
+    parent
+  , firstChild
+  , lastChild
+  , nextSibling
+  , prevSibling
+  , subtreeSize
+  , degree
+  , child
+  , DfudsT1
+  , ordToDfudsT1
+  , DfudsT2
+  , ordToDfudsT2
+  , DfudsT3
+  , ordToDfudsT3
+  , DfudsT4
+  , ordToDfudsT4
+  ) where
 
-import           Control.Applicative ((<*>), (<|>))
+import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Maybe
 

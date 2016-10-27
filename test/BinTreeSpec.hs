@@ -1,13 +1,13 @@
 module BinTreeSpec
-       (
-         binIpRouterSpec
-       ) where
+  (
+    binIpRouterSpec
+  ) where
 
 import           Test.Hspec
 
 import           Data.BinTree
 import           Data.IpRouter
-import           RandomPrefixes
+import           RandomEntries
 import           TestIpRouter
 
 binIpRouterSpec :: Spec

@@ -11,3 +11,6 @@ dist/
 *.pdf
 *.prof
 *.ps
+
+# Routing tables
+*.route
