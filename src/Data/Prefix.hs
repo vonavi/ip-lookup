@@ -3,6 +3,8 @@
 module Data.Prefix
   (
     Address
+  , ipv4Address
+  , ipv6Address
   , Mask
   , Vpn
   , Prefix
@@ -145,6 +147,12 @@ instance Read Address where
 instance Show Address where
   show (IPv4Addr x) = show x
   show (IPv6Addr x) = show x
+
+ipv4Address :: Word32 -> Address
+ipv4Address = IPv4Addr . IPv4Address
+
+ipv6Address :: Integer -> Address
+ipv6Address = IPv6Addr . IPv6Address
 
 
 type Mask = Int

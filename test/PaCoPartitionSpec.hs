@@ -8,7 +8,7 @@ import           Test.Hspec
 import           Data.IpRouter
 import           Data.PaCoPartition
 import           Data.Partition     (MemTree)
-import           RandomPrefixes
+import           RandomEntries
 import           TestIpRouter
 
 paCoPrtnIpRouterSpec :: Spec

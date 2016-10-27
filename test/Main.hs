@@ -8,15 +8,15 @@ import           Test.Hspec
 -- import           OrdTreeSpec
 -- import           PaCo2PartitionSpec
 -- import           PaCo2TreeSpec
--- import           PaCoPartitionSpec
--- import           PaCoTreeSpec
+import           PaCoPartitionSpec
+import           PaCoTreeSpec
 import           PrefixSpec
 
 main :: IO ()
 main = do
-  -- hspec paCoTreeSpec
-  -- hspec paCoIpRouterSpec
-  -- hspec paCoPrtnIpRouterSpec
+  hspec paCoTreeSpec
+  hspec paCoIpRouterSpec
+  hspec paCoPrtnIpRouterSpec
 
   -- hspec ordBpsSpec
   -- hspec ordDfudsSpec

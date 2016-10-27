@@ -8,53 +8,51 @@ import           Test.Hspec
 
 import           Data.IpRouter
 import           Data.PaCoTree
-import           RandomPrefixes
+import           Data.Prefix
+import           RandomEntries
 import           TestIpRouter
 
 testPaCoTree :: PaCoTree
 testPaCoTree = mkTable . map toEntry $ l
-  where toEntry (s, m, h) = Entry (read (s ++ m) :: Prefix) h
-        l = [ ("0.0.0.0",   "/1", 0)
-            , ("127.0.0.0", "/2", 1)
-            , ("111.0.0.0", "/4", 2)
-            , ("255.0.0.0", "/1", 3)
-            , ("223.0.0.0", "/4", 4)
-            , ("223.0.0.0", "/5", 5)
+  where toEntry (v, m, n) = Entry { network = mkPrefix (read v :: Address) m
+                                  , nextHop = n
+                                  }
+        l = [ ("0.0.0.0",   1, 0)
+            , ("127.0.0.0", 2, 1)
+            , ("111.0.0.0", 4, 2)
+            , ("255.0.0.0", 1, 3)
+            , ("223.0.0.0", 4, 4)
+            , ("223.0.0.0", 5, 5)
             ]
 
 refPaCoTree :: PaCoTree
-refPaCoTree = Bin Node { skip   = 0
-                       , string = 0
+refPaCoTree = Bin Node { prefix = mkPrefix (ipv4Address 0) 0
                        , label  = Nothing
                        }
-                  (Bin Node { skip   = 0
-                            , string = 0
+                  (Bin Node { prefix = mkPrefix (ipv4Address 0) 0
                             , label  = Just 0
                             }
                        Tip
-                       (Bin Node { skip   = 0
-                                 , string = 4227858432
+                       (Bin Node { prefix = mkPrefix (ipv4Address 4227858432) 0
                                  , label  = Just 1
                                  }
                             Tip
-                            (Bin Node { skip   = 1
-                                      , string = 2013265920
+                            (Bin Node { prefix =
+                                          mkPrefix (ipv4Address 2013265920) 1
                                       , label  = Just 2
                                       }
                                  Tip
                                  Tip)))
-                  (Bin Node { skip   = 0
-                            , string = 4261412864
+                  (Bin Node { prefix = mkPrefix (ipv4Address 4261412864) 0
                             , label  = Just 3
                             }
                        Tip
-                       (Bin Node { skip   = 2
-                                 , string = 2080374784
+                       (Bin Node { prefix = mkPrefix (ipv4Address 2080374784) 2
                                  , label  = Just 4
                                  }
                             Tip
-                            (Bin Node { skip   = 0
-                                      , string = 3758096384
+                            (Bin Node { prefix =
+                                          mkPrefix (ipv4Address 3758096384) 0
                                       , label  = Just 5
                                       }
                                  Tip
