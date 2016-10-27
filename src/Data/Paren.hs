@@ -1,16 +1,16 @@
 module Data.Paren
-       (
-         Paren(Open, Close)
-       , isOpen
-       , isClose
-       , findOpen
-       , findClose
-       , enclose
-       , rankOpen
-       , rankClose
-       , selectOpen
-       , selectClose
-       ) where
+  (
+    Paren(Open, Close)
+  , isOpen
+  , isClose
+  , findOpen
+  , findClose
+  , enclose
+  , rankOpen
+  , rankClose
+  , selectOpen
+  , selectClose
+  ) where
 
 data Paren = Open | Close deriving Eq
 

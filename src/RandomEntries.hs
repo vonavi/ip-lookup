@@ -1,8 +1,8 @@
-module RandomPrefixes
-       (
-         randomEntries
-       , genRandomEntries
-       ) where
+module RandomEntries
+  (
+    randomEntries
+  , genRandomEntries
+  ) where
 
 import           Data.Bits
 import           Data.List     (unfoldr)
@@ -10,6 +10,7 @@ import           Data.Word
 import           System.Random
 
 import           Data.IpRouter
+import           Data.Prefix
 
 newtype Xorshift32 = Xorshift32 { getWord32 :: Word32 }
 
@@ -28,9 +29,11 @@ maskSeed = 1
 
 randomEntries :: (Int, Int) -> [Int] -> [Entry]
 randomEntries (l, h) = zipWith3 helper addrList maskList
-  where helper a m = Entry (Prefix a m)
-        maskList   = map Mask . randomRs (l, h) . mkStdGen $ maskSeed
-        addrList   = map (Address . getWord32) $ unfoldr step addrSeed
+  where helper a m n = Entry { network = mkPrefix a m
+                             , nextHop = n
+                             }
+        maskList     = randomRs (l, h) . mkStdGen $ maskSeed
+        addrList     = map (ipv4Address . getWord32) $ unfoldr step addrSeed
           where step x = let y = step32 x in Just (y, y)
 
 genRandomEntries :: Int -> [Entry]
