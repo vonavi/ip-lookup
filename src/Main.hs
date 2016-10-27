@@ -6,6 +6,7 @@ import           System.Directory
 
 import           Data.IpRouter
 import           Data.PaCoPartition (putPaCoMinHeight)
+import           Data.Prefix
 
 main :: IO ()
 main = do
@@ -15,6 +16,6 @@ main = do
       es                    = map (getEntry . words) prefixLines
   putPaCoMinHeight . mkTable $ es
   where getEntry (aStr : mStr : _ : _ : nStr : _) =
-          Entry { prefix  = read (aStr ++ ('/' : mStr)) :: Prefix
+          Entry { network = mkPrefix (read aStr :: Address) (read mStr :: Mask)
                 , nextHop = read nStr :: Int
                 }
