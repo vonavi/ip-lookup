@@ -13,7 +13,6 @@ module Data.PaCo2.Partition
 
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
-import           Data.Bits
 import           Data.Function       (on)
 import           Data.Maybe          (fromMaybe, isNothing)
 import           Data.Monoid
@@ -21,6 +20,7 @@ import           Data.Monoid
 import           Data.IpRouter
 import           Data.PaCo2.Tree     (PaCo2Zipper)
 import           Data.PaCo2.Zipper
+import           Data.Prefix
 
 data Node a = Node { zipper :: a
                    , height :: Int
@@ -152,19 +152,20 @@ prtnDelete z (Bin (Just x) l r) = delEmptyPage $
         s   = delLabel (zipper x) z'
 prtnDelete _ (Bin Nothing _ _)  = error "No pointer"
 
-lookupState :: Zipper a => Address -> MemTree a -> State (Maybe Int) ()
-lookupState (Address a) = helper 31
-  where helper _ (Tip _)            = return ()
-        helper n (Bin (Just x) l r) = do
-          modify (getLabel z <|>)
-          if a `testBit` n
-            then helper (pred n) $
-                 updatePointer Node { zipper = goRight z, height = h } r
-            else helper (pred n) $
-                 updatePointer Node { zipper = goLeft z, height = h } l
-            where z = zipper x
-                  h = height x
-        helper _ (Bin Nothing _ _)  = error "No pointer"
+lookupState :: Zipper a => Prefix -> MemTree a -> State (Maybe Int) ()
+lookupState _ (Tip _)            = return ()
+lookupState v (Bin (Just x) l r) = do
+  modify (getLabel z <|>)
+  case uncons v of
+    Nothing      -> return ()
+    Just (b, v') -> if b
+                    then lookupState v' $
+                         updatePointer Node { zipper = goRight z, height = h } r
+                    else lookupState v' $
+                         updatePointer Node { zipper = goLeft z, height = h } l
+    where z = zipper x
+          h = height x
+lookupState _ (Bin Nothing _ _)  = error "No pointer"
 
 instance (IpRouter a, Partible a) => IpRouter (MemTree a) where
   mkTable       = prtnBuild . (mkTable :: IpRouter a => [Entry] -> a)
