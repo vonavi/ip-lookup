@@ -6,8 +6,8 @@ import           BinPartitionSpec
 import           BinTreeSpec
 import           OrdPartitionSpec
 import           OrdTreeSpec
--- import           PaCo2PartitionSpec
--- import           PaCo2TreeSpec
+import           PaCo2PartitionSpec
+import           PaCo2TreeSpec
 import           PaCoPartitionSpec
 import           PaCoTreeSpec
 import           PrefixSpec
@@ -26,9 +26,9 @@ main = do
   hspec binIpRouterSpec
   hspec binPrtnIpRouterSpec
 
-  -- hspec paCo2TreeSpec
-  -- hspec paCo2IpRouterSpec
-  -- hspec paCo2PrtnIpRouterSpec
+  hspec paCo2TreeSpec
+  hspec paCo2IpRouterSpec
+  hspec paCo2PrtnIpRouterSpec
 
   hspec addressSpec
   hspec prefixSpec

@@ -7,7 +7,7 @@ import           Test.Hspec
 
 import           Data.IpRouter
 import           Data.PaCo2.Partition
-import           RandomPrefixes
+import           RandomEntries
 import           TestIpRouter
 
 paCo2PrtnIpRouterSpec :: Spec
