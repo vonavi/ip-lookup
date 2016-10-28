@@ -9,6 +9,7 @@ module Data.Trees.BinTree
 import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Bool           (bool)
+import           Data.Function       (on)
 import           Data.List           (unfoldr)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
@@ -17,7 +18,12 @@ import           Data.IpRouter
 import           Data.Prefix
 import           Data.Zipper
 
-data Tree a = Tip | Bin !a (Tree a) (Tree a) deriving (Eq, Show)
+data Tree a = Tip
+            | Bin { label :: a
+                  , left  :: Tree a
+                  , right :: Tree a
+                  }
+            deriving (Eq, Show)
 type BinTree = Tree (Maybe Int)
 
 instance Foldable Tree where
@@ -27,10 +33,12 @@ instance Foldable Tree where
 instance Monoid BinTree where
   mempty = Tip
 
-  Tip           `mappend` x             = x
-  x             `mappend` Tip           = x
-  (Bin x ll lr) `mappend` (Bin y rl rr) =
-    Bin (x <|> y) (ll `mappend` rl) (lr `mappend` rr)
+  Tip `mappend` t   = t
+  t   `mappend` Tip = t
+  tx  `mappend` ty  = Bin { label = ((<|>) `on` label) tx ty
+                          , left  = ((<>)  `on` left)  tx ty
+                          , right = ((<>)  `on` right) tx ty
+                          }
 
 fromEntry :: Entry -> BinTree
 fromEntry Entry { network = p, nextHop = n } =
@@ -51,14 +59,17 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
 
   insEntry = mappend . fromEntry
 
-  delEntry e btree = btree `helper` fromEntry e
-    where Tip           `helper` _             = Tip
-          tree          `helper` Tip           = tree
-          (Bin x lx rx) `helper` (Bin y ly ry) =
-            delEmptyNode $ Bin z (lx `helper` ly) (rx `helper` ry)
+  delEntry = flip helper . fromEntry
+    where Tip `helper` _   = Tip
+          t   `helper` Tip = t
+          tx  `helper` ty  = delEmptyNode
+                             Bin { label = (unlabel `on` label) tx ty
+                                 , left  = (helper  `on` left)  tx ty
+                                 , right = (helper  `on` right) tx ty
+                                 }
             where delEmptyNode (Bin Nothing Tip Tip) = Tip
                   delEmptyNode t                     = t
-                  z = if x == y then Nothing else x
+                  unlabel x y = if x == y then Nothing else x
 
   ipLookup a t = execState (lookupState a t) Nothing
 
