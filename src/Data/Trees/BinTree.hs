@@ -17,33 +17,31 @@ import           Data.IpRouter
 import           Data.Prefix
 import           Data.Zipper
 
-data Tree a = Tip | Bin (Tree a) !a (Tree a) deriving (Eq, Show)
+data Tree a = Tip | Bin !a (Tree a) (Tree a) deriving (Eq, Show)
+type BinTree = Tree (Maybe Int)
 
 instance Foldable Tree where
   foldMap _ Tip         = mempty
-  foldMap f (Bin l x r) = foldMap f l <> f x <> foldMap f r
+  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
-instance Monoid (Tree (Maybe Int)) where
+instance Monoid BinTree where
   mempty = Tip
 
   Tip           `mappend` x             = x
   x             `mappend` Tip           = x
-  (Bin ll x lr) `mappend` (Bin rl y rr) =
-    Bin (ll `mappend` rl) (x <|> y) (lr `mappend` rr)
-
-type BinTree = Tree (Maybe Int)
-
+  (Bin x ll lr) `mappend` (Bin y rl rr) =
+    Bin (x <|> y) (ll `mappend` rl) (lr `mappend` rr)
 
 fromEntry :: Entry -> BinTree
 fromEntry Entry { network = p, nextHop = n } =
-  (`appEndo` Bin Tip (Just n) Tip)
+  (`appEndo` Bin (Just n) Tip Tip)
   . foldMap (Endo . bool pushLeft pushRight) . unfoldr uncons $ p
-  where pushLeft x  = Bin x Nothing Tip
-        pushRight x = Bin Tip Nothing x
+  where pushLeft x  = Bin Nothing x Tip
+        pushRight x = Bin Nothing Tip x
 
-lookupState :: Prefix -> Tree (Maybe Int) -> State (Maybe Int) ()
+lookupState :: Prefix -> BinTree -> State (Maybe Int) ()
 lookupState _ Tip         = return ()
-lookupState v (Bin l x r) = do modify (x <|>)
+lookupState v (Bin x l r) = do modify (x <|>)
                                case uncons v of
                                  Nothing      -> return ()
                                  Just (b, v') -> lookupState v' $ bool l r b
@@ -56,9 +54,9 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
   delEntry e btree = btree `helper` fromEntry e
     where Tip           `helper` _             = Tip
           tree          `helper` Tip           = tree
-          (Bin lx x rx) `helper` (Bin ly y ry) =
-            delEmptyNode $ Bin (lx `helper` ly) z (rx `helper` ry)
-            where delEmptyNode (Bin Tip Nothing Tip) = Tip
+          (Bin x lx rx) `helper` (Bin y ly ry) =
+            delEmptyNode $ Bin z (lx `helper` ly) (rx `helper` ry)
+            where delEmptyNode (Bin Nothing Tip Tip) = Tip
                   delEmptyNode t                     = t
                   z = if x == y then Nothing else x
 
@@ -95,23 +93,23 @@ binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
 
 instance Zipper BinZipper where
-  goLeft (Bin l x r, es) = (l, Right (x, r) : es)
+  goLeft (Bin x l r, es) = (l, Right (x, r) : es)
   goLeft _               = error "Tried to go left from a leaf"
 
-  goRight (Bin l x r, es) = (r, Left (x, l) : es)
+  goRight (Bin x l r, es) = (r, Left (x, l) : es)
   goRight _               = error "Tried to go right from a leaf"
 
-  goUp (l, Right (x, r) : es) = (Bin l x r, es)
-  goUp (r, Left (x, l) : es)  = (Bin l x r, es)
+  goUp (l, Right (x, r) : es) = (Bin x l r, es)
+  goUp (r, Left (x, l) : es)  = (Bin x l r, es)
   goUp _                      = error "Tried to go up from the top"
 
   isLeaf (Tip, _) = True
   isLeaf _        = False
 
-  getLabel (Bin _ x _, _) = x
+  getLabel (Bin x _ _, _) = x
   getLabel _              = Nothing
 
-  setLabel s (Bin l _ r, es) = (Bin l s r, es)
+  setLabel s (Bin _ l r, es) = (Bin s l r, es)
   setLabel _ z               = z
 
   size (t, _) = binSize t
