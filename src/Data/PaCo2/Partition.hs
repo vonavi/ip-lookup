@@ -18,9 +18,8 @@ import           Data.Maybe           (fromMaybe, isNothing)
 import           Data.Monoid
 
 import           Data.IpRouter
-import           Data.PaCo2.Zipper
 import           Data.Prefix
-import           Data.Trees.PaCo2Tree (PaCo2Zipper)
+import           Data.Trees.PaCo2Tree (PaCo2Zipper, Zipper (..))
 
 data Node a = Node { zipper :: a
                    , height :: Int
