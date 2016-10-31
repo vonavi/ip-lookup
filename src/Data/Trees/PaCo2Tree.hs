@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Data.PaCo2.Tree
+module Data.Trees.PaCo2Tree
   (
     Node(..)
   , Tree(..)
   , PaCo2Tree
+  , Zipper(..)
   , PaCo2Zipper
   , eliasGammaSize
   , eliasDeltaSize
@@ -30,7 +31,6 @@ import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
 import           Data.Compression.Huffman
 import           Data.IpRouter
-import           Data.PaCo2.Zipper
 import           Data.Prefix
 
 data Node = Node { prefix :: Prefix
@@ -285,6 +285,19 @@ putPaCo2Tree t = do
   putStrLn . (++) "  Fibonacci coding   " . show . fibonacciSize $ t
   putStrLn . (++) "  Huffman coding     " . show . huffmanSize $ t
 
+
+class Zipper a where
+  goLeft     :: a -> a
+  goRight    :: a -> a
+  goUp       :: a -> a
+  isLeaf     :: a -> Bool
+  getLabel   :: a -> Maybe Int
+  setLabel   :: Maybe Int -> a -> a
+  size       :: a -> Int
+  insert     :: a -> a -> a
+  delete     :: a -> a
+  isNodeFull :: a -> Bool
+  mkNodeFull :: a -> a
 
 type PaCo2Zipper = (,,) PaCo2Tree
                    [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]

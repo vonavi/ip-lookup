@@ -4,12 +4,12 @@ module PaCo2TreeSpec
   , paCo2IpRouterSpec
   ) where
 
-import           Control.Monad   (zipWithM_)
+import           Control.Monad        (zipWithM_)
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.PaCo2.Tree
 import           Data.Prefix
+import           Data.Trees.PaCo2Tree
 import           RandomEntries
 import           TestIpRouter
 
