@@ -7,8 +7,8 @@ module PaCoTreeSpec
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.PaCoTree
 import           Data.Prefix
+import           Data.Trees.PaCoTree
 import           RandomEntries
 import           TestIpRouter
 
