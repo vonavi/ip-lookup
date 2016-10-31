@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.OrdTree
+module Data.Trees.OrdTree
   (
     OrdTree(..)
   , ordToBps

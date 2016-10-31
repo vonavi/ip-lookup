@@ -8,9 +8,9 @@ module OrdTreeSpec
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.OrdTree
 import           Data.Paren
 import           Data.Prefix
+import           Data.Trees.OrdTree
 import           RandomEntries
 import           TestIpRouter
 

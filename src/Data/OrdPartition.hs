@@ -21,9 +21,9 @@ module Data.OrdPartition
   ) where
 
 import           Data.IpRouter
-import           Data.OrdTree   (OrdZipperT1, OrdZipperT2, OrdZipperT3,
-                                 OrdZipperT4)
 import           Data.Partition
+import           Data.Trees.OrdTree (OrdZipperT1, OrdZipperT2, OrdZipperT3,
+                                     OrdZipperT4)
 import           Data.Zipper
 
 newtype OrdMinHeightT1 = OrdMinHeightT1 OrdZipperT1
