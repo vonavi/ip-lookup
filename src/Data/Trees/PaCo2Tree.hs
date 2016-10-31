@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RankNTypes        #-}
 
-module Data.PaCo2.Tree
+module Data.Trees.PaCo2Tree
   (
     Node(..)
   , Tree(..)

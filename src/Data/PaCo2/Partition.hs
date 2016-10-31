@@ -11,16 +11,16 @@ module Data.PaCo2.Partition
   , putPaCo2MinSize
   ) where
 
-import           Control.Applicative ((<|>))
+import           Control.Applicative  ((<|>))
 import           Control.Monad.State
-import           Data.Function       (on)
-import           Data.Maybe          (fromMaybe, isNothing)
+import           Data.Function        (on)
+import           Data.Maybe           (fromMaybe, isNothing)
 import           Data.Monoid
 
 import           Data.IpRouter
-import           Data.PaCo2.Tree     (PaCo2Zipper)
 import           Data.PaCo2.Zipper
 import           Data.Prefix
+import           Data.Trees.PaCo2Tree (PaCo2Zipper)
 
 data Node a = Node { zipper :: a
                    , height :: Int
