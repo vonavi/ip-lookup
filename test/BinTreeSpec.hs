@@ -5,8 +5,8 @@ module BinTreeSpec
 
 import           Test.Hspec
 
-import           Data.BinTree
 import           Data.IpRouter
+import           Data.Trees.BinTree
 import           RandomEntries
 import           TestIpRouter
 

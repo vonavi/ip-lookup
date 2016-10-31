@@ -8,9 +8,9 @@ module Data.BinPartition
   , putBinMinSize
   ) where
 
-import           Data.BinTree   (BinZipper)
 import           Data.IpRouter
 import           Data.Partition
+import           Data.Trees.BinTree (BinZipper)
 import           Data.Zipper
 
 newtype BinMinHeight = BinMinHeight BinZipper

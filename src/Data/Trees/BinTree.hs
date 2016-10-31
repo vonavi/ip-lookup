@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Data.BinTree
+module Data.Trees.BinTree
   (
     BinTree
   , BinZipper
