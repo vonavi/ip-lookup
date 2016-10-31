@@ -47,12 +47,9 @@ fromEntry Entry { network = p, nextHop = n } =
   where pushLeft x  = Bin Nothing x Tip
         pushRight x = Bin Nothing Tip x
 
-lookupState :: Prefix -> BinTree -> State (Maybe Int) ()
-lookupState _ Tip         = return ()
-lookupState v (Bin x l r) = do modify (x <|>)
-                               case uncons v of
-                                 Nothing      -> return ()
-                                 Just (b, v') -> lookupState v' $ bool l r b
+isTip :: Tree a -> Bool
+isTip Tip = True
+isTip _   = False
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
   mkTable = foldr insEntry mempty
@@ -71,7 +68,10 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
                   delEmptyNode t                     = t
                   unlabel x y = if x == y then Nothing else x
 
-  ipLookup a t = execState (lookupState a t) Nothing
+  ipLookup v t = getLast . foldMap (Last . label)
+                 . takeWhile (not . isTip) . (t :) . (`evalState` t)
+                 . mapM (act . bool left right) . unfoldr uncons $ v
+    where act f = state $ \s -> let s' = f s in (s', s')
 
   numOfPrefixes = getSum . foldMap (Sum . fromEnum . isJust)
 
