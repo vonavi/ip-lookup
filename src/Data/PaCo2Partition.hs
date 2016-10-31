@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Data.PaCo2.Partition
+module Data.PaCo2Partition
   (
     MemTree
   , PaCo2MinHeight(..)

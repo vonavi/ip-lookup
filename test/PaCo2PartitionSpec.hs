@@ -6,7 +6,7 @@ module PaCo2PartitionSpec
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.PaCo2.Partition
+import           Data.PaCo2Partition
 import           RandomEntries
 import           TestIpRouter
 
