@@ -174,7 +174,7 @@ parts:
 -}
 eliasGammaSize :: PaCo2Tree -> Int
 eliasGammaSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 2 + (BMP.size . encodeEliasGamma . succ $ k)
+  where nodeSize x = 1 + (BMP.size . encodeEliasGamma . succ $ k)
                      + k + 1 + 18 * (fromEnum . isJust $ s)
           where k = maskLength . prefix $ x
                 s = label x
@@ -196,7 +196,7 @@ parts:
 -}
 eliasDeltaSize :: PaCo2Tree -> Int
 eliasDeltaSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 2 + (BMP.size . encodeEliasDelta . succ $ k)
+  where nodeSize x = 1 + (BMP.size . encodeEliasDelta . succ $ k)
                      + k + 1 + 18 * (fromEnum . isJust $ s)
           where k = maskLength . prefix $ x
                 s = label x
@@ -216,7 +216,7 @@ The size of path-compressed 2-tree is built from the following parts:
 -}
 eliasFanoSize :: PaCo2Tree -> Int
 eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
-  where nodeSize x = 2 + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 1 + k + 1 + 18 * (fromEnum . isJust $ s)
           where k = maskLength . prefix $ x
                 s = label x
 
@@ -245,7 +245,7 @@ parts:
 -}
 fibonacciSize :: PaCo2Tree -> Int
 fibonacciSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 2 + (BMP.size . encodeFibonacci . succ $ k)
+  where nodeSize x = 1 + (BMP.size . encodeFibonacci . succ $ k)
                      + k + 1 + 18 * (fromEnum . isJust $ s)
           where k = maskLength . prefix $ x
                 s = label x
@@ -268,7 +268,7 @@ huffmanSize :: PaCo2Tree -> Int
 huffmanSize = getSum . foldMap (Sum . nodeSize)
   where nodeSize x = runST $ do
           hsize <- readSTRef huffmanVecRef
-          return $ 2 + (hsize V.! k) + k + 1 + 18 * (fromEnum . isJust $ s)
+          return $ 1 + (hsize V.! k) + k + 1 + 18 * (fromEnum . isJust $ s)
             where k = maskLength . prefix $ x
                   s = label x
 
