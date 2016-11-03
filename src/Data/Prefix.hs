@@ -24,7 +24,7 @@ import           Control.Monad.State
 import           Data.Bits
 import           Data.Bool           (bool)
 import           Data.Char
-import           Data.List           (intercalate, maximumBy)
+import           Data.List           (foldl', intercalate, maximumBy)
 import           Data.List.Split
 import           Data.Ord            (comparing)
 import           Data.Word
@@ -36,7 +36,7 @@ splitBitsAt n x = (h, x - (h `shiftL` n))
 newtype IPv4Address = IPv4Address Word32
 
 fromOctetList :: [Word32] -> IPv4Address
-fromOctetList = IPv4Address . sum . zipWith (flip shiftL) [24, 16, 8, 0]
+fromOctetList = IPv4Address . foldl' ((+) . (`shiftL` 8)) 0
 
 readsOctets :: Int -> ReadS [Word32]
 readsOctets _ "" = [ ([], "") ]
@@ -79,15 +79,13 @@ instance {-# OVERLAPPING #-} Read Hex where
     | null hex    = [ ([HexDigit 0], other) ]
     | otherwise   = [ (map (read . (:[])) hex, other) ]
     where (digits, str) = span isHexDigit s
-          (hex, other)  = first (dropWhile ('0' ==)) . second (++ str)
-                          . splitAt 4 $ digits
+          (hex, other)  = dropWhile ('0' ==) *** (++ str) $ splitAt 4 digits
 
 instance {-# OVERLAPPING #-} Show Hex where
   show = map hexDigitToChar
 
 hexToWord :: Hex -> Word16
-hexToWord xs = sum . zipWith (flip shiftL) offsets . map unHexDigit $ xs
-  where offsets = drop (4 - length xs) [12, 8, 4, 0]
+hexToWord = foldl' ((+) . (`shiftL` 4)) 0 . map unHexDigit
 
 wordToHex :: Word16 -> Hex
 wordToHex 0 = [HexDigit 0]
@@ -98,9 +96,8 @@ wordToHex x = map HexDigit . dropWhile (0 ==)
 newtype IPv6Address = IPv6Address Integer
 
 fromHexList :: [Hex] -> IPv6Address
-fromHexList = IPv6Address . sum . zipWith (flip shiftL) offsets
+fromHexList = IPv6Address . foldl' ((+) . (`shiftL` 16)) 0
               . map (toInteger . hexToWord)
-  where offsets = map (16 *) [7, 6 .. 0]
 
 instance Read IPv6Address where
   readsPrec _ s
