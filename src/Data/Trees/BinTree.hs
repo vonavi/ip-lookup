@@ -4,6 +4,7 @@ module Data.Trees.BinTree
   (
     BinTree
   , BinZipper
+  , putBinTree
   ) where
 
 import           Control.Applicative ((<|>))
@@ -52,9 +53,9 @@ isTip Tip = True
 isTip _   = False
 
 instance {-# OVERLAPPING #-} IpRouter BinTree where
-  mkTable = foldr insEntry mempty
+  mkTable = foldMap fromEntry
 
-  insEntry = mappend . fromEntry
+  insEntry = (<>) . fromEntry
 
   delEntry = flip helper . fromEntry
     where Tip `helper` _   = Tip
@@ -76,18 +77,6 @@ instance {-# OVERLAPPING #-} IpRouter BinTree where
   numOfPrefixes = getSum . foldMap (Sum . fromEnum . isJust)
 
 
-type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])
-
-instance {-# OVERLAPPING #-} Show BinZipper where
-  show (t, _) = show t
-
-instance IpRouter BinZipper where
-  mkTable es           = (mkTable es, [])
-  insEntry e (t, _)    = (insEntry e t, [])
-  delEntry e (t, _)    = (delEntry e t, [])
-  ipLookup e (t, _)    = ipLookup e t
-  numOfPrefixes (t, _) = numOfPrefixes t
-
 {-|
 The size of binary tree is built from the following parts:
 
@@ -102,6 +91,22 @@ The size of binary tree is built from the following parts:
 binSize :: BinTree -> Int
 binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
+
+putBinTree :: BinTree -> IO ()
+putBinTree = putStrLn . (++) "Size of binary tree " . show . binSize
+
+
+type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])
+
+instance {-# OVERLAPPING #-} Show BinZipper where
+  show (t, _) = show t
+
+instance IpRouter BinZipper where
+  mkTable es           = (mkTable es, [])
+  insEntry e (t, _)    = (insEntry e t, [])
+  delEntry e (t, _)    = (delEntry e t, [])
+  ipLookup e (t, _)    = ipLookup e t
+  numOfPrefixes (t, _) = numOfPrefixes t
 
 instance Zipper BinZipper where
   goLeft (Bin x l r, es) = (l, Right (x, r) : es)
