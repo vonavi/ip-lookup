@@ -19,7 +19,7 @@ module Data.Prefix
   , commonPrefixes
   ) where
 
-import           Control.Arrow       (first, second)
+import           Control.Arrow       (first, second, (***))
 import           Control.Monad.State
 import           Data.Bits
 import           Data.Bool           (bool)
@@ -38,13 +38,20 @@ newtype IPv4Address = IPv4Address Word32
 fromOctetList :: [Word32] -> IPv4Address
 fromOctetList = IPv4Address . sum . zipWith (flip shiftL) [24, 16, 8, 0]
 
+readsOctets :: Int -> ReadS [Word32]
+readsOctets _ "" = [ ([], "") ]
+readsOctets d s  = [ (x : xs, w)
+                   | (x, "") <- (readsPrec d :: ReadS Word32) u
+                   , (xs, w) <- readsOctets d v
+                   ]
+  where (u, v) = second dropDot . break ('.' ==) $ s
+        dropDot ('.':t) = t
+        dropDot t       = t
+
 instance Read IPv4Address where
-  readsPrec _ s
-    | length xs /= 4 = []
-    | otherwise      = map (first fromOctetList) . (readList :: ReadS [Word32])
-                       $ "[" ++ intercalate "," xs ++ "]" ++ other
-    where (addr, other) = span (\c -> isDigit c || '.' == c) s
-          xs            = splitOn "." addr
+  readsPrec d s = map (fromOctetList *** (++ other))
+                  . filter ((== 4) . length . fst) . readsOctets d $ ip
+    where (ip, other) = span (\c -> isDigit c || '.' == c) s
 
 instance Show IPv4Address where
   show (IPv4Address x) = intercalate "." . map show . (`evalState` x)
