@@ -11,11 +11,9 @@ import           Data.Prefix
 
 main :: IO ()
 main = do
-  pwd   <- getCurrentDirectory
-  input <- C.readFile $ pwd ++ "/1.route"
-  let (_ : _ : prefixLines) = C.lines input
-      es                    = map (getEntry . C.words) prefixLines
-  putPaCoMinHeight . mkTable $ es
+  pwd          <- getCurrentDirectory
+  (_ : _ : ls) <- C.lines <$> C.readFile (pwd ++ "/1.route")
+  putPaCoMinHeight . mkTable . map (getEntry . C.words) $ ls
     where getEntry (aBS : mBS : _ : _ : nBS : _) =
             Entry { network = mkPrefix addr mask
                   , nextHop = nHop
