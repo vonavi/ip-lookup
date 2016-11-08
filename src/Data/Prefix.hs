@@ -19,7 +19,7 @@ module Data.Prefix
   , commonPrefixes
   ) where
 
-import           Control.Arrow       (first, (***))
+import           Control.Arrow       (first)
 import           Control.Monad.State
 import           Data.Bits
 import           Data.Bool           (bool)
@@ -73,19 +73,28 @@ instance Show HexDigit where
 
 type Hex = [HexDigit]
 
+readsHex :: Int -> ReadS Hex
+readsHex d = helper (4 :: Int)
+  where helper 0 s       = [ ([], s) ]
+        helper n (c:cs)
+          | isHexDigit c = [ (x:xs, t)
+                           | (x, "") <- (readsPrec d :: ReadS HexDigit) [c]
+                           , (xs, t) <- helper (pred n) cs
+                           ]
+        helper _ s       = [ ([], s) ]
+
 instance {-# OVERLAPPING #-} Read Hex where
-  readsPrec _ s
-    | null digits = []
-    | null hex    = [ ([HexDigit 0], other) ]
-    | otherwise   = [ (map (read . (:[])) hex, other) ]
-    where (digits, str) = span isHexDigit s
-          (hex, other)  = dropWhile ('0' ==) *** (++ str) $ splitAt 4 digits
+  readsPrec d = map (first reduceZeros) . readsHex d
+    where reduceZeros xs@[HexDigit 0]   = xs
+          reduceZeros (HexDigit 0 : xs) = reduceZeros xs
+          reduceZeros xs                = xs
 
 instance {-# OVERLAPPING #-} Show Hex where
   show = map hexDigitToChar
 
 hexToWord :: Hex -> Word16
-hexToWord = foldl' ((+) . (`shiftL` 4)) 0 . map unHexDigit
+hexToWord = foldl' accum 0
+  where accum r h = (r `shiftL` 4) .|. unHexDigit h
 
 wordToHex :: Word16 -> Hex
 wordToHex 0 = [HexDigit 0]
