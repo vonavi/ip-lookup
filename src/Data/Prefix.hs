@@ -29,10 +29,6 @@ import           Data.List.Split
 import           Data.Ord            (comparing)
 import           Data.Word
 
-splitBitsAt :: (Num a, Bits a) => Int -> a -> (a, a)
-splitBitsAt n x = (h, x - (h `shiftL` n))
-  where h = x `shiftR` n
-
 newtype IPv4Address = IPv4Address Word32
 
 fromOctetList :: [Word8] -> IPv4Address
@@ -98,15 +94,15 @@ hexToWord = foldl' accum 0
 
 wordToHex :: Word16 -> Hex
 wordToHex 0 = [HexDigit 0]
-wordToHex x = map HexDigit . dropWhile (0 ==)
-              . (`evalState` x) . mapM (state . splitBitsAt) $ [12, 8, 4, 0]
+wordToHex x = dropWhile ((0 ==) . unHexDigit)
+              . map (HexDigit . (15 .&.) . shiftR x) $ [12, 8, 4, 0]
 
 
 newtype IPv6Address = IPv6Address Integer
 
 fromHexList :: [Hex] -> IPv6Address
-fromHexList = IPv6Address . foldl' ((+) . (`shiftL` 16)) 0
-              . map (toInteger . hexToWord)
+fromHexList = IPv6Address . foldl' accum 0
+  where accum r h = (r `shiftL` 16) .|. (toInteger . hexToWord $ h)
 
 instance Read IPv6Address where
   readsPrec _ s
