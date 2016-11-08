@@ -19,7 +19,7 @@ module Data.Prefix
   , commonPrefixes
   ) where
 
-import           Control.Arrow       (first, second, (***))
+import           Control.Arrow       (first, (***))
 import           Control.Monad.State
 import           Data.Bits
 import           Data.Bool           (bool)
@@ -35,27 +35,27 @@ splitBitsAt n x = (h, x - (h `shiftL` n))
 
 newtype IPv4Address = IPv4Address Word32
 
-fromOctetList :: [Word32] -> IPv4Address
-fromOctetList = IPv4Address . foldl' ((+) . (`shiftL` 8)) 0
+fromOctetList :: [Word8] -> IPv4Address
+fromOctetList = IPv4Address . foldl' accum 0
+  where accum r o = (r `shiftL` 8) .|. fromIntegral o
 
-readsOctets :: Int -> ReadS [Word32]
-readsOctets _ "" = [ ([], "") ]
-readsOctets d s  = [ (x : xs, w)
-                   | (x, "") <- (readsPrec d :: ReadS Word32) u
-                   , (xs, w) <- readsOctets d v
-                   ]
-  where (u, v) = second dropDot . break ('.' ==) $ s
-        dropDot ('.':t) = t
-        dropDot t       = t
+readsOctets :: Int -> ReadS [Word8]
+readsOctets d = helper (4 :: Int)
+  where helper 1 s = map (first (:[])) . (readsPrec d :: ReadS Word8) $ s
+        helper n s = [ (x:xs, w)
+                     | (x, "")  <- (readsPrec d :: ReadS Word8) t
+                     , (".", v) <- lex u
+                     , (xs, w)  <- helper (pred n) v
+                     ]
+          where (t, u) = span isDigit s
 
 instance Read IPv4Address where
-  readsPrec d s = map (fromOctetList *** (++ other))
-                  . filter ((== 4) . length . fst) . readsOctets d $ ip
-    where (ip, other) = span (\c -> isDigit c || '.' == c) s
+  readsPrec d = map (first fromOctetList) . readsOctets d
 
 instance Show IPv4Address where
-  show (IPv4Address x) = intercalate "." . map show . (`evalState` x)
-                         . mapM (state . splitBitsAt) $ [24, 16, 8, 0]
+  show (IPv4Address x) =
+    intercalate "."
+    . map (show . (fromIntegral :: Word32 -> Word8) . shiftR x) $ [24, 16, 8, 0]
 
 
 newtype HexDigit = HexDigit { unHexDigit :: Word16 }
