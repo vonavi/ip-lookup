@@ -35,18 +35,18 @@ fromOctetList :: [Word8] -> IPv4Address
 fromOctetList = IPv4Address . foldl' accum 0
   where accum r o = (r `shiftL` 8) .|. fromIntegral o
 
-readsOctets :: Int -> ReadS [Word8]
-readsOctets d = helper (4 :: Int)
-  where helper 1 s = map (first (:[])) . (readsPrec d :: ReadS Word8) $ s
-        helper n s = [ (x:xs, w)
-                     | (x, "")  <- (readsPrec d :: ReadS Word8) t
-                     , (".", v) <- lex u
-                     , (xs, w)  <- helper (pred n) v
-                     ]
-          where (t, u) = span isDigit s
+readsOctets :: Int -> Int -> ReadS [Word8]
+readsOctets 0 _ s = [ ([], s) ]
+readsOctets 1 d s = [ ([x], t) | (x, t) <- (readsPrec d :: ReadS Word8) s ]
+readsOctets n d s = [ (x:xs, w)
+                    | (x, "")  <- (readsPrec d :: ReadS Word8) t
+                    , (".", v) <- lex u
+                    , (xs, w)  <- readsOctets (pred n) d v
+                    ]
+  where (t, u) = span isDigit s
 
 instance Read IPv4Address where
-  readsPrec d = map (first fromOctetList) . readsOctets d
+  readsPrec d = map (first fromOctetList) . readsOctets 4 d
 
 instance Show IPv4Address where
   show (IPv4Address x) =
@@ -69,18 +69,20 @@ instance Show HexDigit where
 
 type Hex = [HexDigit]
 
-readsHex :: Int -> ReadS Hex
-readsHex d = helper (4 :: Int)
-  where helper 0 s       = [ ([], s) ]
-        helper n (c:cs)
-          | isHexDigit c = [ (x:xs, t)
+readsHex :: Int -> Int -> ReadS Hex
+readsHex n d = helper n
+  where helper k s
+          | k == 0       = [ ([], s) ]
+          | (c:cs) <- s
+          , isHexDigit c = [ (x:xs, t)
                            | (x, "") <- (readsPrec d :: ReadS HexDigit) [c]
-                           , (xs, t) <- helper (pred n) cs
+                           , (xs, t) <- helper (pred k) cs
                            ]
-        helper _ s       = [ ([], s) ]
+          | k == n       = []
+          | otherwise    = [ ([], s) ]
 
 instance {-# OVERLAPPING #-} Read Hex where
-  readsPrec d = map (first reduceZeros) . readsHex d
+  readsPrec d = map (first reduceZeros) . readsHex 4 d
     where reduceZeros xs@[HexDigit 0]   = xs
           reduceZeros (HexDigit 0 : xs) = reduceZeros xs
           reduceZeros xs                = xs
