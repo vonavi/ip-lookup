@@ -106,18 +106,28 @@ fromHexList :: [Hex] -> IPv6Address
 fromHexList = IPv6Address . foldl' accum 0
   where accum r h = (r `shiftL` 16) .|. (toInteger . hexToWord $ h)
 
+readsHexList :: Int -> ReadS [Hex]
+readsHexList d s
+  | null hs   = [ ([], s) ]
+  | otherwise = [ (x:xs, w)
+                | (x, "")  <- hs
+                , (xs, w)  <- case u of
+                                (':':v) -> readsHexList d v
+                                _       -> [ ([], u) ]
+                ]
+  where (t, u) = span isHexDigit s
+        hs     = (readsPrec d :: ReadS Hex) t
+
 instance Read IPv6Address where
-  readsPrec _ s
-    | lenx > 8                        = []
-    | (lenx /= 8) /= ("::" `elem` xs) = []
-    | otherwise                       =
-      map (first fromHexList) . (readList :: ReadS [Hex])
-      . ("[" ++) . (++ "]" ++ other) . intercalate "," . map addZeros $ xs
-    where (ip, other) = span (\c -> isHexDigit c || ':' == c) s
-          xs          = filter (":" /=) . split (dropBlanks $ oneOf ":") $ ip
-          lenx        = length xs
-          addZeros "::" = intercalate "," $ replicate (9 - length xs) "0"
-          addZeros x    = x
+  readsPrec d s = [ let l = 8 - (length xs + length ys)
+                    in (fromHexList $ xs ++ replicate l [HexDigit 0] ++ ys, v)
+                  | (xs, "") <- readsHexList d t
+                  , (ys, v)  <- readsHexList d u
+                  ]
+    where (t, u) = splitOn2Colon s
+          splitOn2Colon (':':':':xs) = ([], xs)
+          splitOn2Colon (x:xs)       = first (x :) . splitOn2Colon $ xs
+          splitOn2Colon []           = ([], [])
 
 longestGroupIndices :: (a -> Bool) -> [a] -> [Int]
 longestGroupIndices p xs
