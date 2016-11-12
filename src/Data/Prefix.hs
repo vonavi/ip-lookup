@@ -6,10 +6,8 @@ module Data.Prefix
   , ipv4Address
   , ipv6Address
   , Mask
-  , Vpn
   , Prefix
   , mkPrefix
-  , setVpn
   , maskLength
   , empty
   , breakAt
@@ -177,126 +175,69 @@ ipv6Address = IPv6Addr . IPv6Address
 
 
 type Mask = Int
-type Vpn = Hex
 data Prefix = IPv4  Word32  Mask
-            | VPNv4 Word64  Mask
             | IPv6  Integer Mask
-            | VPNv6 Integer Mask
             deriving Show
 
 instance Eq Prefix where
-  (IPv4  a1 m1) == (IPv4  a2 m2) =
+  (IPv4 a1 m1) == (IPv4 a2 m2) =
     (m1 == m2) && ((a1 `xor` a2) .&. (bit 32 - bit (32 - m1)) == 0)
-  (VPNv4 a1 m1) == (VPNv4 a2 m2) =
-    (m1 == m2) && ((a1 `xor` a2) .&. (bit 48 - bit (48 - m1)) == 0)
-  (IPv6  a1 m1) == (IPv6  a2 m2) =
+  (IPv6 a1 m1) == (IPv6 a2 m2) =
     (m1 == m2) && ((a1 `xor` a2) .&. (bit 128 - bit (128 - m1)) == 0)
-  (VPNv6 a1 m1) == (VPNv6 a2 m2) =
-    (m1 == m2) && ((a1 `xor` a2) .&. (bit 144 - bit (144 - m1)) == 0)
-  _             == _             = False
+  _            == _            = False
 
 mkPrefix :: Address -> Mask -> Prefix
 mkPrefix (IPv4Addr (IPv4Address x)) = IPv4 x
 mkPrefix (IPv6Addr (IPv6Address x)) = IPv6 x
 
-setVpn :: Vpn -> Prefix -> Prefix
-setVpn v (IPv4  x m) = VPNv4 (vpnBits .|. addrBits) (m + 16)
-  where vpnBits  = fromIntegral (hexToWord v) `shiftL` 32
-        addrBits = fromIntegral x
-setVpn v (VPNv4 x m) = VPNv4 (vpnBits .|. addrBits) m
-  where vpnBits  = fromIntegral (hexToWord v) `shiftL` 32
-        addrBits = x .&. (bit 32 - bit 0)
-setVpn v (IPv6  x m) = VPNv6 (vpnBits .|. addrBits) (m + 16)
-  where vpnBits  = toInteger (hexToWord v) `shiftL` 128
-        addrBits = x
-setVpn v (VPNv6 x m) = VPNv6 (vpnBits .|. addrBits) m
-  where vpnBits  = toInteger (hexToWord v) `shiftL` 128
-        addrBits = x .&. (bit 128 - bit 0)
-
 maskLength :: Prefix -> Int
-maskLength (IPv4  _ m) = m
-maskLength (VPNv4 _ m) = m
-maskLength (IPv6  _ m) = m
-maskLength (VPNv6 _ m) = m
+maskLength (IPv4 _ m) = m
+maskLength (IPv6 _ m) = m
 
 empty :: Prefix -> Bool
-empty (IPv4  _ 0) = True
-empty (VPNv4 _ 0) = True
-empty (IPv6  _ 0) = True
-empty (VPNv6 _ 0) = True
-empty _           = False
+empty (IPv4 _ 0) = True
+empty (IPv6 _ 0) = True
+empty _          = False
 
 breakAt :: Int -> Prefix -> (Prefix, Prefix)
-breakAt n p@(IPv4  x m) | n <= 0    = (IPv4 0 0, p)
-                        | n >= m    = (p, IPv4 0 0)
-                        | otherwise = (IPv4 x n, IPv4 x' (m - n))
+breakAt n p@(IPv4 x m) | n <= 0    = (IPv4 0 0, p)
+                       | n >= m    = (p, IPv4 0 0)
+                       | otherwise = (IPv4 x n, IPv4 x' (m - n))
   where x' = x `shiftL` n
-breakAt n p@(VPNv4 x m) | n <= 0    = (VPNv4 0 0, p)
-                        | n >= m    = (p, VPNv4 0 0)
-                        | otherwise = (VPNv4 x n, VPNv4 x' (m - n))
-  where x' = (x `shiftL` n) .&. (bit 48 - bit 0)
-breakAt n p@(IPv6  x m) | n <= 0    = (IPv6 0 0, p)
-                        | n >= m    = (p, IPv6 0 0)
-                        | otherwise = (IPv6 x n, IPv6 x' (m - n))
+breakAt n p@(IPv6 x m) | n <= 0    = (IPv6 0 0, p)
+                       | n >= m    = (p, IPv6 0 0)
+                       | otherwise = (IPv6 x n, IPv6 x' (m - n))
   where x' = (x `shiftL` n) .&. (bit 128 - bit 0)
-breakAt n p@(VPNv6 x m) | n <= 0    = (VPNv6 0 0, p)
-                        | n >= m    = (p, VPNv6 0 0)
-                        | otherwise = (VPNv6 x n, VPNv6 x' (m - n))
-  where x' = (x `shiftL` n) .&. (bit 144 - bit 0)
 
 cons :: Bool -> Prefix -> Prefix
-cons b (IPv4  x m) = IPv4  x' (succ m)
+cons b (IPv4 x m) = IPv4 x' (succ m)
   where x' = bool clearBit setBit b (x `shiftR` 1) 31
-cons b (VPNv4 x m) = VPNv4 x' (succ m)
-  where x' = bool clearBit setBit b (x `shiftR` 1) 47
-cons b (IPv6  x m) = IPv6  x' (succ m)
+cons b (IPv6 x m) = IPv6 x' (succ m)
   where x' = bool clearBit setBit b (x `shiftR` 1) 127
-cons b (VPNv6 x m) = VPNv6 x' (succ m)
-  where x' = bool clearBit setBit b (x `shiftR` 1) 143
 
 uncons :: Prefix -> Maybe (Bool, Prefix)
-uncons (IPv4  x m) | m == 0    = Nothing
-                   | otherwise = Just (x `testBit` 31,  IPv4  x' (pred m))
+uncons (IPv4 x m) | m == 0    = Nothing
+                  | otherwise = Just (x `testBit` 31, IPv4 x' (pred m))
   where x' = x `shiftL` 1
-uncons (VPNv4 x m) | m == 0    = Nothing
-                   | otherwise = Just (x `testBit` 47,  VPNv4 x' (pred m))
-  where x' = (x `shiftL` 1) `clearBit` 48
-uncons (IPv6  x m) | m == 0    = Nothing
-                   | otherwise = Just (x `testBit` 127, IPv6  x' (pred m))
+uncons (IPv6 x m) | m == 0    = Nothing
+                  | otherwise = Just (x `testBit` 127, IPv6 x' (pred m))
   where x' = (x `shiftL` 1) `clearBit` 128
-uncons (VPNv6 x m) | m == 0    = Nothing
-                   | otherwise = Just (x `testBit` 143, VPNv6 x' (pred m))
-  where x' = (x `shiftL` 1) `clearBit` 144
 
 append :: Prefix -> Prefix -> Prefix
-append (IPv4  x1 m1) (IPv4  x2 m2) = IPv4  x (m1 + m2)
+append (IPv4 x1 m1) (IPv4 x2 m2) = IPv4 x (m1 + m2)
   where x = (x1 .&. (bit 32 - bit (32 - m1))) .|. (x2 `shiftR` m1)
-append (VPNv4 x1 m1) (VPNv4 x2 m2) = VPNv4 x (m1 + m2)
-  where x = (x1 .&. (bit 48 - bit (48 - m1))) .|. (x2 `shiftR` m1)
-append (IPv6  x1 m1) (IPv6  x2 m2) = IPv6  x (m1 + m2)
+append (IPv6 x1 m1) (IPv6 x2 m2) = IPv6 x (m1 + m2)
   where x = (x1 .&. (bit 128 - bit (128 - m1))) .|. (x2 `shiftR` m1)
-append (VPNv6 x1 m1) (VPNv6 x2 m2) = VPNv6 x (m1 + m2)
-  where x = (x1 .&. (bit 144 - bit (144 - m1))) .|. (x2 `shiftR` m1)
-append _             _             = error "incompatible prefixes"
-
-widthOfInteger :: Integer -> Int
-widthOfInteger = ceiling . logBase (2::Double) . fromInteger . succ
+append _            _            = error "incompatible prefixes"
 
 commonPrefixes :: Prefix -> Prefix -> (Prefix, Prefix, Prefix)
-commonPrefixes (IPv4  x1 m1) (IPv4  x2 m2) =
-  (IPv4  x1 m, IPv4  (dropMSBs x1) (m1 - m), IPv4  (dropMSBs x2) (m2 - m))
+commonPrefixes (IPv4 x1 m1) (IPv4 x2 m2) =
+  (IPv4 x1 m, IPv4 (dropMSBs x1) (m1 - m), IPv4 (dropMSBs x2) (m2 - m))
   where m = minimum [m1, m2, countLeadingZeros (x1 `xor` x2)]
         dropMSBs x = x `shiftL` m
-commonPrefixes (VPNv4 x1 m1) (VPNv4 x2 m2) =
-  (VPNv4 x1 m, VPNv4 (dropMSBs x1) (m1 - m), VPNv4 (dropMSBs x2) (m2 - m))
-  where m = minimum [m1, m2, countLeadingZeros (x1 `xor` x2) - 16]
-        dropMSBs x = (x `shiftL` m) .&. (bit 48 - bit 0)
-commonPrefixes (IPv6  x1 m1) (IPv6  x2 m2) =
-  (IPv6  x1 m, IPv6  (dropMSBs x1) (m1 - m), IPv6  (dropMSBs x2) (m2 - m))
-  where m = minimum [m1, m2, 128 - widthOfInteger (x1 `xor` x2)]
+commonPrefixes (IPv6 x1 m1) (IPv6 x2 m2) =
+  (IPv6 x1 m, IPv6 (dropMSBs x1) (m1 - m), IPv6 (dropMSBs x2) (m2 - m))
+  where m = minimum [m1, m2, 128 - numOfBits (x1 `xor` x2)]
         dropMSBs x = (x `shiftL` m) .&. (bit 128 - bit 0)
-commonPrefixes (VPNv6 x1 m1) (VPNv6 x2 m2) =
-  (VPNv6 x1 m, VPNv6 (dropMSBs x1) (m1 - m), VPNv6 (dropMSBs x2) (m2 - m))
-  where m = minimum [m1, m2, 144 - widthOfInteger (x1 `xor` x2)]
-        dropMSBs x = (x `shiftL` m) .&. (bit 144 - bit 0)
-commonPrefixes _             _             = error "incompatible prefixes"
+        numOfBits = ceiling . logBase (2::Double) . fromInteger . succ
+commonPrefixes _            _            = error "incompatible prefixes"
