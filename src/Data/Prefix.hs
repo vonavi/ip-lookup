@@ -36,13 +36,14 @@ fromOctetList = IPv4Address . foldl' accum 0
   where accum r o = (r `shiftL` 8) .|. fromIntegral o
 
 readsOctets :: Int -> Int -> ReadS [Word8]
-readsOctets 0 _ s = [ ([], s) ]
-readsOctets 1 d s = [ ([x], t) | (x, t) <- (readsPrec d :: ReadS Word8) s ]
-readsOctets n d s = [ (x:xs, w)
-                    | (x, "")  <- (readsPrec d :: ReadS Word8) t
-                    , (".", v) <- lex u
-                    , (xs, w)  <- readsOctets (pred n) d v
-                    ]
+readsOctets n d s
+  | n == 0    = [ ([], s) ]
+  | n == 1    = [ ([x], u) | (x, "") <- (readsPrec d :: ReadS Word8) t ]
+  | otherwise = [ (x:xs, w)
+                | (x, "")  <- (readsPrec d :: ReadS Word8) t
+                , (".", v) <- lex u
+                , (xs, w)  <- readsOctets (pred n) d v
+                ]
   where (t, u) = span isDigit s
 
 instance Read IPv4Address where
@@ -72,14 +73,14 @@ type Hex = [HexDigit]
 readsHex :: Int -> Int -> ReadS Hex
 readsHex n d = helper n
   where helper k s
-          | k == 0       = [ ([], s) ]
-          | (c:cs) <- s
-          , isHexDigit c = [ (x:xs, t)
-                           | (x, "") <- (readsPrec d :: ReadS HexDigit) [c]
-                           , (xs, t) <- helper (pred k) cs
-                           ]
-          | k == n       = []
-          | otherwise    = [ ([], s) ]
+          | k == 0           = [ ([], s) ]
+          | not (null digit) = [ (x:xs, u)
+                               | (x, t)  <- digit
+                               , (xs, u) <- helper (pred k) t
+                               ]
+          | k == n           = []
+          | otherwise        = [ ([], s) ]
+          where digit = (readsPrec d :: ReadS HexDigit) s
 
 instance {-# OVERLAPPING #-} Read Hex where
   readsPrec d = map (first reduceZeros) . readsHex 4 d
@@ -108,15 +109,14 @@ fromHexList = IPv6Address . foldl' accum 0
 
 readsHexList :: Int -> ReadS [Hex]
 readsHexList d s
-  | null hs   = [ ([], s) ]
-  | otherwise = [ (x:xs, w)
-                | (x, "")  <- hs
-                , (xs, w)  <- case u of
-                                (':':v) -> readsHexList d v
-                                _       -> [ ([], u) ]
-                ]
-  where (t, u) = span isHexDigit s
-        hs     = (readsPrec d :: ReadS Hex) t
+  | null hex   = [ ([], s) ]
+  | null colon = [ ([x], t) | (x, t) <- hex ]
+  | otherwise  = [ (x:xs, u)
+                 | (x, t)  <- colon
+                 , (xs, u) <- readsHexList d t
+                 ]
+  where hex   = (readsPrec d :: ReadS Hex) s
+        colon = [ (x, u) | (x, t) <- hex, (":", u) <- lex t ]
 
 instance Read IPv6Address where
   readsPrec d s = [ let l = 8 - (length xs + length ys)
