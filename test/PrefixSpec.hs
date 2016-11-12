@@ -44,53 +44,15 @@ significantBits = unfoldr uncons
 testBitSpec :: Spec
 testBitSpec = do
   describe "Test prefix bits" $ do
-    let p1 = mkPrefix (read "192.168.0.1") 16
-        p2 = setVpn (read "db8") p1
-        p3 = setVpn (read "2001") p2
     it "IPv4 prefix" $ do
-      significantBits p1
+      significantBits (mkPrefix (read "192.168.0.1") 16)
         `shouldBe` [ True, True, False, False, False, False, False, False
                    , True, False, True, False, True, False, False, False
                    ]
-    it "VPNv4 prefix" $ do
-      significantBits p2
-        `shouldBe` [ False, False, False, False, True, True, False, True
-                   , True, False, True, True, True, False, False, False
-                   , True, True, False, False, False, False, False, False
-                   , True, False, True, False, True, False, False, False
-                   ]
-    it "VPNv4 prefix (changed)" $ do
-      significantBits p3
-        `shouldBe` [ False, False, True, False, False, False, False, False
-                   , False, False, False, False, False, False, False, True
-                   , True, True, False, False, False, False, False, False
-                   , True, False, True, False, True, False, False, False
-                   ]
 
-    let p4 = mkPrefix (read "2001:db8::") 32
-        p5 = setVpn (read "ac10") p4
-        p6 = setVpn (read "fe01") p5
     it "IPv6 prefix" $ do
-      significantBits p4
+      significantBits (mkPrefix (read "2001:db8::") 32)
         `shouldBe` [ False, False, True, False, False, False, False, False
-                   , False, False, False, False, False, False, False, True
-                   , False, False, False, False, True, True, False, True
-                   , True, False, True, True, True, False, False, False
-                   ]
-    it "VPNv6 prefix" $ do
-      significantBits p5
-        `shouldBe` [ True, False, True, False, True, True, False, False
-                   , False, False, False, True, False, False, False, False
-                   , False, False, True, False, False, False, False, False
-                   , False, False, False, False, False, False, False, True
-                   , False, False, False, False, True, True, False, True
-                   , True, False, True, True, True, False, False, False
-                   ]
-    it "VPNv6 prefix (changed)" $ do
-      significantBits p6
-        `shouldBe` [ True, True, True, True, True, True, True, False
-                   , False, False, False, False, False, False, False, True
-                   , False, False, True, False, False, False, False, False
                    , False, False, False, False, False, False, False, True
                    , False, False, False, False, True, True, False, True
                    , True, False, True, True, True, False, False, False
@@ -111,18 +73,6 @@ commonPrefixesSpec = do
       append p3 p1' `shouldBe` p1
       append p3 p2' `shouldBe` p2
 
-    it "VPNv4 prefix" $ do
-      let p1  = setVpn (read "64") $ mkPrefix (read "192.168.255.0") 32
-          p2  = setVpn (read "64") $ mkPrefix (read "192.168.127.0") 32
-          p3  = setVpn (read "64") $ mkPrefix (read "192.168.0.0") 16
-          p1' = setVpn (read "ff00") $ mkPrefix (read "0.0.0.0") 0
-          p2' = setVpn (read "7f00") $ mkPrefix (read "0.0.0.0") 0
-      commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
-      breakAt 32 p1 `shouldBe` (p3, p1')
-      breakAt 32 p2 `shouldBe` (p3, p2')
-      append p3 p1' `shouldBe` p1
-      append p3 p2' `shouldBe` p2
-
     it "IPv6 prefix" $ do
       let p1  = mkPrefix (read "2001:db8::") 64
           p2  = mkPrefix (read "2001:dc8::") 48
@@ -132,17 +82,5 @@ commonPrefixesSpec = do
       commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
       breakAt 25 p1 `shouldBe` (p3, p1')
       breakAt 25 p2 `shouldBe` (p3, p2')
-      append p3 p1' `shouldBe` p1
-      append p3 p2' `shouldBe` p2
-
-    it "VPNv6 prefix" $ do
-      let p1  = setVpn (read "ac10") $ mkPrefix (read "2001:db8::") 64
-          p2  = setVpn (read "ac10") $ mkPrefix (read "2001:dc8::") 48
-          p3  = setVpn (read "ac10") $ mkPrefix (read "2001:db8::") 25
-          p1' = setVpn (read "7000") $ mkPrefix (read "::") 23
-          p2' = setVpn (read "9000") $ mkPrefix (read "::") 7
-      commonPrefixes p1 p2 `shouldBe` (p3, p1', p2')
-      breakAt 41 p1 `shouldBe` (p3, p1')
-      breakAt 41 p2 `shouldBe` (p3, p2')
       append p3 p1' `shouldBe` p1
       append p3 p2' `shouldBe` p2
