@@ -3,9 +3,9 @@
 module Data.BinPartition
   (
     BinMinHeight(..)
-  , putBinMinHeight
+  , showBinMinHeight
   , BinMinSize(..)
-  , putBinMinSize
+  , showBinMinSize
   ) where
 
 import           Data.IpRouter
@@ -18,17 +18,15 @@ newtype BinMinHeight = BinMinHeight BinZipper
 instance Partible BinMinHeight where
   memTreeMerge = minHeightMerge
 
-putBinMinHeight :: MemTree BinMinHeight -> IO ()
-putBinMinHeight t = do
-  putStrLn "Min-height partition of binary tree"
-  putPartition t
+showBinMinHeight :: MemTree BinMinHeight -> String
+showBinMinHeight = ("Min-height partition of binary tree\n" ++)
+                   . showPartition
 
 newtype BinMinSize = BinMinSize BinZipper
                    deriving (Eq, Show, IpRouter, Zipper)
 instance Partible BinMinSize where
   memTreeMerge = minSizeMerge
 
-putBinMinSize :: MemTree BinMinSize -> IO ()
-putBinMinSize t = do
-  putStrLn "Min-size partition of binary tree"
-  putPartition t
+showBinMinSize :: MemTree BinMinSize -> String
+showBinMinSize = ("Min-size partition of binary tree\n" ++)
+                 . showPartition

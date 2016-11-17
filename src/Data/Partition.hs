@@ -4,7 +4,7 @@
 module Data.Partition
   (
     MemTree
-  , putPartition
+  , showPartition
   , Partible(..)
   , minHeightMerge
   , minSizeMerge
@@ -172,18 +172,18 @@ memUsage = getSum . foldMap (Sum . fitToMinPage . pageSize)
 fillSize :: Zipper a => MemTree a -> Int
 fillSize = getSum . foldMap (Sum . pageSize)
 
-putPartition :: (IpRouter a, Partible a) => MemTree a -> IO ()
-putPartition t = do
-  putStrLn . (++) "  Number of prefixes " . show . numOfPrefixes $ t
-  putStrLn . (++) "  Height             " . show . fromRoot height $ t
-  putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage       " . show . memUsage $ t
-  putStrLn . (++) "  Memory utilization " . show $ memUtil
-  putStrLn . (++) "  Fill size          " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio         " . show $ fillRatio
-    where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
-          fillRatio :: Double
-          fillRatio = fromIntegral (fillSize t) / fromIntegral (memUsage t)
+showPartition :: (IpRouter a, Partible a) => MemTree a -> String
+showPartition t =
+  "  Number of prefixes " ++ show (numOfPrefixes t)   ++ "\n" ++
+  "  Height             " ++ show (fromRoot height t) ++ "\n" ++
+  "  Number of pages    " ++ show (numOfPages t)      ++ "\n" ++
+  "  Memory usage       " ++ show (memUsage t)        ++ "\n" ++
+  "  Memory utilization " ++ show memUtil             ++ "\n" ++
+  "  Fill size          " ++ show (fillSize t)        ++ "\n" ++
+  "  Fill ratio         " ++ show fillRatio           ++ "\n"
+  where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
+        fillRatio :: Double
+        fillRatio = ((/) `on` fromIntegral) (fillSize t) (memUsage t)
 
 
 class Zipper a => Partible a where

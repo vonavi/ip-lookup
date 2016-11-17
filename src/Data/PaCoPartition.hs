@@ -3,9 +3,9 @@
 module Data.PaCoPartition
   (
     PaCoMinHeight(..)
-  , putPaCoMinHeight
+  , showPaCoMinHeight
   , PaCoMinSize(..)
-  , putPaCoMinSize
+  , showPaCoMinSize
   ) where
 
 import           Data.IpRouter
@@ -18,17 +18,15 @@ newtype PaCoMinHeight = PaCoMinHeight PaCoZipper
 instance Partible PaCoMinHeight where
   memTreeMerge = minHeightMerge
 
-putPaCoMinHeight :: MemTree PaCoMinHeight -> IO ()
-putPaCoMinHeight t = do
-  putStrLn "Min-height partition of path-compressed tree"
-  putPartition t
+showPaCoMinHeight :: MemTree PaCoMinHeight -> String
+showPaCoMinHeight = ("Min-height partition of path-compressed tree\n" ++)
+                    . showPartition
 
 newtype PaCoMinSize = PaCoMinSize PaCoZipper
                     deriving (Eq, Show, IpRouter, Zipper)
 instance Partible PaCoMinSize where
   memTreeMerge = minSizeMerge
 
-putPaCoMinSize :: MemTree PaCoMinSize -> IO ()
-putPaCoMinSize t = do
-  putStrLn "Min-size partition of path-compressed tree"
-  putPartition t
+showPaCoMinSize :: MemTree PaCoMinSize -> String
+showPaCoMinSize = ("Min-size partition of path-compressed tree\n" ++)
+                  . showPartition

@@ -4,7 +4,7 @@ module Data.Trees.BinTree
   (
     BinTree
   , BinZipper
-  , putBinTree
+  , showBinTree
   ) where
 
 import           Control.Applicative ((<|>))
@@ -92,8 +92,8 @@ binSize :: BinTree -> Int
 binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
 
-putBinTree :: BinTree -> IO ()
-putBinTree = putStrLn . (++) "Size of binary tree " . show . binSize
+showBinTree :: BinTree -> String
+showBinTree t = "Size of binary tree " ++ show (binSize t) ++ "\n"
 
 
 type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])

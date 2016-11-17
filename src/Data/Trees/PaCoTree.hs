@@ -10,7 +10,7 @@ module Data.Trees.PaCoTree
   , eliasGammaSize
   , eliasDeltaSize
   , eliasFanoSize
-  , putPaCoTree
+  , showPaCoTree
   ) where
 
 import           Control.Applicative        ((<|>))
@@ -220,13 +220,13 @@ fibonacciSize = (2 +) . getSum . foldMap (Sum . nodeSize)
           where k = P.maskLength . prefix $ x
                 s = label x
 
-putPaCoTree :: PaCoTree -> IO ()
-putPaCoTree t = do
-  putStrLn "Size of path-compressed tree"
-  putStrLn . (++) "  Elias gamma coding " . show . eliasGammaSize $ t
-  putStrLn . (++) "  Elias delta coding " . show . eliasDeltaSize $ t
-  putStrLn . (++) "  Elias-Fano coding  " . show . eliasFanoSize $ t
-  putStrLn . (++) "  Fibonacci coding   " . show . fibonacciSize $ t
+showPaCoTree :: PaCoTree -> String
+showPaCoTree t =
+  "Size of path-compressed tree\n" ++
+  "  Elias gamma coding " ++ show (eliasGammaSize t) ++ "\n" ++
+  "  Elias delta coding " ++ show (eliasDeltaSize t) ++ "\n" ++
+  "  Elias-Fano coding  " ++ show (eliasFanoSize t)  ++ "\n" ++
+  "  Fibonacci coding   " ++ show (fibonacciSize t)  ++ "\n"
 
 
 type PaCoZipper = (,,) PaCoTree
