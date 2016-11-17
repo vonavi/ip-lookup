@@ -6,9 +6,9 @@ module Data.PaCo2Partition
   (
     MemTree
   , PaCo2MinHeight(..)
-  , putPaCo2MinHeight
+  , showPaCo2MinHeight
   , PaCo2MinSize(..)
-  , putPaCo2MinSize
+  , showPaCo2MinSize
   ) where
 
 import           Control.Applicative  ((<|>))
@@ -185,18 +185,16 @@ memUsage = getSum . foldMap (Sum . fitToMinPage . pageSize)
 fillSize :: Zipper a => MemTree a -> Int
 fillSize = getSum . foldMap (Sum . pageSize)
 
-putPartition :: (IpRouter a, Partible a) => MemTree a -> IO ()
-putPartition t = do
-  putStrLn . (++) "  Number of prefixes " . show . numOfPrefixes $ t
-  putStrLn . (++) "  Height             " . show . fromRoot height $ t
-  putStrLn . (++) "  Number of pages    " . show . numOfPages $ t
-  putStrLn . (++) "  Memory usage       " . show . memUsage $ t
-  putStrLn . (++) "  Memory utilization " . show $ memUtil
-  putStrLn . (++) "  Fill size          " . show . fillSize $ t
-  putStrLn . (++) "  Fill ratio         " . show $ fillRatio
-    where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
-          fillRatio :: Double
-          fillRatio = fromIntegral (fillSize t) / fromIntegral (memUsage t)
+showPartition :: (IpRouter a, Partible a) => MemTree a -> String
+showPartition t =
+  "  Number of prefixes " ++ show (numOfPrefixes t)   ++ "\n" ++
+  "  Height             " ++ show (fromRoot height t) ++ "\n" ++
+  "  Number of pages    " ++ show (numOfPages t)      ++ "\n" ++
+  "  Memory usage       " ++ show (memUsage t)        ++ "\n" ++
+  "  Fill size          " ++ show (fillSize t)        ++ "\n" ++
+  "  Fill ratio         " ++ show fillRatio           ++ "\n"
+  where fillRatio :: Double
+        fillRatio = ((/) `on` fromIntegral) (fillSize t) (memUsage t)
 
 
 class Zipper a => Partible a where
@@ -282,17 +280,15 @@ newtype PaCo2MinHeight = PaCo2MinHeight PaCo2Zipper
 instance Partible PaCo2MinHeight where
   memTreeMerge = minHeightMerge
 
-putPaCo2MinHeight :: MemTree PaCo2MinHeight -> IO ()
-putPaCo2MinHeight t = do
-  putStrLn "Min-height partition of path-compressed 2-tree"
-  putPartition t
+showPaCo2MinHeight :: MemTree PaCo2MinHeight -> String
+showPaCo2MinHeight = ("Min-height partition of path-compressed 2-tree\n" ++)
+                     . showPartition
 
 newtype PaCo2MinSize = PaCo2MinSize PaCo2Zipper
                      deriving (Eq, Show, IpRouter, Zipper)
 instance Partible PaCo2MinSize where
   memTreeMerge = minSizeMerge
 
-putPaCo2MinSize :: MemTree PaCo2MinSize -> IO ()
-putPaCo2MinSize t = do
-  putStrLn "Min-size partition of path-compressed 2-tree"
-  putPartition t
+showPaCo2MinSize :: MemTree PaCo2MinSize -> String
+showPaCo2MinSize = ("Min-size partition of path-compressed 2-tree\n" ++)
+                   . showPartition
