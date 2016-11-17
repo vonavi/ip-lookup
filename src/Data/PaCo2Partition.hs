@@ -17,6 +17,7 @@ import           Data.Function        (on)
 import           Data.Maybe           (fromMaybe, isNothing)
 import           Data.Monoid
 
+import           Config
 import           Data.IpRouter
 import           Data.Prefix
 import           Data.Trees.PaCo2Tree (PaCo2Zipper, Zipper (..))
@@ -46,18 +47,12 @@ instance Foldable Tree where
                           foldMap f l <> foldMap f r
 
 
-minPageSize :: Int
-minPageSize = 128
-
-maxPageSize :: Int
-maxPageSize = 6 * minPageSize
-
--- | 18 bits are reserved for the 'plpm' folder.
 pageSize :: Zipper a => Node a -> Int
-pageSize x = size (zipper x) + 18
+pageSize x = size (zipper x)
+             + nextHopSize config * fromEnum (prevNextHop config)
 
 isFitted :: Zipper a => Node a -> Bool
-isFitted = (<= maxPageSize) . pageSize
+isFitted = (<= maxPageSize config) . pageSize
 
 
 fromRoot :: (Node a -> b) -> MemTree a -> b
@@ -178,9 +173,9 @@ numOfPages :: MemTree a -> Int
 numOfPages = getSum . foldMap (Sum . const 1)
 
 memUsage :: Zipper a => MemTree a -> Int
-memUsage = getSum . foldMap (Sum . fitToMinPage . pageSize)
-  where fitToMinPage s = let k = (s + minPageSize - 1) `div` minPageSize
-                         in k * minPageSize
+memUsage = getSum . foldMap (Sum . granularity . pageSize)
+  where granularity s = ((s + smin - 1) `div` smin) * smin
+        smin          = minPageSize config
 
 fillSize :: Zipper a => MemTree a -> Int
 fillSize = getSum . foldMap (Sum . pageSize)

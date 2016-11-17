@@ -20,6 +20,7 @@ import           Data.Bool                  (bool)
 import           Data.Maybe                 (isJust)
 import           Data.Monoid
 
+import           Config
 import qualified Data.Compression.Bitmap    as BMP
 import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
@@ -152,12 +153,12 @@ parts:
 
     * prefix bit (1 bit);
 
-    * RE index (18 bits) if the prefix bit is set.
+    * next-hop size per prefix.
 -}
 eliasGammaSize :: PaCo2Tree -> Int
 eliasGammaSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 1 + (BMP.size . encodeEliasGamma . succ $ k)
-                     + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 1 + (BMP.size . encodeEliasGamma . succ $ k) + k
+                     + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
@@ -174,12 +175,12 @@ parts:
 
     * prefix bit (1 bit);
 
-    * RE index (18 bits) if the prefix bit is set.
+    * next-hop size per prefix.
 -}
 eliasDeltaSize :: PaCo2Tree -> Int
 eliasDeltaSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 1 + (BMP.size . encodeEliasDelta . succ $ k)
-                     + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 1 + (BMP.size . encodeEliasDelta . succ $ k) + k
+                     + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
@@ -194,11 +195,11 @@ The size of path-compressed 2-tree is built from the following parts:
 
     * prefix bits (1 bit per node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 eliasFanoSize :: PaCo2Tree -> Int
 eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
-  where nodeSize x = 1 + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 1 + k + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
@@ -223,12 +224,12 @@ parts:
 
     * prefix bit (1 bit);
 
-    * RE index (18 bits) if the prefix bit is set.
+    * next-hop size per prefix.
 -}
 fibonacciSize :: PaCo2Tree -> Int
 fibonacciSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 1 + (BMP.size . encodeFibonacci . succ $ k)
-                     + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 1 + (BMP.size . encodeFibonacci . succ $ k) + k
+                     + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
