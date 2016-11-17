@@ -9,8 +9,8 @@ module Data.Prefix
   , Prefix
   , mkPrefix
   , maskLength
-  , empty
-  , breakAt
+  , null
+  , splitAt
   , cons
   , uncons
   , append
@@ -26,6 +26,8 @@ import           Data.List           (foldl', intercalate, maximumBy)
 import           Data.List.Split
 import           Data.Ord            (comparing)
 import           Data.Word
+import           Prelude             hiding (null, splitAt)
+import qualified Prelude             as P (null)
 
 newtype IPv4Address = IPv4Address Word32
 
@@ -71,13 +73,13 @@ type Hex = [HexDigit]
 readsHex :: Int -> Int -> ReadS Hex
 readsHex n d = helper n
   where helper k s
-          | k == 0           = [ ([], s) ]
-          | not (null digit) = [ (x:xs, u)
-                               | (x, t)  <- digit
-                               , (xs, u) <- helper (pred k) t
-                               ]
-          | k == n           = []
-          | otherwise        = [ ([], s) ]
+          | k == 0             = [ ([], s) ]
+          | not (P.null digit) = [ (x:xs, u)
+                                 | (x, t)  <- digit
+                                 , (xs, u) <- helper (pred k) t
+                                 ]
+          | k == n             = []
+          | otherwise          = [ ([], s) ]
           where digit = (readsPrec d :: ReadS HexDigit) s
 
 instance {-# OVERLAPPING #-} Read Hex where
@@ -107,12 +109,12 @@ fromHexList = IPv6Address . foldl' accum 0
 
 readsHexList :: Int -> ReadS [Hex]
 readsHexList d s
-  | null hex   = [ ([], s) ]
-  | null colon = [ ([x], t) | (x, t) <- hex ]
-  | otherwise  = [ (x:xs, u)
-                 | (x, t)  <- colon
-                 , (xs, u) <- readsHexList d t
-                 ]
+  | P.null hex   = [ ([], s) ]
+  | P.null colon = [ ([x], t) | (x, t) <- hex ]
+  | otherwise    = [ (x:xs, u)
+                   | (x, t)  <- colon
+                   , (xs, u) <- readsHexList d t
+                   ]
   where hex   = (readsPrec d :: ReadS Hex) s
         colon = [ (x, u) | (x, t) <- hex, (":", u) <- lex t ]
 
@@ -129,8 +131,8 @@ instance Read IPv6Address where
 
 longestGroupIndices :: (a -> Bool) -> [a] -> [Int]
 longestGroupIndices p xs
-  | null indexGroups = []
-  | otherwise        = maximumBy (comparing length) . reverse $ indexGroups
+  | P.null indexGroups = []
+  | otherwise          = maximumBy (comparing length) . reverse $ indexGroups
   where indexGroups = map (map fst) . wordsBy (not . p . snd) . zip [0 ..] $ xs
 
 instance Show IPv6Address where
@@ -147,7 +149,7 @@ instance Show IPv6Address where
           addrStr  = tail . concat . (`evalState` maxZeros)
                      . mapM (state . dropGroup) . zip [0 ..] $ octets
           dropGroup :: (Int, Word16) -> [Int] -> (String, [Int])
-          dropGroup (n, _) (g:gs) | n == g = (bool "" ":" (null gs), gs)
+          dropGroup (n, _) (g:gs) | n == g = (bool "" ":" (P.null gs), gs)
           dropGroup (_, h) gs              = (':' : show (wordToHex h), gs)
 
 
@@ -194,17 +196,17 @@ maskLength :: Prefix -> Int
 maskLength (IPv4 _ m) = m
 maskLength (IPv6 _ m) = m
 
-empty :: Prefix -> Bool
-empty (IPv4 _ 0) = True
-empty (IPv6 _ 0) = True
-empty _          = False
+null :: Prefix -> Bool
+null (IPv4 _ 0) = True
+null (IPv6 _ 0) = True
+null _          = False
 
-breakAt :: Int -> Prefix -> (Prefix, Prefix)
-breakAt n p@(IPv4 x m) | n <= 0    = (IPv4 0 0, p)
+splitAt :: Int -> Prefix -> (Prefix, Prefix)
+splitAt n p@(IPv4 x m) | n <= 0    = (IPv4 0 0, p)
                        | n >= m    = (p, IPv4 0 0)
                        | otherwise = (IPv4 x n, IPv4 x' (m - n))
   where x' = x `shiftL` n
-breakAt n p@(IPv6 x m) | n <= 0    = (IPv6 0 0, p)
+splitAt n p@(IPv6 x m) | n <= 0    = (IPv6 0 0, p)
                        | n >= m    = (p, IPv6 0 0)
                        | otherwise = (IPv6 x n, IPv6 x' (m - n))
   where x' = (x `shiftL` n) .&. (bit 128 - bit 0)

@@ -30,10 +30,10 @@ import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
 import           Data.Compression.Huffman
 import           Data.IpRouter
-import           Data.Prefix
+import qualified Data.Prefix                    as P
 import           Data.Zipper
 
-data Node = Node { prefix :: Prefix
+data Node = Node { prefix :: P.Prefix
                  , label  :: Maybe Int
                  }
           deriving (Show, Eq)
@@ -47,7 +47,7 @@ instance Foldable Tree where
 
 joinNodes :: Node -> Bool -> Node -> Node
 joinNodes Node { prefix = px } b y
-  = Node { prefix = (px `append`) . cons b . prefix $ y
+  = Node { prefix = (px `P.append`) . P.cons b . prefix $ y
          , label  = label y
          }
 
@@ -59,11 +59,11 @@ uniteRoot t                                = t
 
 resizeRoot :: Int -> PaCoTree -> PaCoTree
 resizeRoot _ Tip           = Tip
-resizeRoot k t@(Bin x l r) = case uncons pb of
+resizeRoot k t@(Bin x l r) = case P.uncons pb of
                                Nothing         -> t
                                Just (True, p)  -> Bin xa Tip (subtree p)
                                Just (False, p) -> Bin xa (subtree p) Tip
-  where (pa, pb)  = breakAt k . prefix $ x
+  where (pa, pb)  = P.splitAt k . prefix $ x
         xa        = Node { prefix = pa
                          , label  = Nothing
                          }
@@ -78,8 +78,8 @@ instance Monoid PaCoTree where
     where tx `helper` ty = Bin node (lx <> ly) (rx <> ry)
             where Bin x _ _    = tx
                   Bin y _ _    = ty
-                  (p, _, _)    = commonPrefixes (prefix x) (prefix y)
-                  kmin         = maskLength p
+                  (p, _, _)    = P.commonPrefixes (prefix x) (prefix y)
+                  kmin         = P.maskLength p
                   Bin x' lx rx = resizeRoot kmin tx
                   Bin y' ly ry = resizeRoot kmin ty
                   node         = x' { label = label x' <|> label y' }
@@ -89,15 +89,15 @@ fromEntry :: Entry -> PaCoTree
 fromEntry Entry { network = p, nextHop = n } =
   Bin Node { prefix = p, label = Just n } Tip Tip
 
-lookupState :: Prefix -> PaCoTree -> State (Maybe Int) ()
+lookupState :: P.Prefix -> PaCoTree -> State (Maybe Int) ()
 lookupState _ Tip         = return ()
 lookupState v (Bin x l r)
-  | (not . empty) pa      = return ()
+  | (not . P.null) pa     = return ()
   | otherwise             = do modify (label x <|>)
-                               case uncons va of
+                               case P.uncons va of
                                  Nothing      -> return ()
                                  Just (b, vb) -> lookupState vb $ bool l r b
-  where (_, va, pa) = commonPrefixes v (prefix x)
+  where (_, va, pa) = P.commonPrefixes v (prefix x)
 
 delEmptyNode :: PaCoTree -> PaCoTree
 delEmptyNode t | Bin x Tip Tip <- t
@@ -111,8 +111,8 @@ tx `delSubtree` ty = delEmptyNode . uniteRoot $
                      Bin node (lx `delSubtree` ly) (rx `delSubtree` ry)
   where Bin x _ _    = tx
         Bin y _ _    = ty
-        (p, _, _)    = commonPrefixes (prefix x) (prefix y)
-        kmin         = maskLength p
+        (p, _, _)    = P.commonPrefixes (prefix x) (prefix y)
+        kmin         = P.maskLength p
         Bin x' lx rx = resizeRoot kmin tx
         Bin y' ly ry = resizeRoot kmin ty
         node         = x' { label = labelDiff (label x') (label y') }
@@ -128,9 +128,9 @@ instance IpRouter PaCoTree where
             kvec  = foldr accSkipValues (V.replicate 33 0) tree
             hsize = map (second length) . freqToEnc .
                     V.toList . V.indexed $ kvec
-            accSkipValues x v = V.accum (+) v [(maskLength . prefix $ x, 1)]
+            accSkipValues x v = V.accum (+) v [(P.maskLength . prefix $ x, 1)]
 
-  insEntry = mappend . fromEntry
+  insEntry = (<>) . fromEntry
 
   delEntry = flip delSubtree . fromEntry
 
@@ -159,7 +159,7 @@ eliasGammaSize :: PaCoTree -> Int
 eliasGammaSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 2 + (BMP.size . encodeEliasGamma . succ $ k)
                      + k + 1 + 18 * (fromEnum . isJust $ s)
-          where k = maskLength . prefix $ x
+          where k = P.maskLength . prefix $ x
                 s = label x
 
 {-|
@@ -182,7 +182,7 @@ eliasDeltaSize :: PaCoTree -> Int
 eliasDeltaSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 2 + (BMP.size . encodeEliasDelta . succ $ k)
                      + k + 1 + 18 * (fromEnum . isJust $ s)
-          where k = maskLength . prefix $ x
+          where k = P.maskLength . prefix $ x
                 s = label x
 
 {-|
@@ -204,7 +204,7 @@ eliasFanoSize :: PaCoTree -> Int
 eliasFanoSize t =
   2 + (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
   where nodeSize x = 2 + k + 1 + 18 * (fromEnum . isJust $ s)
-          where k = maskLength . prefix $ x
+          where k = P.maskLength . prefix $ x
                 s = label x
 
 eliasFanoSeqSize :: PaCoTree -> Int
@@ -212,7 +212,7 @@ eliasFanoSeqSize t
   | null ks   = 0
   | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
                 highBits bmp2 <> lowBits bmp2
-  where ks   = foldMap ((:[]) . maskLength . prefix) t
+  where ks   = foldMap ((:[]) . P.maskLength . prefix) t
         bmp2 = encodeEliasFano . scanl1 (+) $ ks
 
 {-|
@@ -235,7 +235,7 @@ fibonacciSize :: PaCoTree -> Int
 fibonacciSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 2 + (BMP.size . encodeFibonacci . succ $ k)
                      + k + 1 + 18 * (fromEnum . isJust $ s)
-          where k = maskLength . prefix $ x
+          where k = P.maskLength . prefix $ x
                 s = label x
 
 {-|
@@ -259,7 +259,7 @@ huffmanSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = runST $ do
           hsize <- readSTRef huffmanVecRef
           return $ 2 + (hsize V.! k) + k + 1 + 18 * (fromEnum . isJust $ s)
-            where k = maskLength . prefix $ x
+            where k = P.maskLength . prefix $ x
                   s = label x
 
 {-# NOINLINE huffmanVecRef #-}
@@ -311,12 +311,12 @@ instance Zipper PaCoZipper where
   isLeaf _           = False
 
   getLabel (Bin x _ _, _, _)
-    | empty (prefix x) = label x
-  getLabel _           = Nothing
+    | P.null (prefix x) = label x
+  getLabel _            = Nothing
 
   setLabel s (t@(Bin x l r), es, bs)
-    | empty (prefix x) = (Bin x { label = s } l r, es, bs)
-    | isJust s         = (Bin x' { label = s } l' r', es, bs)
+    | P.null (prefix x) = (Bin x { label = s } l r, es, bs)
+    | isJust s          = (Bin x' { label = s } l' r', es, bs)
     where Bin x' l' r' = resizeRoot 0 t
   setLabel _ z    = z
 
