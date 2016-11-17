@@ -2,22 +2,20 @@
 
 module Main where
 
-import qualified Data.ByteString.Lazy.Char8 as C
-import           System.Directory
+import qualified Data.ByteString.Lazy.Char8 as BC
 
 import           Data.IpRouter
 import           Data.PaCoPartition         (showPaCoMinHeight)
 import           Data.Prefix
 
 main :: IO ()
-main = do
-  pwd          <- getCurrentDirectory
-  (_ : _ : ls) <- C.lines <$> C.readFile (pwd ++ "/1.route")
-  putStr . showPaCoMinHeight . mkTable . map (getEntry . C.words) $ ls
-    where getEntry (aBS : mBS : _ : _ : nBS : _) =
-            Entry { network = mkPrefix addr mask
-                  , nextHop = nHop
-                  }
-            where addr = read (C.unpack aBS) :: Address
-                  mask = read (C.unpack mBS) :: Mask
-                  nHop = read (C.unpack nBS) :: Int
+main = BC.interact
+       $ BC.pack . showPaCoMinHeight . mkTable
+       . map (getEntry . BC.words) . BC.lines
+  where getEntry (aBS : mBS : _ : nBS : _) =
+          Entry { network = mkPrefix addr mask
+                , nextHop = nHop
+                }
+          where addr = read (BC.unpack aBS) :: Address
+                mask = read (BC.unpack mBS) :: Mask
+                nHop = read (BC.unpack nBS) :: Int
