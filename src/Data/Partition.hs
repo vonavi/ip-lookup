@@ -178,11 +178,9 @@ showPartition t =
   "  Height             " ++ show (fromRoot height t) ++ "\n" ++
   "  Number of pages    " ++ show (numOfPages t)      ++ "\n" ++
   "  Memory usage       " ++ show (memUsage t)        ++ "\n" ++
-  "  Memory utilization " ++ show memUtil             ++ "\n" ++
   "  Fill size          " ++ show (fillSize t)        ++ "\n" ++
   "  Fill ratio         " ++ show fillRatio           ++ "\n"
-  where memUtil = (\x -> 12 * x `div` 10) . memUsage $ t
-        fillRatio :: Double
+  where fillRatio :: Double
         fillRatio = ((/) `on` fromIntegral) (fillSize t) (memUsage t)
 
 
