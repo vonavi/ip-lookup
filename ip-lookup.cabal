@@ -59,5 +59,3 @@ test-suite tests
   ghc-options:         -O2
                        -threaded
                        -Wall
-                       -fprof-auto
-                       "-with-rtsopts=-N -p -s -h -i0.1"
