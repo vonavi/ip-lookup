@@ -11,27 +11,20 @@ module Data.Trees.PaCo2Tree
   , eliasGammaSize
   , eliasDeltaSize
   , eliasFanoSize
-  , huffmanSize
   , putPaCo2Tree
   ) where
 
-import           Control.Applicative            ((<|>))
-import           Control.Arrow                  (second)
-import           Control.Monad.ST
-import           Control.Monad.ST.UnsafePerform
+import           Control.Applicative        ((<|>))
 import           Control.Monad.State
-import           Data.Bool                      (bool)
-import           Data.Maybe                     (isJust)
+import           Data.Bool                  (bool)
+import           Data.Maybe                 (isJust)
 import           Data.Monoid
-import           Data.STRef
-import qualified Data.Vector                    as V
 
-import qualified Data.Compression.Bitmap        as BMP
+import qualified Data.Compression.Bitmap    as BMP
 import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
-import           Data.Compression.Huffman
 import           Data.IpRouter
-import qualified Data.Prefix                    as P
+import qualified Data.Prefix                as P
 
 data Node = Node { prefix :: P.Prefix
                  , label  :: Maybe Int
@@ -139,21 +132,10 @@ tx `delSubtree` ty = delEmptyNode . mkRootFull . uniteRoot $
         labelDiff sx        _                    = sx
 
 instance IpRouter PaCo2Tree where
-  mkTable es = runST $ do
-    modifySTRef huffmanVecRef (V.// hsize)
-    return tree
-      where tree  = foldr insEntry mempty es
-            kvec  = foldr accSkipValues (V.replicate 33 0) tree
-            hsize = map (second length) . freqToEnc .
-                    V.toList . V.indexed $ kvec
-            accSkipValues x v = V.accum (+) v [(P.maskLength . prefix $ x, 1)]
-
-  insEntry = mappend . fromEntry
-
-  delEntry = flip delSubtree . fromEntry
-
-  ipLookup a t = execState (lookupState a t) Nothing
-
+  mkTable       = foldMap fromEntry
+  insEntry      = (<>) . fromEntry
+  delEntry      = flip delSubtree . fromEntry
+  ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldMap (Sum . fromEnum . isJust . label)
 
 
@@ -250,32 +232,6 @@ fibonacciSize = getSum . foldMap (Sum . nodeSize)
           where k = P.maskLength . prefix $ x
                 s = label x
 
-{-|
-The node size of path-compressed 2-tree is built from the following
-parts:
-
-    * open/close parenthesis (1 bit);
-
-    * Huffman code of skip value;
-
-    * node string;
-
-    * prefix bit (1 bit);
-
-    * RE index (18 bits) if the prefix bit is set.
--}
-huffmanSize :: PaCo2Tree -> Int
-huffmanSize = getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = runST $ do
-          hsize <- readSTRef huffmanVecRef
-          return $ 1 + (hsize V.! k) + k + 1 + 18 * (fromEnum . isJust $ s)
-            where k = P.maskLength . prefix $ x
-                  s = label x
-
-{-# NOINLINE huffmanVecRef #-}
-huffmanVecRef :: forall s . STRef s (V.Vector Int)
-huffmanVecRef = unsafePerformST . newSTRef $ V.replicate 33 0
-
 putPaCo2Tree :: PaCo2Tree -> IO ()
 putPaCo2Tree t = do
   putStrLn "Size of path-compressed 2-tree"
@@ -283,7 +239,6 @@ putPaCo2Tree t = do
   putStrLn . (++) "  Elias delta coding " . show . eliasDeltaSize $ t
   putStrLn . (++) "  Elias-Fano coding  " . show . eliasFanoSize $ t
   putStrLn . (++) "  Fibonacci coding   " . show . fibonacciSize $ t
-  putStrLn . (++) "  Huffman coding     " . show . huffmanSize $ t
 
 
 class Zipper a where
