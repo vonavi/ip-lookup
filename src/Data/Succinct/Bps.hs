@@ -2,7 +2,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.Bps
+module Data.Succinct.Bps
   (
     parent
   , firstChild
@@ -28,8 +28,8 @@ import           Control.Monad.Trans       (lift)
 import           Control.Monad.Trans.State
 import           Data.Maybe
 
-import           Data.OrdTree
-import           Data.Paren
+import           Data.Succinct.Paren
+import           Data.Trees.OrdTree
 
 class Bps a where
   getList      :: a -> [(Maybe Int, Paren)]

@@ -1,4 +1,4 @@
-module Data.Paren
+module Data.Succinct.Paren
   (
     Paren(Open, Close)
   , isOpen

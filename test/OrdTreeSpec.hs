@@ -8,8 +8,8 @@ module OrdTreeSpec
 import           Test.Hspec
 
 import           Data.IpRouter
-import           Data.Paren
 import           Data.Prefix
+import           Data.Succinct.Paren
 import           Data.Trees.OrdTree
 import           RandomEntries
 import           TestIpRouter

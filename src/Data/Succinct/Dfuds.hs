@@ -2,7 +2,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.Dfuds
+module Data.Succinct.Dfuds
   (
     parent
   , firstChild
@@ -26,8 +26,8 @@ import           Control.Applicative ((<|>))
 import           Control.Monad.State
 import           Data.Maybe
 
-import           Data.OrdTree
-import           Data.Paren
+import           Data.Succinct.Paren
+import           Data.Trees.OrdTree
 
 class Dfuds a where
   getList :: a -> [(Maybe Int, [Paren])]

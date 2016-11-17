@@ -32,8 +32,8 @@ import           Data.Sequence       (ViewL ((:<), EmptyL),
 import qualified Data.Sequence       as S
 
 import           Data.IpRouter
-import           Data.Paren
 import           Data.Prefix
+import           Data.Succinct.Paren
 import           Data.Zipper
 
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
