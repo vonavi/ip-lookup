@@ -15,6 +15,7 @@ import           Data.List           (unfoldr)
 import           Data.Maybe          (isJust)
 import           Data.Monoid
 
+import           Config
 import           Data.IpRouter
 import           Data.Prefix
 import           Data.Zipper
@@ -86,11 +87,11 @@ The size of binary tree is built from the following parts:
 
     * prefix bit (1 bit per inner node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 binSize :: BinTree -> Int
 binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
+  where nodeSize x = 3 + nextHopSize config * (fromEnum . isJust $ x)
 
 showBinTree :: BinTree -> String
 showBinTree t = "Size of binary tree " ++ show (binSize t) ++ "\n"

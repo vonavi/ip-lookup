@@ -31,6 +31,7 @@ import           Data.Sequence       (ViewL ((:<), EmptyL),
                                       ViewR ((:>), EmptyR), (<|), (|>))
 import qualified Data.Sequence       as S
 
+import           Config
 import           Data.IpRouter
 import           Data.Prefix
 import           Data.Succinct.Paren
@@ -84,11 +85,11 @@ The size of ordinal tree is built from the following parts:
 
     * prefix bit (1 bit per inner node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 ordSize :: OrdTree a => a -> Int
 ordSize = (2 +) . getSum . foldMap (Sum . nodeSize) . toForest
-  where nodeSize x = 3 + 18 * (fromEnum . isJust $ x)
+  where nodeSize x = 3 + nextHopSize config * (fromEnum . isJust $ x)
 
 delRoot :: Maybe Int -> Maybe Int -> Maybe Int
 delRoot x y = if x == y then Nothing else x

@@ -19,6 +19,7 @@ import           Data.Bool                  (bool)
 import           Data.Maybe                 (isJust)
 import           Data.Monoid
 
+import           Config
 import qualified Data.Compression.Bitmap    as BMP
 import           Data.Compression.Elias
 import           Data.Compression.Fibonacci
@@ -135,12 +136,12 @@ The size of path-compressed tree is built from the following parts:
 
     * prefix bits (1 bit per node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 eliasGammaSize :: PaCoTree -> Int
 eliasGammaSize = (2 +) . getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 2 + (BMP.size . encodeEliasGamma . succ $ k)
-                     + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 2 + (BMP.size . encodeEliasGamma . succ $ k) + k
+                     + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
@@ -158,12 +159,12 @@ The size of path-compressed tree is built from the following parts:
 
     * prefix bits (1 bit per node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 eliasDeltaSize :: PaCoTree -> Int
 eliasDeltaSize = (2 +) . getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 2 + (BMP.size . encodeEliasDelta . succ $ k)
-                     + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 2 + (BMP.size . encodeEliasDelta . succ $ k) + k
+                     + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
@@ -180,12 +181,12 @@ The size of path-compressed tree is built from the following parts:
 
     * prefix bits (1 bit per node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 eliasFanoSize :: PaCoTree -> Int
 eliasFanoSize t =
   2 + (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
-  where nodeSize x = 2 + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 2 + k + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
@@ -211,12 +212,12 @@ The size of path-compressed tree is built from the following parts:
 
     * prefix bits (1 bit per node);
 
-    * RE indexes (18 bits per prefix).
+    * next-hop size per prefix.
 -}
 fibonacciSize :: PaCoTree -> Int
 fibonacciSize = (2 +) . getSum . foldMap (Sum . nodeSize)
-  where nodeSize x = 2 + (BMP.size . encodeFibonacci . succ $ k)
-                     + k + 1 + 18 * (fromEnum . isJust $ s)
+  where nodeSize x = 2 + (BMP.size . encodeFibonacci . succ $ k) + k
+                     + 1 + nextHopSize config * (fromEnum . isJust $ s)
           where k = P.maskLength . prefix $ x
                 s = label x
 
