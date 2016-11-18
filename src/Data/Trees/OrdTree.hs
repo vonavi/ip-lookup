@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFoldable       #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns         #-}
@@ -37,12 +38,9 @@ import           Data.Prefix
 import           Data.Succinct.Paren
 import           Data.Zipper
 
-newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a) } deriving (Eq, Show)
-
-instance Foldable Forest where
-  foldMap f t = case S.viewl . getSeq $ t of
-                  (x, l) :< r -> f x <> foldMap f l <> foldMap f (Forest r)
-                  EmptyL      -> mempty
+newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a)
+                          }
+                 deriving (Eq, Show, Foldable)
 
 class OrdTree a where
   toForest    :: a      -> Forest (Maybe Int)

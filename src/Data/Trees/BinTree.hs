@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Data.Trees.BinTree
@@ -25,12 +26,8 @@ data Tree a = Tip
                   , left  :: Tree a
                   , right :: Tree a
                   }
-            deriving (Eq, Show)
+            deriving (Eq, Show, Foldable)
 type BinTree = Tree (Maybe Int)
-
-instance Foldable Tree where
-  foldMap _ Tip         = mempty
-  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 instance Monoid BinTree where
   mempty = Tip

@@ -1,5 +1,5 @@
+{-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RankNTypes        #-}
 
 module Data.Trees.PaCoTree
   (
@@ -31,12 +31,10 @@ data Node = Node { prefix :: P.Prefix
                  , label  :: Maybe Int
                  }
           deriving (Show, Eq)
-data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
+data Tree a = Tip
+            | Bin a (Tree a) (Tree a)
+            deriving (Show, Eq, Foldable)
 type PaCoTree = Tree Node
-
-instance Foldable Tree where
-  foldMap _ Tip         = mempty
-  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
 joinNodes :: Node -> Bool -> Node -> Node
