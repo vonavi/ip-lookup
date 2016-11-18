@@ -1,5 +1,5 @@
+{-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RankNTypes        #-}
 
 module Data.Trees.PaCo2Tree
   (
@@ -31,12 +31,10 @@ data Node = Node { prefix :: P.Prefix
                  , label  :: Maybe Int
                  }
           deriving (Show, Eq)
-data Tree a = Tip | Bin a (Tree a) (Tree a) deriving (Show, Eq)
+data Tree a = Tip
+            | Bin a (Tree a) (Tree a)
+            deriving (Show, Eq, Foldable)
 type PaCo2Tree = Tree Node
-
-instance Foldable Tree where
-  foldMap _ Tip         = mempty
-  foldMap f (Bin x l r) = f x <> foldMap f l <> foldMap f r
 
 
 isRootFull :: PaCo2Tree -> Bool
@@ -206,10 +204,9 @@ eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
 eliasFanoSeqSize :: PaCo2Tree -> Int
 eliasFanoSeqSize t
   | null ks   = 0
-  | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
-                highBits bmp2 <> lowBits bmp2
+  | otherwise = BMP.size $ highBits bmp2 <> lowBits bmp2
   where ks   = foldMap ((:[]) . P.maskLength . prefix) t
-        bmp2 = encodeEliasFano . scanl1 (+) $ ks
+        bmp2 = encodeEliasFanoWith (eliasFanoLowerBits config) . scanl1 (+) $ ks
 
 {-|
 The node size of path-compressed 2-tree is built from the following
@@ -299,7 +296,7 @@ instance Zipper PaCo2Zipper where
     where Bin x' l' r' = resizeRoot 0 t
   setLabel _ z    = z
 
-  size (t, _, _) = eliasGammaSize t
+  size (t, _, _) = eliasFanoSize t
 
   insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
   insert (t, _, _) (_, es, [])     = (t, es, [])
