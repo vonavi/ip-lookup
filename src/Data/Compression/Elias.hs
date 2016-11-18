@@ -7,11 +7,13 @@ module Data.Compression.Elias
   , decodeEliasGamma
   , encodeEliasDelta
   , decodeEliasDelta
+  , encodeEliasFanoWith
   , encodeEliasFano
   , decodeEliasFano
   ) where
 
 import           Data.Bits
+import           Data.Function           (on)
 import           Data.List               (unfoldr)
 import           Data.Monoid             ((<>))
 
@@ -50,8 +52,8 @@ data Bitmap2 = Bitmap2 { highBits :: Bitmap
                        }
                deriving Show
 
-encodeEliasFano :: [Int] -> Bitmap2
-encodeEliasFano xs
+encodeEliasFanoWith :: Int -> [Int] -> Bitmap2
+encodeEliasFanoWith l xs
   | null xs      = error "Empty monotone sequence"
   | last xs == 0 = Bitmap2 { highBits = mconcat . map (\_ -> fromInt 1) $ xs
                            , lowBits  = mempty
@@ -59,14 +61,17 @@ encodeEliasFano xs
                            }
   | otherwise    = Bitmap2 { highBits = hbmp
                            , lowBits  = lbmp
-                           , lowSize  = s
+                           , lowSize  = l
                            }
-  where s    = max 0 . floor . logBase (2 :: Double) $
-               fromIntegral (last xs) / fromIntegral (length xs)
-        hbs  = map (`shiftR` s) xs
+  where hbs  = map (`shiftR` l) xs
         hbmp = mconcat . map (fromIntExact 1 . succ) $
                zipWith (-) hbs (0 : init hbs)
-        lbmp = mconcat . map (`fromIntExact` s) $ xs
+        lbmp = mconcat . map (`fromIntExact` l) $ xs
+
+encodeEliasFano :: [Int] -> Bitmap2
+encodeEliasFano xs = encodeEliasFanoWith l xs
+  where l =  max 0 . floor . logBase (2 :: Double) $
+             ((/) `on` fromIntegral) (last xs) (length xs)
 
 decodeEliasFano :: Bitmap2 -> [Int]
 decodeEliasFano bmp
