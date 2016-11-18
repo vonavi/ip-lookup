@@ -9,6 +9,8 @@ data Config = Config
               , maxPageSize :: Int
               , nextHopSize :: Int
               , prevNextHop :: Bool
+
+              , eliasFanoLowerBits :: Int
               }
 
 config :: Config
@@ -17,4 +19,6 @@ config = Config
          , maxPageSize = 6 * 128
          , nextHopSize = 18
          , prevNextHop = True
+
+         , eliasFanoLowerBits = 3
          }
