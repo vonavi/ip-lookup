@@ -206,10 +206,9 @@ eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
 eliasFanoSeqSize :: PaCo2Tree -> Int
 eliasFanoSeqSize t
   | null ks   = 0
-  | otherwise = BMP.size $ (encodeUnary . succ . lowSize $ bmp2) <>
-                highBits bmp2 <> lowBits bmp2
+  | otherwise = BMP.size $ highBits bmp2 <> lowBits bmp2
   where ks   = foldMap ((:[]) . P.maskLength . prefix) t
-        bmp2 = encodeEliasFano . scanl1 (+) $ ks
+        bmp2 = encodeEliasFanoWith (eliasFanoLowerBits config) . scanl1 (+) $ ks
 
 {-|
 The node size of path-compressed 2-tree is built from the following
@@ -299,7 +298,7 @@ instance Zipper PaCo2Zipper where
     where Bin x' l' r' = resizeRoot 0 t
   setLabel _ z    = z
 
-  size (t, _, _) = eliasGammaSize t
+  size (t, _, _) = eliasFanoSize t
 
   insert (t, _, _) (_, es, _ : bs) = (t, es, True : bs)
   insert (t, _, _) (_, es, [])     = (t, es, [])
