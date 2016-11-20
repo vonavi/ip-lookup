@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+-- | Implements a path-compressed 2-tree.
 module Data.Trees.PaCo2Tree
   (
     Node(..)
@@ -27,46 +28,57 @@ import           Data.Compression.Fibonacci
 import           Data.IpRouter
 import qualified Data.Prefix                as P
 
-data Node = Node { prefix :: P.Prefix
-                 , label  :: Maybe Int
+-- | Node of path-compressed 2-tree
+data Node = Node { prefix :: P.Prefix  -- ^ Skipped bits
+                 , label  :: Maybe Int -- ^ may or may not contain
+                                       --   'Data.IpRouter.nextHop'
                  }
           deriving (Show, Eq)
+-- | Structure of path-compressed 2-tree
 data Tree a = Tip
             | Bin a (Tree a) (Tree a)
             deriving (Show, Eq, Foldable)
+-- | Path-compressed 2-tree
 type PaCo2Tree = Tree Node
 
 
+-- | Checks if the root of path-compressed 2-tree is full.
 isRootFull :: PaCo2Tree -> Bool
 isRootFull (Bin _ Tip Tip) = True
 isRootFull (Bin _ Tip _)   = False
 isRootFull (Bin _ _ Tip)   = False
 isRootFull _               = True
 
+-- | Gives the empty branch, to be added to a non-full root of
+--   path-compressed 2-tree.
 emptyBranch :: PaCo2Tree
 emptyBranch = Bin emptyRoot Tip Tip
   where emptyRoot = Node { prefix = P.mkPrefix (P.ipv4Address 0) 0
                          , label  = Nothing
                          }
 
+-- | Makes the root of path-compressed 2-tree to be full.
 mkRootFull :: PaCo2Tree -> PaCo2Tree
 mkRootFull t@(Bin _ Tip Tip) = t
 mkRootFull (Bin x Tip r)     = Bin x emptyBranch r
 mkRootFull (Bin x l Tip)     = Bin x l emptyBranch
 mkRootFull t                 = t
 
+-- | Joins bit strings of two consequent nodes.
 joinNodes :: Node -> Bool -> Node -> Node
 joinNodes Node { prefix = px } b y
   = Node { prefix = (px `P.append`) . P.cons b . prefix $ y
          , label  = label y
          }
 
+-- | Unites the root with a child node if possible.
 uniteRoot :: PaCo2Tree -> PaCo2Tree
 uniteRoot t@(Bin x _ _) | isJust (label x) = t
 uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
 uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
 uniteRoot t                                = t
 
+-- | Reduces the skip value of the root down to the given value.
 resizeRoot :: Int -> PaCo2Tree -> PaCo2Tree
 resizeRoot _ Tip           = Tip
 resizeRoot k t@(Bin x l r) = case P.uncons pb of
@@ -95,10 +107,12 @@ instance Monoid PaCo2Tree where
                   node         = x' { label = label x' <|> label y' }
 
 
+-- | Builds a path-compressed 2-tree from routing entry.
 fromEntry :: Entry -> PaCo2Tree
 fromEntry Entry { network = p, nextHop = n } =
   Bin Node { prefix = p, label = Just n } Tip Tip
 
+-- | Makes the longest-prefix match (LPM).
 lookupState :: P.Prefix -> PaCo2Tree -> State (Maybe Int) ()
 lookupState _ Tip         = return ()
 lookupState v (Bin x l r)
@@ -109,11 +123,13 @@ lookupState v (Bin x l r)
                                  Just (b, vb) -> lookupState vb $ bool l r b
   where (_, va, pa) = P.commonPrefixes v (prefix x)
 
+-- | Deletes the empty root.
 delEmptyNode :: PaCo2Tree -> PaCo2Tree
 delEmptyNode t | Bin x Tip Tip <- t
                , Nothing <- label x = Tip
                | otherwise          = t
 
+-- | Deletes one path-compressed 2-tree from another.
 delSubtree :: PaCo2Tree -> PaCo2Tree -> PaCo2Tree
 Tip `delSubtree` _ = Tip
 t `delSubtree` Tip = delEmptyNode . uniteRoot $ t
@@ -201,6 +217,8 @@ eliasFanoSize t = (getSum . foldMap (Sum . nodeSize) $ t) + eliasFanoSeqSize t
           where k = P.maskLength . prefix $ x
                 s = label x
 
+-- | Returns the size of skip values encoded as an Elias-Fano
+--   sequence.
 eliasFanoSeqSize :: PaCo2Tree -> Int
 eliasFanoSeqSize t
   | null ks   = 0
@@ -230,6 +248,7 @@ fibonacciSize = getSum . foldMap (Sum . nodeSize)
           where k = P.maskLength . prefix $ x
                 s = label x
 
+-- | Shows characteristics of path-compressed 2-tree.
 showPaCo2Tree :: PaCo2Tree -> String
 showPaCo2Tree t =
   "Size of path-compressed 2-tree\n" ++
@@ -252,6 +271,7 @@ class Zipper a where
   isNodeFull :: a -> Bool
   mkNodeFull :: a -> a
 
+-- | Zipper of path-compressed 2-tree
 type PaCo2Zipper = (,,) PaCo2Tree
                    [Either (Node, PaCo2Tree) (Node, PaCo2Tree)]
                    [Bool]
