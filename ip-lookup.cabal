@@ -37,14 +37,6 @@ executable ip-lookup
                        Data.Trees.PaCoTree
                        Data.Zipper
                        RandomEntries
-  other-extensions:    FlexibleContexts
-                     , FlexibleInstances
-                     , GeneralizedNewtypeDeriving
-                     , IncoherentInstances
-                     , UndecidableInstances
-                     , RankNTypes
-                     , UndecidableInstances
-                     , ViewPatterns
   build-depends:       base >=4.8 && <4.9
                      , bytestring >=0.10 && <0.11
                      , containers >=0.5 && <0.6
