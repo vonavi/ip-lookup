@@ -258,18 +258,19 @@ showPaCo2Tree t =
   "  Fibonacci coding   " ++ show (fibonacciSize t)  ++ "\n"
 
 
+-- | Zipper typeclass
 class Zipper a where
-  goLeft     :: a -> a
-  goRight    :: a -> a
-  goUp       :: a -> a
-  isLeaf     :: a -> Bool
-  getLabel   :: a -> Maybe Int
-  setLabel   :: Maybe Int -> a -> a
-  size       :: a -> Int
-  insert     :: a -> a -> a
-  delete     :: a -> a
-  isNodeFull :: a -> Bool
-  mkNodeFull :: a -> a
+  goLeft     :: a -> a              -- ^ Goes left.
+  goRight    :: a -> a              -- ^ Goes right.
+  goUp       :: a -> a              -- ^ Goes up.
+  isLeaf     :: a -> Bool           -- ^ Is a leaf reached or not.
+  getLabel   :: a -> Maybe Int      -- ^ Gets label.
+  setLabel   :: Maybe Int -> a -> a -- ^ Sets label.
+  size       :: a -> Int            -- ^ Gets the size of page.
+  insert     :: a -> a -> a         -- ^ Inserts a page here.
+  delete     :: a -> a              -- ^ Deletes page here.
+  isNodeFull :: a -> Bool           -- ^ Is node full or not.
+  mkNodeFull :: a -> a              -- ^ Makes node to be full.
 
 -- | Zipper of path-compressed 2-tree
 type PaCo2Zipper = (,,) PaCo2Tree
