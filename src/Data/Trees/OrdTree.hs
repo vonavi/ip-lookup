@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- | Implements ordinal trees.
 module Data.Trees.OrdTree
   (
     OrdTree(..)
@@ -38,15 +39,24 @@ import           Data.Prefix
 import           Data.Succinct.Paren
 import           Data.Zipper
 
+-- | Inner structure (forest) of any ordinal tree
 newtype Forest a = Forest { getSeq :: S.Seq (a, Forest a)
                           }
                  deriving (Eq, Show, Foldable)
 
+-- | Ordinal-tree typeclass
 class OrdTree a where
-  toForest    :: a      -> Forest (Maybe Int)
-  fromEntry   :: Entry  -> a
-  lookupState :: Prefix -> a -> State (Maybe Int) ()
-  delSubtree  :: a      -> a -> a
+  toForest    :: a      -> Forest (Maybe Int)        -- ^ Returns the
+                                                     --   forest.
+  fromEntry   :: Entry  -> a                         -- ^ Builds from
+                                                     --   a routing
+                                                     --   entry.
+  lookupState :: Prefix -> a -> State (Maybe Int) () -- ^ Accumulates
+                                                     --   prefixes.
+  delSubtree  :: a      -> a -> a                    -- ^ Deletes
+                                                     --   another
+                                                     --   ordinal
+                                                     --   tree.
 
 instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   mkTable       = foldr (mappend . fromEntry) mempty
@@ -55,13 +65,16 @@ instance {-# OVERLAPPABLE #-} (Monoid a, OrdTree a) => IpRouter a where
   ipLookup a t  = execState (lookupState a t) Nothing
   numOfPrefixes = getSum . foldMap (Sum . fromEnum . isJust) . toForest
 
+-- | Represents forest as a balanced-parentheses sequence (BPS).
 forestToBps :: Forest a -> [(a, Paren)]
 forestToBps = concatMap f . getSeq
   where f (x, l) = [(x, Open)] ++ forestToBps l ++ [(x, Close)]
 
+-- | Represents ordinal tree as a balanced-parentheses sequence (BPS).
 ordToBps :: OrdTree a => a -> [(Maybe Int, Paren)]
 ordToBps x = [(Nothing, Open)] ++ forestToBps (toForest x) ++ [(Nothing, Close)]
 
+-- | Represents forest as a DFUDS sequence.
 forestToDfuds :: Forest a -> [(a, [Paren])]
 forestToDfuds = helper . getSeq
   where helper t = case S.viewl t of
@@ -69,6 +82,7 @@ forestToDfuds = helper . getSeq
                      (x, Forest l) :< r -> (x, p) : helper l ++ helper r
                        where p = replicate (S.length l) Open ++ [Close]
 
+-- | Represents ordinal tree as a DFUDS sequence.
 ordToDfuds :: OrdTree a => a -> [(Maybe Int, [Paren])]
 ordToDfuds x = (Nothing, ps) : forestToDfuds f
   where f  = toForest x
@@ -89,9 +103,11 @@ ordSize :: OrdTree a => a -> Int
 ordSize = (2 +) . getSum . foldMap (Sum . nodeSize) . toForest
   where nodeSize x = 3 + nextHopSize config * (fromEnum . isJust $ x)
 
+-- | Deletes one ordinal-tree node from another.
 delRoot :: Maybe Int -> Maybe Int -> Maybe Int
 delRoot x y = if x == y then Nothing else x
 
+-- | Deletes the empty root of forest, moving from left to right.
 delEmptyNodeL :: S.Seq (Maybe Int, Forest (Maybe Int))
               -> S.Seq (Maybe Int, Forest (Maybe Int))
 delEmptyNodeL t | (Nothing, Forest l) :< r <- S.viewl t
@@ -100,6 +116,7 @@ delEmptyNodeL t | (Nothing, Forest l) :< r <- S.viewl t
                 | otherwise
                   = t
 
+-- | Deletes the empty root of forest, moving from right to left.
 delEmptyNodeR :: S.Seq (Maybe Int, Forest (Maybe Int))
               -> S.Seq (Maybe Int, Forest (Maybe Int))
 delEmptyNodeR t | l :> (Nothing, Forest r) <- S.viewr t
@@ -109,6 +126,7 @@ delEmptyNodeR t | l :> (Nothing, Forest r) <- S.viewr t
                   = t
 
 
+-- | Ordinal tree given by transformation T1
 newtype OrdTreeT1 = OrdTreeT1 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT1 where
@@ -150,6 +168,7 @@ instance OrdTree OrdTreeT1 where
                   (y, Forest ly) = hy
 
 
+-- | Zipper of ordinal tree T1
 type OrdZipperT1 = (,) OrdTreeT1
                    [Either (Maybe Int, OrdTreeT1) (Maybe Int, OrdTreeT1)]
 
@@ -200,6 +219,7 @@ instance Zipper OrdZipperT1 where
   delete (_, es) = (OrdTreeT1 . Forest $ S.empty, es)
 
 
+-- | Ordinal tree given by transformation T2
 newtype OrdTreeT2 = OrdTreeT2 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT2 where
@@ -241,6 +261,7 @@ instance OrdTree OrdTreeT2 where
                   (y, Forest ly) = hy
 
 
+-- | Zipper of ordinal tree T2
 type OrdZipperT2 = (,) OrdTreeT2
                    [Either (Maybe Int, OrdTreeT2) (Maybe Int, OrdTreeT2)]
 
@@ -291,6 +312,7 @@ instance Zipper OrdZipperT2 where
   delete (_, es) = (OrdTreeT2 . Forest $ S.empty, es)
 
 
+-- | Ordinal tree given by transformation T3
 newtype OrdTreeT3 = OrdTreeT3 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT3 where
@@ -332,6 +354,7 @@ instance OrdTree OrdTreeT3 where
                   (y, Forest ry) = hy
 
 
+-- | Zipper of ordinal tree T3
 type OrdZipperT3 = (,) OrdTreeT3
                    [Either (Maybe Int, OrdTreeT3) (Maybe Int, OrdTreeT3)]
 
@@ -382,6 +405,7 @@ instance Zipper OrdZipperT3 where
   delete (_, es) = (OrdTreeT3 . Forest $ S.empty, es)
 
 
+-- | Ordinal tree given by transformation T4
 newtype OrdTreeT4 = OrdTreeT4 (Forest (Maybe Int)) deriving (Eq, Show)
 
 instance Monoid OrdTreeT4 where
@@ -423,6 +447,7 @@ instance OrdTree OrdTreeT4 where
                   (y, Forest ry) = hy
 
 
+-- | Zipper of ordinal tree T4
 type OrdZipperT4 = (,) OrdTreeT4
                    [Either (Maybe Int, OrdTreeT4) (Maybe Int, OrdTreeT4)]
 

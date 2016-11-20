@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+-- | Implements a binary tree.
 module Data.Trees.BinTree
   (
     BinTree
@@ -21,12 +22,14 @@ import           Data.IpRouter
 import           Data.Prefix
 import           Data.Zipper
 
+-- | Structure of binary tree
 data Tree a = Tip
             | Bin { label :: a
                   , left  :: Tree a
                   , right :: Tree a
                   }
             deriving (Eq, Show, Foldable)
+-- | Binary tree
 type BinTree = Tree (Maybe Int)
 
 instance Monoid BinTree where
@@ -39,6 +42,7 @@ instance Monoid BinTree where
                           , right = ((<>)  `on` right) tx ty
                           }
 
+-- | Builds a binary tree from routing entry.
 fromEntry :: Entry -> BinTree
 fromEntry Entry { network = p, nextHop = n } =
   (`appEndo` Bin (Just n) Tip Tip)
@@ -46,6 +50,7 @@ fromEntry Entry { network = p, nextHop = n } =
   where pushLeft x  = Bin Nothing x Tip
         pushRight x = Bin Nothing Tip x
 
+-- | Returns the true for an empty binary tree.
 isTip :: Tree a -> Bool
 isTip Tip = True
 isTip _   = False
@@ -90,10 +95,12 @@ binSize :: BinTree -> Int
 binSize = (2 +) . getSum . foldMap (Sum . nodeSize)
   where nodeSize x = 3 + nextHopSize config * (fromEnum . isJust $ x)
 
+-- | Shows characteristics of binary tree.
 showBinTree :: BinTree -> String
 showBinTree t = "Size of binary tree " ++ show (binSize t) ++ "\n"
 
 
+-- | Zipper of binary tree
 type BinZipper = (BinTree, [Either (Maybe Int, BinTree) (Maybe Int, BinTree)])
 
 instance {-# OVERLAPPING #-} Show BinZipper where

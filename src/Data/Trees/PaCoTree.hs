@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFoldable    #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+-- | Implements a path-compressed tree.
 module Data.Trees.PaCoTree
   (
     Node(..)
@@ -27,28 +28,35 @@ import           Data.IpRouter
 import qualified Data.Prefix                as P
 import           Data.Zipper
 
-data Node = Node { prefix :: P.Prefix
-                 , label  :: Maybe Int
+-- | Node of path-compressed tree
+data Node = Node { prefix :: P.Prefix  -- ^ Skipped bits
+                 , label  :: Maybe Int -- ^ may or may not contain
+                                       --   'Data.IpRouter.nextHop'
                  }
           deriving (Show, Eq)
+-- | Structure of path-compressed tree
 data Tree a = Tip
             | Bin a (Tree a) (Tree a)
             deriving (Show, Eq, Foldable)
+-- | Path-compressed tree
 type PaCoTree = Tree Node
 
 
+-- | Joins bit strings of two consequent nodes.
 joinNodes :: Node -> Bool -> Node -> Node
 joinNodes Node { prefix = px } b y
   = Node { prefix = (px `P.append`) . P.cons b . prefix $ y
          , label  = label y
          }
 
+-- | Unites the root with a child node if possible.
 uniteRoot :: PaCoTree -> PaCoTree
 uniteRoot t@(Bin x _ _) | isJust (label x) = t
 uniteRoot (Bin x Tip (Bin y l r))          = Bin (joinNodes x True y) l r
 uniteRoot (Bin x (Bin y l r) Tip)          = Bin (joinNodes x False y) l r
 uniteRoot t                                = t
 
+-- | Reduces the skip value of the root down to the given value.
 resizeRoot :: Int -> PaCoTree -> PaCoTree
 resizeRoot _ Tip           = Tip
 resizeRoot k t@(Bin x l r) = case P.uncons pb of
@@ -77,10 +85,12 @@ instance Monoid PaCoTree where
                   node         = x' { label = label x' <|> label y' }
 
 
+-- | Builds a path-compressed tree from routing entry.
 fromEntry :: Entry -> PaCoTree
 fromEntry Entry { network = p, nextHop = n } =
   Bin Node { prefix = p, label = Just n } Tip Tip
 
+-- | Makes the longest-prefix match (LPM).
 lookupState :: P.Prefix -> PaCoTree -> State (Maybe Int) ()
 lookupState _ Tip         = return ()
 lookupState v (Bin x l r)
@@ -91,11 +101,13 @@ lookupState v (Bin x l r)
                                  Just (b, vb) -> lookupState vb $ bool l r b
   where (_, va, pa) = P.commonPrefixes v (prefix x)
 
+-- | Deletes the empty root.
 delEmptyNode :: PaCoTree -> PaCoTree
 delEmptyNode t | Bin x Tip Tip <- t
                , Nothing <- label x = Tip
                | otherwise          = t
 
+-- | Deletes one path-compressed tree from another.
 delSubtree :: PaCoTree -> PaCoTree -> PaCoTree
 Tip `delSubtree` _ = Tip
 t `delSubtree` Tip = uniteRoot t
@@ -188,6 +200,8 @@ eliasFanoSize t =
           where k = P.maskLength . prefix $ x
                 s = label x
 
+-- | Returns the size of skip values encoded as an Elias-Fano
+--   sequence.
 eliasFanoSeqSize :: PaCoTree -> Int
 eliasFanoSeqSize t
   | null ks   = 0
@@ -218,6 +232,7 @@ fibonacciSize = (2 +) . getSum . foldMap (Sum . nodeSize)
           where k = P.maskLength . prefix $ x
                 s = label x
 
+-- | Shows characteristics of path-compressed tree.
 showPaCoTree :: PaCoTree -> String
 showPaCoTree t =
   "Size of path-compressed tree\n" ++
@@ -227,6 +242,7 @@ showPaCoTree t =
   "  Fibonacci coding   " ++ show (fibonacciSize t)  ++ "\n"
 
 
+-- | Zipper of path-compressed tree
 type PaCoZipper = (,,) PaCoTree
                   [Either (Node, PaCoTree) (Node, PaCoTree)]
                   [Bool]
